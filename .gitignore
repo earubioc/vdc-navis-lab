@@ -22,6 +22,8 @@ htmlcov/
 # --- .NET ---
 bin/
 obj/
+*.dll
+addin/refs/   # Autodesk assemblies copied locally for compiling: never commit
 *.user
 .vs/
 
