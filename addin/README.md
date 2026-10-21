@@ -8,7 +8,7 @@ An `EventWatcherPlugin` loads with Navisworks, captures the UI thread, and opens
 
 Implemented: `hello`, `doc.info`, `clash.tests`, `clash.export`, `clash.apply`, `doc.save`, `job.status`, `job.result`, `job.cancel`, `job.list`. Everything else answers `unsupported` and `hello.methods` says so. Wire format: [../docs/PROTOCOL.md](../docs/PROTOCOL.md).
 
-Known limits of 0.1: extraction runs on the UI thread in one block (Navisworks is unresponsive meanwhile); `model.census`, `elements.query` and `clash.run` are not implemented.
+Extraction runs one test per UI-thread slice, so Navisworks processes its own message queue between tests instead of freezing for the whole export; not yet confirmed against a real model (needs Navisworks open). Known limits of 0.1: `model.census`, `elements.query` and `clash.run` are not implemented.
 
 ## Build and install (one command)
 

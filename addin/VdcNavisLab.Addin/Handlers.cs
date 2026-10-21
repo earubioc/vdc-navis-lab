@@ -380,47 +380,82 @@ namespace VdcNavisLab.Addin
                 .Cast<object>().Select(x => Convert.ToString(x)));
             int limit = p.ContainsKey("limit") ? Convert.ToInt32(p["limit"]) : 0;
             var job = _jobs.Create("clash.export");
-            // 0.1 limitation: extraction runs on the UI thread in one block, so Navisworks is unresponsive meanwhile.
-            // Chunked extraction (a few tests per UI slice) is the first item on the add-in roadmap.
-            UiThreadPost(() => Export(job, names, limit));
+            System.Threading.ThreadPool.QueueUserWorkItem(_ => Export(job, names, limit));
             return new Dictionary<string, object> { { "job_id", job.Id } };
         }
 
-        private static void UiThreadPost(Action a) { System.Threading.ThreadPool.QueueUserWorkItem(_ => { try { UiThread.Run<object>(() => { a(); return null; }, 600000); } catch { } }); }
-
+        /// <summary>One short UI-thread call per test instead of one call for the whole export, so
+        /// Navisworks processes its own message queue (repaint, input) between tests rather than
+        /// freezing for as long as the extraction takes.</summary>
         private void Export(Jobs.Job job, HashSet<string> names, int limit)
         {
             try
             {
-                var d = Doc();
+                var start = UiThread.Run<Dictionary<string, object>>(() =>
+                {
+                    var d = Doc();
+                    return new Dictionary<string, object> {
+                        { "document", DocState(d) },
+                        { "models", d.Models.Select(m => System.IO.Path.GetFileName(m.FileName ?? "")).ToArray() },
+                        { "tests", Tests(d).Where(t => names.Count == 0 || names.Contains(t.DisplayName))
+                                            .Select(t => t.DisplayName).ToList() } };
+                }, 30000);
+                var document = start["document"];
+                var models = start["models"];
+                var testNames = (List<string>)start["tests"];
+
                 var tests = new List<object>();
                 var clashes = new List<object>();
                 bool truncated = false;
                 int skipped = 0;
-                foreach (var t in Tests(d))
+
+                for (int i = 0; i < testNames.Count; i++)
                 {
                     if (job.Cancelled) { job.Finish("cancelled", null, ""); return; }
-                    if (names.Count > 0 && !names.Contains(t.DisplayName)) continue;
-                    var results = Results(t).ToList();
-                    tests.Add(new Dictionary<string, object> {
-                        { "name", t.DisplayName }, { "kind", Kind(t) }, { "status", TestStatus(t) },
-                        { "tolerance", Metres(d, t.Tolerance) }, { "count", results.Count } });
-                    foreach (var r in results)
+                    var name = testNames[i];
+                    var skipDescribe = truncated;  // already full: still record this test, do no more Describe() work
+                    var remaining = limit > 0 ? Math.Max(0, limit - clashes.Count) : -1;
+
+                    var slice = UiThread.Run<Dictionary<string, object>>(() =>
                     {
-                        if (limit > 0 && clashes.Count >= limit) { truncated = true; break; }
-                        if (r.Item1 == null || r.Item2 == null) { skipped++; continue; }  // element no longer in the model
-                        var a = Describe(d, r.Item1); var b = Describe(d, r.Item2);
-                        clashes.Add(new Dictionary<string, object> {
-                            { "id", r.Guid.ToString() }, { "test", t.DisplayName }, { "name", r.DisplayName },
-                            { "status", ResultStatus(r) }, { "kind", Kind(t) }, { "distance", Metres(d, r.Distance) },
-                            { "point", new object[] { Metres(d, r.Center.X), Metres(d, r.Center.Y), Metres(d, r.Center.Z) } },
-                            { "a", a }, { "b", b }, { "level", a["level"] } });
-                    }
+                        var d = Doc();
+                        var t = Tests(d).FirstOrDefault(x => x.DisplayName == name);
+                        if (t == null) return null;  // removed from Clash Detective mid-export
+                        var results = Results(t).ToList();
+                        var sliceClashes = new List<object>();
+                        int sliceSkipped = 0;
+                        bool sliceTruncated = false;
+                        if (!skipDescribe)
+                            foreach (var r in results)
+                            {
+                                if (remaining >= 0 && sliceClashes.Count >= remaining) { sliceTruncated = true; break; }
+                                if (r.Item1 == null || r.Item2 == null) { sliceSkipped++; continue; }
+                                var a = Describe(d, r.Item1); var b = Describe(d, r.Item2);
+                                sliceClashes.Add(new Dictionary<string, object> {
+                                    { "id", r.Guid.ToString() }, { "test", t.DisplayName }, { "name", r.DisplayName },
+                                    { "status", ResultStatus(r) }, { "kind", Kind(t) }, { "distance", Metres(d, r.Distance) },
+                                    { "point", new object[] { Metres(d, r.Center.X), Metres(d, r.Center.Y), Metres(d, r.Center.Z) } },
+                                    { "a", a }, { "b", b }, { "level", a["level"] } });
+                            }
+                        return new Dictionary<string, object> {
+                            { "test", new Dictionary<string, object> {
+                                { "name", t.DisplayName }, { "kind", Kind(t) }, { "status", TestStatus(t) },
+                                { "tolerance", Metres(d, t.Tolerance) }, { "count", results.Count } } },
+                            { "clashes", sliceClashes }, { "skipped", sliceSkipped }, { "truncated", sliceTruncated } };
+                    }, 60000);
+
+                    job.SetProgress(i + 1, testNames.Count);
+                    if (slice == null) continue;
+                    tests.Add(slice["test"]);
+                    clashes.AddRange((List<object>)slice["clashes"]);
+                    skipped += (int)slice["skipped"];
+                    if ((bool)slice["truncated"]) truncated = true;
                 }
+
                 job.Finish("completed", new Dictionary<string, object> {
-                    { "schema", "vdc_navis_lab.clashset/1" }, { "source", "navisworks" }, { "document", DocState(d) },
-                    { "models", d.Models.Select(m => System.IO.Path.GetFileName(m.FileName ?? "")).ToArray() },
-                    { "truncated", truncated }, { "skipped", skipped }, { "tests", tests }, { "clashes", clashes } }, "");
+                    { "schema", "vdc_navis_lab.clashset/1" }, { "source", "navisworks" }, { "document", document },
+                    { "models", models }, { "truncated", truncated }, { "skipped", skipped },
+                    { "tests", tests }, { "clashes", clashes } }, "");
             }
             catch (RpcException ex) { job.Finish("failed", null, ex.Message); }
             catch (Exception ex) { job.Finish("failed", null, ex.GetType().Name); }

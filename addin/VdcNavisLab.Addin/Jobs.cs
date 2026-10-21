@@ -15,6 +15,7 @@ namespace VdcNavisLab.Addin
             public string State { get; private set; }
             public object Result { get; private set; }
             public string Error { get; private set; }
+            private int _done, _total;
             public bool Cancelled { get { lock (_gate) return State == "cancelled"; } }
 
             public Job(string kind) { Id = "job-" + Guid.NewGuid().ToString("N").Substring(0, 8); Kind = kind; State = "running"; Error = ""; }
@@ -26,12 +27,19 @@ namespace VdcNavisLab.Addin
 
             public void Cancel() { lock (_gate) { if (State == "running") State = "cancelled"; } }
 
+            /// <summary>Reported by a long job as it works through bounded slices (e.g. one per test).</summary>
+            public void SetProgress(int done, int total) { lock (_gate) { _done = done; _total = total; } }
+
             public Dictionary<string, object> Status()
             {
                 lock (_gate)
+                {
+                    var progress = _total > 0
+                        ? new Dictionary<string, object> { { "kind", "determinate" }, { "done", _done }, { "total", _total } }
+                        : new Dictionary<string, object> { { "kind", "indeterminate" } };
                     return new Dictionary<string, object> {
-                        { "job_id", Id }, { "kind", Kind }, { "state", State }, { "error", Error },
-                        { "progress", new Dictionary<string, object> { { "kind", "indeterminate" } } } };
+                        { "job_id", Id }, { "kind", Kind }, { "state", State }, { "error", Error }, { "progress", progress } };
+                }
             }
         }
 
