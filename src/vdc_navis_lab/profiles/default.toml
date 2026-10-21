@@ -38,7 +38,7 @@ categories = ["ducts", "duct fittings", "duct accessories", "air terminals", "me
 [disciplines.PLB]
 label = { es = "Hidráulica", en = "Plumbing" }
 mobility = 0.55
-name_patterns = ["hid", "hidr", "plb", "plum", "agua"]
+name_patterns = ["hid", "hidr", "plb", "plum", "agua", "rhs", "hys"]
 categories = ["pipes", "pipe fittings", "pipe accessories", "plumbing fixtures", "flex pipes",
   "tuberías", "uniones de tubería", "accesorios de tubería", "aparatos sanitarios"]
 

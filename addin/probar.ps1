@@ -1,6 +1,9 @@
 # Prueba completa contra Navisworks real. Un solo comando; espera a que abras Navisworks.
 #   powershell -ExecutionPolicy Bypass -File D:\IA_WORK\MCP_NAVIS\addin\probar.ps1
 $root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
+$env:PYTHONIOENCODING = "utf-8"
+$env:PYTHONUTF8 = "1"
 $cli = Join-Path $root ".venv\Scripts\vdc-navis-lab-cli.exe"
 if (-not (Test-Path $cli)) { throw "No existe $cli. Activa el entorno e instala: pip install -e `".[dev]`"" }
 Write-Host "Esperando a Navisworks con el add-in cargado (hasta 3 minutos). Abre Navisworks Manage 2026 y un modelo."

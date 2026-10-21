@@ -218,36 +218,82 @@ namespace VdcNavisLab.Addin
             }
         }
 
+        /// <summary>Index of the source-file level of the tree (the .nwc/.rvt node), or -1.</summary>
+        private static int SourceIndex(Document d, List<string> path)
+        {
+            var self = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                { d.Title ?? "", System.IO.Path.GetFileName(d.FileName ?? "") };
+            for (int i = 0; i < path.Count; i++)
+            {
+                var l = path[i].ToLowerInvariant();
+                if (self.Contains(path[i])) continue;
+                if (FileExtensions.Any(e => l.EndsWith(e))) return i;
+            }
+            return -1;
+        }
+
+        private static string At(List<string> path, int index, int leaf)
+        {
+            return index >= 0 && index < leaf ? path[index] : "";
+        }
+
         private static Dictionary<string, object> Describe(Document d, ModelItem item)
         {
             var bb = item.BoundingBox();
             double f = UnitFactor(d);
             var elementId = FirstProp(item, new[] { "Element ID", "Value" }, new[] { "Element", "Id" });
             var path = PathOf(item);
-            var modelFile = ModelName(d, item, path);
+            int fi = SourceIndex(d, path);
+            int leaf = path.Count - 1;  // the last node is the solid (named after its material in Revit exports)
+            var modelFile = FirstProp(item, new[] { "Elemento", "Archivo de origen" }, new[] { "Element", "Source File" });
+            if (modelFile.Length == 0) modelFile = ModelName(d, item, path);
             var bbox = new object[] {
                 new object[] { Math.Round(bb.Min.X * f, 4), Math.Round(bb.Min.Y * f, 4), Math.Round(bb.Min.Z * f, 4) },
                 new object[] { Math.Round(bb.Max.X * f, 4), Math.Round(bb.Max.Y * f, 4), Math.Round(bb.Max.Z * f, 4) } };
+            var boxText = string.Join(",", ((object[])bbox[0]).Concat((object[])bbox[1]));
             // Identity must be unique per element: InstanceGuid is all zeros for most geometry items, so it is only
             // used when set; otherwise the tree path plus the box identify the item.
             string ident;
             if (elementId.Length > 0) ident = elementId;
             else if (item.InstanceGuid != Guid.Empty) ident = item.InstanceGuid.ToString();
-            else ident = "p" + Short(string.Join("/", path) + "|" + string.Join(",", ((object[])bbox[0]).Concat((object[])bbox[1])));
-            var category = FirstProp(item, new[] { "Item", "Type" }, new[] { "Element", "Category" });
+            else ident = "p" + Short(string.Join("/", path) + "|" + boxText);
+
+            // Revit exports: file / layer(level) / category / family / type / instance / solid.
+            var category = At(path, fi + 2, leaf);
+            if (category.Length == 0) category = FirstProp(item, new[] { "Item", "Type" }, new[] { "Element", "Category" });
             if (category.Length == 0) category = item.ClassDisplayName ?? "";
+            var family = At(path, fi + 3, leaf);
+            if (family.Length == 0) family = FirstProp(item, new[] { "Element", "Family" });
+            var type = At(path, fi + 4, leaf);
+            var name = family.Length > 0 ? (type.Length > 0 ? family + " : " + type : family) : (item.DisplayName ?? "");
+            var level = FirstProp(item, new[] { "Elemento", "Capa" }, new[] { "Element", "Layer" }, new[] { "Element", "Level" });
+            if (level.Length == 0) level = At(path, fi + 1, leaf);
+
+            // Assembly identity: the instance node (parent of the solid) and its own box, so two walls of the same
+            // type are different assemblies but the layers of one wall are the same.
+            string host = "";
+            var parent = item.Parent;
+            if (parent != null && !item.Children.Any())
+            {
+                var pb = parent.BoundingBox();
+                host = modelFile + ":h" + Short(string.Join("/", path.Take(leaf)) + "|" +
+                    string.Join(",", new[] { pb.Min.X, pb.Min.Y, pb.Min.Z, pb.Max.X, pb.Max.Y, pb.Max.Z }.Select(v => Math.Round(v * f, 3).ToString(System.Globalization.CultureInfo.InvariantCulture))));
+            }
+
             var o = new Dictionary<string, object>
             {
                 { "id", modelFile + ":" + ident },
-                { "name", item.DisplayName ?? "" },
+                { "name", name },
                 { "category", category },
-                { "family", FirstProp(item, new[] { "Element", "Family" }, new[] { "Item", "Type" }) },
+                { "family", family },
                 { "model", modelFile },
                 { "path", path },
-                { "level", FirstProp(item, new[] { "Element", "Level" }, new[] { "Item", "Level" }) },
+                { "level", level },
                 { "props", elementId.Length > 0 ? new Dictionary<string, object> { { "Id", elementId } } : new Dictionary<string, object>() },
                 { "bbox", bbox }
             };
+            if (host.Length > 0) o["host_id"] = host;
+            if (type.Length > 0) ((Dictionary<string, object>)o["props"])["Type"] = type;
             var system = FirstProp(item, new[] { "Element", "System Name" }, new[] { "Element", "System Type" });
             if (system.Length > 0) o["system"] = system;
             return o;
