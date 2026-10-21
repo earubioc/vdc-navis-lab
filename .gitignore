@@ -23,7 +23,8 @@ htmlcov/
 bin/
 obj/
 *.dll
-addin/refs/   # Autodesk assemblies copied locally for compiling: never commit
+# Autodesk assemblies copied locally for compiling: never commit
+addin/refs/
 *.user
 .vs/
 
