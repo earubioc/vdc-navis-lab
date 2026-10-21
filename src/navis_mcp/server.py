@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import functools
 import json
+import sys
 from typing import Any
 
 from mcp.server.mcpserver import MCPServer
@@ -178,8 +179,29 @@ def nw_document(action: str = "save", path: str = "", confirm: bool = False, ove
     return APP.document(action, path, confirm, overwrite)
 
 
-def main() -> None:
+TERMINAL_NOTE = """\
+navis-mcp is an MCP server: it talks JSON over stdin/stdout and is meant to be started by an
+MCP client (Claude Desktop, Claude Code, ...), not typed into a terminal. Waiting silently is
+what a server does, so this window now exits instead of looking frozen.
+navis-mcp es un servidor MCP: lo lanza un cliente (Claude Desktop, Claude Code...), no se usa
+a mano en una terminal.
+
+To try it by hand / para probarlo a mano:
+  navis-mcp-cli demo              recorrido completo contra un Navisworks simulado
+  navis-mcp-cli tools             lista las 14 herramientas
+  navis-mcp-cli call nw_status    llama una herramienta
+To connect a client / para conectar un cliente: see manual_para_dummies.md
+To force the server in a terminal anyway: navis-mcp --serve
+"""
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = sys.argv[1:] if argv is None else argv
+    if "--serve" not in args and sys.stdin.isatty():
+        print(TERMINAL_NOTE, file=sys.stderr)
+        return 0
     mcp.run()
+    return 0
 
 
 if __name__ == "__main__":

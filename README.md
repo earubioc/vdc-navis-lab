@@ -4,7 +4,7 @@ Clash coordination for Autodesk Navisworks Manage, exposed as an [MCP](https://m
 
 Navisworks reports thousands of raw clashes. The hard part of coordination is deciding which ones matter, which discipline has to move, and which fifty of them are the same mistake repeated on every floor. `navis-mcp` does that analysis in a deterministic engine and gives the assistant a small set of tools to work with the result, instead of handing it a pile of raw rows.
 
-> **Status: v0.1, early.** The analysis engine, file ingestion, exports, the MCP server and a Navisworks simulator are implemented and tested (79 tests). The Navisworks add-in is a draft that has not been compiled or run against a real Navisworks yet. See [What is verified](#what-is-verified).
+> **Status: v0.1, early.** The analysis engine, file ingestion, exports, the MCP server and a Navisworks simulator are implemented and tested (84 tests). The Navisworks add-in is a draft that has not been compiled or run against a real Navisworks yet. See [What is verified](#what-is-verified).
 
 ## What it does
 
@@ -18,18 +18,19 @@ Navisworks reports thousands of raw clashes. The hard part of coordination is de
 
 ## Quick start
 
+Use a virtual environment, not your global Python (the `mcp` dependency pulls recent `starlette` and `websockets`, which can conflict with other tools installed globally).
+
 ```bash
+python -m venv .venv && source .venv/bin/activate      # Windows: .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
-navis-mcp-cli sample examples/tower-demo.json         # a synthetic 5-level tower
+navis-mcp-cli demo                                      # guided walk-through, no setup, touches nothing
+navis-mcp-cli sample examples/tower-demo.json           # a synthetic 5-level tower
 navis-mcp-cli analyze examples/tower-demo.json --lang en
 ```
 
-Run the whole stack with no Navisworks, against the simulator:
+`navis-mcp` itself is a stdio server meant to be launched by an MCP client; typed into a terminal it prints a note and exits (`--serve` forces it). To let a client talk to a simulated Navisworks, keep `navis-mcp-cli simulate` running in another terminal.
 
-```bash
-navis-mcp-cli simulate        # terminal 1: fake add-in on loopback
-navis-mcp                     # terminal 2: the MCP server (stdio), finds the simulator by itself
-```
+Step-by-step guides for non-programmers: [manual_para_dummies.md](manual_para_dummies.md) (es), [manual_for_dummies.md](manual_for_dummies.md) (en).
 
 ### Connect an assistant
 

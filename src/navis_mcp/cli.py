@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
+import os
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -47,6 +50,85 @@ def _cmd_simulate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_tools(args: argparse.Namespace) -> int:
+    from .server import mcp
+    for t in asyncio.run(mcp.list_tools()):
+        title = t.annotations.title if t.annotations and t.annotations.title else ""
+        print(f"{t.name:<13} {title}")
+    return 0
+
+
+def _cmd_call(args: argparse.Namespace) -> int:
+    """One stateless call. State (analysis, plans) lives in the server process, so use `demo` for flows."""
+    from .server import mcp
+    try:
+        params = json.loads(args.args) if args.args else {}
+    except json.JSONDecodeError as exc:
+        print(f"error: the arguments are not valid JSON ({exc.msg})", file=sys.stderr)
+        return 2
+    try:
+        res = asyncio.run(mcp.call_tool(args.tool, params))
+    except Exception as exc:  # unknown tool or invalid arguments
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    print(res.content[0].text if res.content else "")
+    return 1 if res.is_error else 0
+
+
+def _cmd_demo(args: argparse.Namespace) -> int:
+    """Whole flow in one process against the simulator: status, analyze, preview, execute, verify."""
+    from .service import App, ToolFault
+    es = args.lang == "es"
+    sim = Simulator(job_delay=0.05)
+    scratch = tempfile.TemporaryDirectory(prefix="navis-mcp-demo-")  # the demo never touches your own data folder
+    os.environ["NAVIS_MCP_HOME"] = scratch.name
+    os.environ["NAVIS_MCP_ENDPOINT"] = sim.start()
+    os.environ["NAVIS_MCP_READ_ONLY"] = "0"
+    app = App()
+
+    def step(n: int, es_text: str, en_text: str) -> None:
+        print(f"\n[{n}] {es_text if es else en_text}")
+
+    try:
+        step(1, "Estado: ¿hay un Navisworks conectado?", "Status: is a Navisworks connected?")
+        st = app.status()
+        t = st["tests"]
+        print(f"    {'conectado' if es else 'connected'}: {st['bridge']['instances'][0]['document']}; "
+              f"{t['count']} tests, {'nunca ejecutados' if es else 'never run'}: {', '.join(t['never_run']) or '-'}")
+
+        step(2, "Análisis: de clashes crudos a problemas priorizados", "Analysis: from raw clashes to ranked issues")
+        a = app.analyze("", None, 3, 20, "", args.lang)
+        print(f"    {a['raw_count']} {'cruces' if es else 'clashes'} -> {a['issues']} "
+              f"{'problemas' if es else 'issues'}; {a['per_band']}")
+        for item in a["top"]:
+            print(f"    {item.get('id')}  {str(item.get('priority')).upper():<8} {item.get('pair', '')} "
+                  f"{item.get('level', '')}  score {item.get('score')}")
+        for w in a.get("coverage", {}).get("warnings", [])[:3]:
+            print(f"    ! {w}")
+
+        step(3, "Plan de escritura (simulación, no cambia nada)", "Write plan (preview, changes nothing)")
+        plan = app.apply([{"op": "group", "issues": "top:3"}], "", True)
+        print(f"    plan_id {plan['plan_id']}: {plan['issues']} {'problemas' if es else 'issues'}, "
+              f"{'vence en' if es else 'expires in'} {plan['expires_in_s']} s")
+
+        step(4, "Ejecución del plan y verificación por relectura", "Execute the plan and verify by re-reading")
+        done = app.apply(None, plan["plan_id"], False)
+        print(f"    {done['state']}; {'verificado' if es else 'verified'}: {done['verified']}")
+
+        step(5, "Instantánea de la entrega", "Snapshot of the delivery")
+        sn = app.snapshot("save", "demo", "")
+        print(f"    {'guardada' if es else 'saved'}: demo ({sn.get('issues')} {'problemas' if es else 'issues'})")
+        print("\n" + ("Listo. Todo esto ocurrió contra un Navisworks simulado." if es
+                      else "Done. All of this ran against a simulated Navisworks."))
+        return 0
+    except ToolFault as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    finally:
+        sim.stop()
+        scratch.cleanup()
+
+
 def _cmd_check(args: argparse.Namespace) -> int:
     try:
         p = Profile.load(args.path)
@@ -75,6 +157,15 @@ def main(argv: list[str] | None = None) -> int:
     m.add_argument("--seed", type=int, default=7)
     m.add_argument("--port", type=int, default=0)
     m.set_defaults(fn=_cmd_simulate)
+    d = sub.add_parser("demo", help="guided walk-through against a simulated Navisworks, no setup needed")
+    d.add_argument("--lang", choices=["es", "en"], default="es")
+    d.set_defaults(fn=_cmd_demo)
+    tl = sub.add_parser("tools", help="list the MCP tools")
+    tl.set_defaults(fn=_cmd_tools)
+    ca = sub.add_parser("call", help="call one tool once: navis-mcp-cli call nw_profile '{\"action\":\"show\"}'")
+    ca.add_argument("tool")
+    ca.add_argument("args", nargs="?", default="")
+    ca.set_defaults(fn=_cmd_call)
     c = sub.add_parser("check-profile", help="validate a profile .toml")
     c.add_argument("path", nargs="?", default=None)
     c.set_defaults(fn=_cmd_check)
