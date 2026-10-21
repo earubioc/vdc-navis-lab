@@ -1,4 +1,4 @@
-// DRAFT, not compiled. Navisworks API calls, all executed on the UI thread through UiThread.Run.
+// Navisworks API calls, all executed on the UI thread through UiThread.Run.
 // Every API detail marked VERIFY has to be checked against the installed Autodesk.Navisworks.* assemblies.
 using System;
 using System.Collections.Generic;
@@ -57,6 +57,16 @@ namespace VdcNavisLab.Addin
             };
         }
 
+        private static string VersionText()
+        {
+            try
+            {
+                var v = Autodesk.Navisworks.Api.Application.Version;
+                return v.RuntimeProductName + " " + v.Runtime;
+            }
+            catch (Exception ex) { return "unknown (" + ex.GetType().Name + ")"; }
+        }
+
         public object Hello(string[] methods)
         {
             return UiThread.Run<object>(() =>
@@ -65,7 +75,7 @@ namespace VdcNavisLab.Addin
                 var doc = (d == null || d.IsClear) ? new Dictionary<string, object> { { "open", false } } : DocState(d);
                 return new Dictionary<string, object>
                 {
-                    { "product", "navisworks" }, { "version", Autodesk.Navisworks.Api.Application.Version.ToString() }, // VERIFY
+                    { "product", "navisworks" }, { "version", VersionText() },
                     { "api", 1 }, { "instance_id", _instance },
                     { "started", (Started - new DateTime(1970, 1, 1)).TotalSeconds }, { "doc", doc }, { "methods", methods }
                 };
@@ -162,28 +172,193 @@ namespace VdcNavisLab.Addin
             return "";
         }
 
+        private static readonly string[] FileExtensions = { ".rvt", ".ifc", ".dwg", ".nwc", ".nwd", ".dgn", ".skp", ".rfa", ".3dm", ".dwfx", ".fbx" };
+
+        /// <summary>Display names from the root of the selection tree down to the item (empty names skipped).</summary>
+        private static List<string> PathOf(ModelItem item)
+        {
+            var names = new List<string>();
+            for (var c = item; c != null; c = c.Parent)
+            {
+                var n = c.DisplayName;
+                if (!string.IsNullOrEmpty(n)) names.Add(n);
+            }
+            names.Reverse();
+            return names;
+        }
+
+        /// <summary>Source file of an item. A federated NWD reports one file for everything, so the tree is searched first.</summary>
+        private static string ModelName(Document d, ModelItem item, List<string> path)
+        {
+            var self = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                { d.Title ?? "", System.IO.Path.GetFileName(d.FileName ?? "") };
+            foreach (var seg in path)
+            {
+                var l = seg.ToLowerInvariant();
+                if (self.Contains(seg)) continue;
+                if (FileExtensions.Any(e => l.EndsWith(e))) return seg;
+            }
+            var m = item.Model;
+            if (m != null)
+            {
+                var f = System.IO.Path.GetFileName(m.FileName ?? "");
+                if (f.Length > 0 && !self.Contains(f)) return f;
+                if (m.RootItem != null && !string.IsNullOrEmpty(m.RootItem.DisplayName) && !self.Contains(m.RootItem.DisplayName))
+                    return m.RootItem.DisplayName;
+            }
+            return path.Count > 1 ? path[1] : (path.Count > 0 ? path[0] : "");
+        }
+
+        private static string Short(string text)
+        {
+            using (var sha = SHA1.Create())
+            {
+                var h = sha.ComputeHash(Encoding.UTF8.GetBytes(text));
+                return BitConverter.ToString(h, 0, 6).Replace("-", "").ToLowerInvariant();
+            }
+        }
+
+        /// <summary>Index of the source-file level of the tree (the .nwc/.rvt node), or -1.</summary>
+        private static int SourceIndex(Document d, List<string> path)
+        {
+            var self = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                { d.Title ?? "", System.IO.Path.GetFileName(d.FileName ?? "") };
+            for (int i = 0; i < path.Count; i++)
+            {
+                var l = path[i].ToLowerInvariant();
+                if (self.Contains(path[i])) continue;
+                if (FileExtensions.Any(e => l.EndsWith(e))) return i;
+            }
+            return -1;
+        }
+
+        private static string At(List<string> path, int index, int leaf)
+        {
+            return index >= 0 && index < leaf ? path[index] : "";
+        }
+
         private static Dictionary<string, object> Describe(Document d, ModelItem item)
         {
             var bb = item.BoundingBox();
             double f = UnitFactor(d);
             var elementId = FirstProp(item, new[] { "Element ID", "Value" }, new[] { "Element", "Id" });
-            var modelFile = item.Model != null ? System.IO.Path.GetFileName(item.Model.FileName ?? "") : "";
+            var path = PathOf(item);
+            int fi = SourceIndex(d, path);
+            int leaf = path.Count - 1;  // the last node is the solid (named after its material in Revit exports)
+            var modelFile = FirstProp(item, new[] { "Elemento", "Archivo de origen" }, new[] { "Element", "Source File" });
+            if (modelFile.Length == 0) modelFile = ModelName(d, item, path);
+            var bbox = new object[] {
+                new object[] { Math.Round(bb.Min.X * f, 4), Math.Round(bb.Min.Y * f, 4), Math.Round(bb.Min.Z * f, 4) },
+                new object[] { Math.Round(bb.Max.X * f, 4), Math.Round(bb.Max.Y * f, 4), Math.Round(bb.Max.Z * f, 4) } };
+            var boxText = string.Join(",", ((object[])bbox[0]).Concat((object[])bbox[1]));
+            // Identity must be unique per element: InstanceGuid is all zeros for most geometry items, so it is only
+            // used when set; otherwise the tree path plus the box identify the item.
+            string ident;
+            if (elementId.Length > 0) ident = elementId;
+            else if (item.InstanceGuid != Guid.Empty) ident = item.InstanceGuid.ToString();
+            else ident = "p" + Short(string.Join("/", path) + "|" + boxText);
+
+            // Revit exports: file / layer(level) / category / family / type / instance / solid.
+            var category = At(path, fi + 2, leaf);
+            if (category.Length == 0) category = FirstProp(item, new[] { "Item", "Type" }, new[] { "Element", "Category" });
+            if (category.Length == 0) category = item.ClassDisplayName ?? "";
+            var family = At(path, fi + 3, leaf);
+            if (family.Length == 0) family = FirstProp(item, new[] { "Element", "Family" });
+            var type = At(path, fi + 4, leaf);
+            var name = family.Length > 0 ? (type.Length > 0 ? family + " : " + type : family) : (item.DisplayName ?? "");
+            var level = FirstProp(item, new[] { "Elemento", "Capa" }, new[] { "Element", "Layer" }, new[] { "Element", "Level" });
+            if (level.Length == 0) level = At(path, fi + 1, leaf);
+
+            // Assembly identity: the instance node (parent of the solid) and its own box, so two walls of the same
+            // type are different assemblies but the layers of one wall are the same.
+            string host = "";
+            var parent = item.Parent;
+            if (parent != null && !item.Children.Any())
+            {
+                var pb = parent.BoundingBox();
+                host = modelFile + ":h" + Short(string.Join("/", path.Take(leaf)) + "|" +
+                    string.Join(",", new[] { pb.Min.X, pb.Min.Y, pb.Min.Z, pb.Max.X, pb.Max.Y, pb.Max.Z }.Select(v => Math.Round(v * f, 3).ToString(System.Globalization.CultureInfo.InvariantCulture))));
+            }
+
             var o = new Dictionary<string, object>
             {
-                { "id", modelFile + ":" + (elementId.Length > 0 ? elementId : item.InstanceGuid.ToString()) },
-                { "name", item.DisplayName ?? "" },
-                { "category", FirstProp(item, new[] { "Item", "Type" }, new[] { "Element", "Category" }) },
-                { "family", FirstProp(item, new[] { "Element", "Family" }, new[] { "Item", "Type" }) },
+                { "id", modelFile + ":" + ident },
+                { "name", name },
+                { "category", category },
+                { "family", family },
                 { "model", modelFile },
-                { "level", FirstProp(item, new[] { "Element", "Level" }, new[] { "Item", "Level" }) },
+                { "path", path },
+                { "level", level },
                 { "props", elementId.Length > 0 ? new Dictionary<string, object> { { "Id", elementId } } : new Dictionary<string, object>() },
-                { "bbox", new object[] {
-                    new object[] { Math.Round(bb.Min.X * f, 4), Math.Round(bb.Min.Y * f, 4), Math.Round(bb.Min.Z * f, 4) },
-                    new object[] { Math.Round(bb.Max.X * f, 4), Math.Round(bb.Max.Y * f, 4), Math.Round(bb.Max.Z * f, 4) } } }
+                { "bbox", bbox }
             };
+            if (host.Length > 0) o["host_id"] = host;
+            if (type.Length > 0) ((Dictionary<string, object>)o["props"])["Type"] = type;
             var system = FirstProp(item, new[] { "Element", "System Name" }, new[] { "Element", "System Type" });
             if (system.Length > 0) o["system"] = system;
             return o;
+        }
+
+        // ------------------------------------------------------------ diagnostic sample
+        private static Dictionary<string, object> Raw(Document d, ModelItem item)
+        {
+            var cats = new List<object>();
+            try
+            {
+                int nc = 0;
+                foreach (var pc in item.PropertyCategories)
+                {
+                    if (++nc > 40) break;
+                    var props = new Dictionary<string, object>();
+                    int np = 0;
+                    foreach (var pr in pc.Properties)
+                    {
+                        if (++np > 60) break;
+                        string v; try { v = pr.Value.ToDisplayString(); } catch { v = "?"; }
+                        props[pr.DisplayName ?? pr.Name] = v;
+                    }
+                    cats.Add(new Dictionary<string, object> { { "category", pc.DisplayName }, { "props", props } });
+                }
+            }
+            catch { }
+            var path = PathOf(item);
+            var m = item.Model;
+            return new Dictionary<string, object>
+            {
+                { "path", path }, { "name", item.DisplayName ?? "" }, { "class", item.ClassDisplayName ?? "" },
+                { "model_file_name", m != null ? (m.FileName ?? "") : "" },
+                { "model_root", m != null && m.RootItem != null ? (m.RootItem.DisplayName ?? "") : "" },
+                { "resolved_model", ModelName(d, item, path) },
+                { "instance_guid", item.InstanceGuid.ToString() }, { "categories", cats }
+            };
+        }
+
+        public object Sample(Dictionary<string, object> p)
+        {
+            int per = p.ContainsKey("per_test") ? Convert.ToInt32(p["per_test"]) : 2;
+            return UiThread.Run<object>(() =>
+            {
+                var d = Doc();
+                var list = new List<object>();
+                foreach (var t in Tests(d))
+                {
+                    int n = 0;
+                    foreach (var r in Results(t))
+                    {
+                        if (n++ >= per) break;
+                        var row = new Dictionary<string, object> { { "test", t.DisplayName }, { "result", r.DisplayName }, { "status", r.Status.ToString() } };
+                        if (r.Item1 == null || r.Item2 == null) row["missing_items"] = true;
+                        else { row["a"] = Raw(d, r.Item1); row["b"] = Raw(d, r.Item2); }
+                        list.Add(row);
+                    }
+                }
+                return new Dictionary<string, object>
+                {
+                    { "document", d.Title }, { "file", d.FileName ?? "" },
+                    { "models", d.Models.Select(m => (object)new Dictionary<string, object> { { "file", m.FileName ?? "" }, { "root", m.RootItem != null ? (m.RootItem.DisplayName ?? "") : "" } }).ToList() },
+                    { "samples", list }
+                };
+            }, 120000);
         }
 
         private static string ResultStatus(ClashResult r)

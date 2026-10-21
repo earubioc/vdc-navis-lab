@@ -2,10 +2,10 @@
 
 ## Next (needed to call it usable)
 
-1. **Compile and run the add-in against a real Navisworks.** Verify the API calls marked `VERIFY`, the named pipe from Python on Windows, and unit handling.
-2. **Chunked extraction.** Process a few tests per UI slice so Navisworks stays responsive during long exports.
-3. **Field-test ingestion** with real Clash Detective XML and CSV exports from different Navisworks versions and languages.
-4. **Calibrate the profile** on real projects. The demo tower ranks many issues as high; the weights and gates need real data.
+1. **Chunked extraction.** Process a few tests per UI slice so Navisworks stays responsive during long exports.
+2. **Field-test ingestion** with real Clash Detective XML and CSV exports from different Navisworks versions and languages.
+3. **Calibrate the profile** on real projects. The first real model (654 clashes) produced 52 critical and 60 high of 113 issues, and each of the ten top issues reports penetration equal to 100% of the smaller element's dimension (pipes and conduits crossing structure), so the bands do not yet separate crossings that a sleeve resolves from true conflicts.
+4. **Report skipped results.** The add-in skips results whose elements are missing from the model (710 listed, 654 exported in the first real model) and should say so in the analysis coverage.
 
 ## Add-in methods not yet implemented
 

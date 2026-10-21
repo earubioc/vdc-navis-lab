@@ -247,3 +247,20 @@ def test_plan_matrix_hotspots(result, profile):
     assert sum(len(p["issues"]) for p in pk) == len(result.issues)
     assert all(len(p["issues"]) <= 5 for p in pk) and pk[0]["id"] == "WP-01"
     assert len(hotspots(result, limit=3)) == 3
+
+
+def test_discipline_falls_back_to_the_selection_tree(profile):
+    t = Tagger(profile)
+    # no property category, model name useless: the tree carries the source file and the Revit category
+    assert t.discipline_of("", "", ["fed.nwd", "ELE_Torre.rvt", "Conduits", "x"]) == "ELE"
+    assert t.discipline_of("", "", ["fed.nwd", "Modelo.rvt", "Pipes", "Pipe Types", "x"]) == "PLB"
+    assert t.discipline_of("", "", ["fed.nwd", "Modelo.rvt", "Cosas"]) == "OTHER"
+    # file name keeps priority over the category
+    assert t.discipline_of("Pipes", "STR_torre.rvt", []) == "STR"
+
+
+def test_element_path_round_trips():
+    e = Element.from_dict({"id": "a", "path": ["fed.nwd", "x.rvt", "", "Walls"]})
+    assert e.path == ["fed.nwd", "x.rvt", "Walls"]
+    assert Element.from_dict(e.to_dict()).path == e.path
+    assert "path" not in Element(id="b").to_dict()

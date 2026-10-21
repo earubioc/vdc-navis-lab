@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Copy the VdcNavisLab.bundle folder to %ProgramData%\Autodesk\ApplicationPlugins\ and put VdcNavisLab.Addin.dll in Contents\. -->
+<!-- Copy the VdcNavisLab.bundle folder to %APPDATA%\Autodesk\ApplicationPlugins\ (current user) or %ProgramData%\Autodesk\ApplicationPlugins\ (all users) and put VdcNavisLab.Addin.dll in Contents\. -->
 <ApplicationPackage SchemaVersion="1.0" AutodeskProduct="Navisworks" Name="vdc-navis-lab" Description="Bridge between Navisworks Manage and MCP clients"
                     AppVersion="0.1.1" Author="VDC Process Lab" ProductType="Application" UpgradeCode="{6f0d4b62-7a1e-4d8b-9c3e-2b6c1f6a9a10}">
   <CompanyDetails Name="VDC Process Lab" />
   <Components>
-    <RuntimeRequirements OS="Win64" Platform="Navisworks" SeriesMin="Nw2024" />
+    <RuntimeRequirements OS="Win64" Platform="NAVMAN|NAVSIM" SeriesMin="Nw2024" />
     <ComponentEntry AppName="vdc-navis-lab" Version="0.1.1" ModuleName="./Contents/VdcNavisLab.Addin.dll" AppType=".net" LoadOnAppStartup="True" />
   </Components>
 </ApplicationPackage>

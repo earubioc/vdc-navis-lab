@@ -209,4 +209,4 @@ def test_status_lists_tests_and_flags_the_ones_never_run(app):
 
 def test_status_survives_an_addin_without_clash_tests(app, sim, monkeypatch):
     monkeypatch.setattr(sim, "m_clash_tests", lambda p: (_ for _ in ()).throw(__import__("vdc_navis_lab.bridge.simulator", fromlist=["Fault"]).Fault("unsupported", "no")))
-    assert app.status()["tests"] == {"available": False, "reason": "unsupported"}
+    assert app.status()["tests"] == {"available": False, "reason": "unsupported", "detail": "no"}

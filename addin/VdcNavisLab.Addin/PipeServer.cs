@@ -1,4 +1,4 @@
-// DRAFT, not compiled. Named pipe, current user only, one JSON-RPC request per connection.
+// Named pipe, current user only, one JSON-RPC request per connection.
 using System;
 using System.IO;
 using System.IO.Pipes;
@@ -35,28 +35,41 @@ namespace VdcNavisLab.Addin
         {
             var sec = new PipeSecurity();
             var me = WindowsIdentity.GetCurrent().User;
-            sec.AddAccessRule(new PipeAccessRule(me, PipeAccessRights.ReadWrite, AccessControlType.Allow));
+            sec.AddAccessRule(new PipeAccessRule(me, PipeAccessRights.ReadWrite | PipeAccessRights.CreateNewInstance, AccessControlType.Allow));
             return sec;
+        }
+
+        private NamedPipeServerStream NewListener()
+        {
+            return new NamedPipeServerStream(_name, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances,
+                PipeTransmissionMode.Byte, PipeOptions.None, 0, 0, CurrentUserOnly());
         }
 
         private void Loop()
         {
+            // The next listening instance is created BEFORE the current connection is handed to a worker,
+            // so there is never a moment without a pipe for the next client (it would see "file not found").
+            NamedPipeServerStream next = null;
             while (!_stop)
             {
-                NamedPipeServerStream pipe = null;
+                NamedPipeServerStream current = null;
                 try
                 {
-                    pipe = new NamedPipeServerStream(_name, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances,
-                        PipeTransmissionMode.Byte, PipeOptions.None, 0, 0, CurrentUserOnly());
-                    pipe.WaitForConnection();
+                    current = next ?? NewListener();
+                    next = null;
+                    current.WaitForConnection();
                     if (_stop) break;
-                    var captured = pipe;
-                    pipe = null;  // ownership moves to the worker
+                    try { next = NewListener(); }
+                    catch (Exception ex) { Log.Write("cannot prepare next pipe instance: " + ex.GetType().Name + ": " + ex.Message); next = null; }
+                    var captured = current;
+                    current = null;  // ownership moves to the worker
                     new Thread(() => Serve(captured)) { IsBackground = true }.Start();
                 }
                 catch (IOException) { Thread.Sleep(100); }
-                finally { if (pipe != null) pipe.Dispose(); }
+                catch (Exception ex) { Log.Write("pipe loop: " + ex.GetType().Name + ": " + ex.Message); Thread.Sleep(1000); }
+                finally { if (current != null) current.Dispose(); }
             }
+            if (next != null) next.Dispose();
         }
 
         private void Serve(NamedPipeServerStream pipe)

@@ -2,6 +2,7 @@
 CLAUDE.md
 CLAUDE.local.md
 historial.md
+comparativo.md
 contexto/
 .claude/
 insumos/
@@ -22,6 +23,9 @@ htmlcov/
 # --- .NET ---
 bin/
 obj/
+*.dll
+# Autodesk assemblies copied locally for compiling: never commit
+addin/refs/
 *.user
 .vs/
 

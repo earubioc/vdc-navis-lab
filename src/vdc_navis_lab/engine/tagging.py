@@ -45,12 +45,22 @@ class Tagger:
                 return code
         return ""
 
-    def discipline_of(self, category: str, file_name: str) -> str:
-        return (
-            self.discipline_of_file(file_name)
-            or self._by_category.get(_fold(category), "")
-            or "OTHER"
-        )
+    def discipline_of(self, category: str, file_name: str, path: list[str] | tuple[str, ...] = ()) -> str:
+        """File name first, then the category, then any level of the selection tree (a federated model keeps the
+        source file and the Revit category as tree levels even when no property says so)."""
+        found = self.discipline_of_file(file_name) or self._by_category.get(_fold(category), "")
+        if found:
+            return found
+        for seg in path:
+            if "." in seg and _fold(seg.rsplit(".", 1)[1]).isalnum() and len(seg.rsplit(".", 1)[1]) <= 5:
+                found = self.discipline_of_file(seg)
+                if found:
+                    return found
+        for seg in reversed(path):
+            found = self._by_category.get(_fold(seg), "")
+            if found:
+                return found
+        return "OTHER"
 
     def tag(self, clashes: list[Clash]) -> dict[str, int]:
         """Tags every element in place. Returns how many clashes ended up with an OTHER side."""
@@ -58,8 +68,8 @@ class Tagger:
         for clash in clashes:
             for el in (clash.a, clash.b):
                 if not el.discipline:
-                    el.discipline = self.discipline_of(el.category, el.model)
+                    el.discipline = self.discipline_of(el.category, el.model, el.path)
                 if el.discipline == "OTHER":
-                    label = el.category or "(no category)"
+                    label = el.category or (el.path[-2] if len(el.path) > 1 else "") or "(no category)"
                     unclassified[label] = unclassified.get(label, 0) + 1
         return unclassified

@@ -4,7 +4,7 @@ Clash coordination for Autodesk Navisworks Manage, exposed as an [MCP](https://m
 
 Navisworks reports thousands of raw clashes. The hard part of coordination is deciding which ones matter, which discipline has to move, and which fifty of them are the same mistake repeated on every floor. `vdc-navis-lab` does that analysis in a deterministic engine and gives the assistant a small set of tools to work with the result, instead of handing it a pile of raw rows.
 
-> **Status: v0.1, early.** The analysis engine, file ingestion, exports, the MCP server and a Navisworks simulator are implemented and tested (87 tests). The Navisworks add-in is a draft that has not been compiled or run against a real Navisworks yet. See [What is verified](#what-is-verified).
+> **Status: v0.1, early.** The analysis engine, file ingestion, exports, the MCP server and a Navisworks simulator are implemented and tested (93 tests). The Navisworks add-in is built and verified against a real Navisworks Manage 2026: it reads the Clash Detective tests and analyses a real federated model. Writes into the open model are not implemented yet. See [What is verified](#what-is-verified).
 
 ## What it does
 
@@ -78,7 +78,7 @@ The add-in listens on a Windows named pipe restricted to the current user. File 
 | MCP server over stdio, 14 tools, write flow, read-only mode | Tested end to end against the simulator |
 | Clash Detective XML ingestion | Tested on a synthetic file in the common layout; real exports vary and need field testing |
 | Windows named pipe client | Written, not run on Windows |
-| Navisworks add-in (C#) | Draft, not compiled, Navisworks API calls unverified |
+| Navisworks add-in (C#) | Verified on Navisworks Manage 2026 (net48): connection, test listing, extraction and analysis of a real 654-clash model; writes not implemented |
 | Scoring weights and bands | Reasonable defaults, not calibrated on real projects |
 
 ## Documentation

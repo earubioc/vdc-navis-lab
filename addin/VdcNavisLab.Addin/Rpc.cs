@@ -1,4 +1,4 @@
-// DRAFT, not compiled. JSON-RPC 2.0 envelope and method dispatch. Wire format: docs/PROTOCOL.md.
+// JSON-RPC 2.0 envelope and method dispatch. Wire format: docs/PROTOCOL.md.
 using System;
 using System.Collections.Generic;
 using System.Web.Script.Serialization;
@@ -51,6 +51,7 @@ namespace VdcNavisLab.Addin
             {
                 { "hello", p => _h.Hello(Names()) },
                 { "doc.info", p => _h.DocInfo() },
+                { "doc.sample", p => _h.Sample(p) },
                 { "clash.tests", p => _h.ClashTests() },
                 { "clash.export", p => _h.StartExport(p) },
                 { "job.status", p => _h.JobStatus(p) },

@@ -27,6 +27,7 @@ class Element:
     category: str = ""
     family: str = ""
     model: str = ""
+    path: list[str] = field(default_factory=list)
     level: str = ""
     host_id: str = ""
     system: str = ""
@@ -54,6 +55,8 @@ class Element:
             value = getattr(self, attr)
             if value:
                 out[attr] = value
+        if self.path:
+            out["path"] = list(self.path)
         if self.props:
             out["props"] = self.props
         if self.bbox:
@@ -69,6 +72,7 @@ class Element:
             category=str(raw.get("category", "") or ""),
             family=str(raw.get("family", "") or ""),
             model=str(raw.get("model", "") or ""),
+            path=[str(x) for x in (raw.get("path") or []) if x],
             level=str(raw.get("level", "") or ""),
             host_id=str(raw.get("host_id", "") or ""),
             system=str(raw.get("system", "") or ""),
