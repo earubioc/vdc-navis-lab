@@ -2,7 +2,7 @@
 
 A step-by-step guide to installing and trying vdc-navis-lab. Every step says **where** to type it (which terminal) and **what you should see**.
 
-Current state: **v0.1**. It works with exported files and with a simulated Navisworks. The connection to a real Navisworks is not ready yet (the add-in is uncompiled), so today it cannot read or change your open model.
+Current state: **v0.1**. It works with exported files, with a simulated Navisworks and with a real Navisworks Manage 2026 (reads Clash Detective tests and analyses them; see section 10). It does not change the open model yet.
 
 ## 0. How to open a terminal ready for work
 
@@ -187,4 +187,32 @@ To analyze your own clashes without a live Navisworks: in Navisworks, Clash Dete
 
 ## 9. What it does not do yet
 
-Read or modify a real open Navisworks, create viewpoints, color the model or produce PDF. See [docs/ROADMAP.md](docs/ROADMAP.md).
+Changing a real open Navisworks (saving, setting statuses), creating viewpoints, colouring the model or producing a PDF. See [docs/ROADMAP.md](docs/ROADMAP.md).
+
+## 10. Connecting to a real Navisworks Manage 2026
+
+Done once per computer and Navisworks version. It needs the .NET 8 SDK (`dotnet --list-sdks` must list a version 8) and the environment from section 0.
+
+**Step 1. Copy the Navisworks DLLs used for compiling.** In PowerShell, from any folder (adjust the project path if yours differs):
+
+```powershell
+$dst = "D:\IA_WORK\MCP_NAVIS\addin\refs\2026"
+New-Item -ItemType Directory -Force $dst | Out-Null
+Copy-Item "C:\Program Files\Autodesk\Navisworks Manage 2026\Autodesk.Navisworks.*.dll" $dst
+```
+
+Listing that folder must show `Autodesk.Navisworks.Api.dll` and `Autodesk.Navisworks.Clash.dll`. These DLLs belong to Autodesk: they are not pushed to GitHub (the folder is in `.gitignore`).
+
+**Step 2. Build, install and test with one command:**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\IA_WORK\MCP_NAVIS\addin\todo.ps1
+```
+
+The script waits for you to close Navisworks, builds, installs the add-in to `%APPDATA%\Autodesk\Navisworks Manage 2026\Plugins\VdcNavisLab\`, asks you to open Navisworks and a model, and runs the checks. At the end it saves a real sample of your data and the analysis under `insumos\`.
+
+**What you should see:** `Compilación correcta` (build succeeded), `Pipe encontrado`, `Modelo abierto. Probando...`, the status with your Clash Detective tests, and an analysis with ranked issues.
+
+**If something fails**, run this with Navisworks open: `powershell -ExecutionPolicy Bypass -File D:\IA_WORK\MCP_NAVIS\addin\check.ps1`. It shows whether Navisworks is running, whether the add-in is installed, the add-in log (`%LOCALAPPDATA%\vdc-navis-lab\addin.log`) and whether the pipe exists.
+
+After this, the Claude Desktop connector (section 5) reads the open Navisworks with nothing else to change. Every time you update the project (section 3), run `todo.ps1` again to reinstall the add-in.

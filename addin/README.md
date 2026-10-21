@@ -1,6 +1,6 @@
 # Navisworks add-in
 
-**Status: compiles against the Navisworks Manage 2026 API (net48); never yet run inside Navisworks.** Calls marked `VERIFY` in `Handlers.cs` type-check, but their runtime behaviour is still unconfirmed.
+**Status: verified on Navisworks Manage 2026 (net48).** Connection, test listing and clash extraction work on a real federated NWD built from Revit exports. Not yet verified: Navisworks 2025 (its folder on the test machine had no API DLLs), writes (not implemented).
 
 ## What it does
 
