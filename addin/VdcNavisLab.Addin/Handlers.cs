@@ -57,6 +57,16 @@ namespace VdcNavisLab.Addin
             };
         }
 
+        private static string VersionText()
+        {
+            try
+            {
+                var v = Autodesk.Navisworks.Api.Application.Version;
+                return v.RuntimeProductName + " " + v.Runtime;
+            }
+            catch (Exception ex) { return "unknown (" + ex.GetType().Name + ")"; }
+        }
+
         public object Hello(string[] methods)
         {
             return UiThread.Run<object>(() =>
@@ -65,7 +75,7 @@ namespace VdcNavisLab.Addin
                 var doc = (d == null || d.IsClear) ? new Dictionary<string, object> { { "open", false } } : DocState(d);
                 return new Dictionary<string, object>
                 {
-                    { "product", "navisworks" }, { "version", Autodesk.Navisworks.Api.Application.Version.ToString() }, // VERIFY
+                    { "product", "navisworks" }, { "version", VersionText() },
                     { "api", 1 }, { "instance_id", _instance },
                     { "started", (Started - new DateTime(1970, 1, 1)).TotalSeconds }, { "doc", doc }, { "methods", methods }
                 };

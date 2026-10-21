@@ -11,6 +11,7 @@ import json
 import os
 import socket
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -100,10 +101,15 @@ class _Pipe(_Conn):  # Windows only; not exercised by the automated tests (see d
         super().__init__()
         if sys.platform != "win32":
             raise BridgeError(UNREACHABLE, "named pipes are only available on Windows")
-        try:
-            self._f = open(rf"\\.\pipe\{name}", "r+b", buffering=0)
-        except OSError as exc:
-            raise BridgeError(UNREACHABLE, f"cannot open pipe {name}: {exc.strerror or exc}") from None
+        last: OSError | None = None
+        for attempt in range(6):  # a busy or just-recycled pipe instance clears within milliseconds
+            try:
+                self._f = open(rf"\\.\pipe\{name}", "r+b", buffering=0)
+                return
+            except OSError as exc:
+                last = exc
+                time.sleep(0.05 * (attempt + 1))
+        raise BridgeError(UNREACHABLE, f"cannot open pipe {name}: {last.strerror or last}") from None
 
     def _recv(self, n: int) -> bytes:
         try:

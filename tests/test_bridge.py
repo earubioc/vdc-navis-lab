@@ -117,3 +117,37 @@ def test_registry_entry_of_a_killed_simulator_is_dropped_on_any_platform():
     stale.write_text(json.dumps({"endpoint": f"tcp://127.0.0.1:{port}", "pid": 0}), encoding="utf-8")
     assert not any(f"{port}" in str(e) for e in discover())
     assert not stale.exists()
+
+
+def test_pipe_open_retries_while_the_instance_is_recycled(monkeypatch):
+    from vdc_navis_lab.bridge import transport
+
+    calls = {"n": 0}
+
+    def flaky_open(path, mode, buffering=0):
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise FileNotFoundError(2, "The system cannot find the file specified")
+        return object()
+
+    monkeypatch.setattr(transport.sys, "platform", "win32")
+    monkeypatch.setattr(transport, "open", flaky_open, raising=False)
+    monkeypatch.setattr(transport.time, "sleep", lambda s: None)
+    transport._Pipe("vdc-navis-lab.1")
+    assert calls["n"] == 3
+
+
+def test_pipe_open_gives_up_with_unreachable(monkeypatch):
+    import pytest
+    from vdc_navis_lab.bridge import transport
+    from vdc_navis_lab.bridge.protocol import UNREACHABLE, BridgeError
+
+    def never(path, mode, buffering=0):
+        raise FileNotFoundError(2, "gone")
+
+    monkeypatch.setattr(transport.sys, "platform", "win32")
+    monkeypatch.setattr(transport, "open", never, raising=False)
+    monkeypatch.setattr(transport.time, "sleep", lambda s: None)
+    with pytest.raises(BridgeError) as e:
+        transport._Pipe("vdc-navis-lab.1")
+    assert e.value.code == UNREACHABLE

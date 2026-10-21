@@ -39,25 +39,36 @@ namespace VdcNavisLab.Addin
             return sec;
         }
 
+        private NamedPipeServerStream NewListener()
+        {
+            return new NamedPipeServerStream(_name, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances,
+                PipeTransmissionMode.Byte, PipeOptions.None, 0, 0, CurrentUserOnly());
+        }
+
         private void Loop()
         {
+            // The next listening instance is created BEFORE the current connection is handed to a worker,
+            // so there is never a moment without a pipe for the next client (it would see "file not found").
+            NamedPipeServerStream next = null;
             while (!_stop)
             {
-                NamedPipeServerStream pipe = null;
+                NamedPipeServerStream current = null;
                 try
                 {
-                    pipe = new NamedPipeServerStream(_name, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances,
-                        PipeTransmissionMode.Byte, PipeOptions.None, 0, 0, CurrentUserOnly());
-                    pipe.WaitForConnection();
+                    current = next ?? NewListener();
+                    next = null;
+                    current.WaitForConnection();
                     if (_stop) break;
-                    var captured = pipe;
-                    pipe = null;  // ownership moves to the worker
+                    next = NewListener();
+                    var captured = current;
+                    current = null;  // ownership moves to the worker
                     new Thread(() => Serve(captured)) { IsBackground = true }.Start();
                 }
                 catch (IOException) { Thread.Sleep(100); }
                 catch (Exception ex) { Log.Write("pipe loop: " + ex.GetType().Name + ": " + ex.Message); Thread.Sleep(1000); }
-                finally { if (pipe != null) pipe.Dispose(); }
+                finally { if (current != null) current.Dispose(); }
             }
+            if (next != null) next.Dispose();
         }
 
         private void Serve(NamedPipeServerStream pipe)

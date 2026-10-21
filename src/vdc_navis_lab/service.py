@@ -149,7 +149,7 @@ class App:
             ep, info, _ = self.bridge.resolve()
             tests = self.bridge.call_at(ep, "clash.tests")
         except BridgeError as exc:
-            return {"available": False, "reason": exc.code}
+            return {"available": False, "reason": exc.code, "detail": str(exc)}
         never = [t["name"] for t in tests if t.get("status") == "new"]
         return {"available": True, "instance_id": info["instance_id"], "count": len(tests), "never_run": never,
                 "items": [{k: t.get(k) for k in ("name", "kind", "status", "count")} for t in tests]}
