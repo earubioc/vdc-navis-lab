@@ -88,12 +88,15 @@ def coverage_view(result: AnalysisResult, lang: str) -> dict[str, Any]:
                          if es else f"the filter rejected every result of: {', '.join(cov.silenced_tests)}"))
     if cov.truncated:
         warnings.append("la exportación fue truncada; el análisis es parcial" if es else "export was truncated; analysis is partial")
+    if cov.skipped:
+        warnings.append((f"{cov.skipped} resultado(s) omitido(s): su(s) elemento(s) ya no existen en el modelo (no se analizaron)"
+                         if es else f"{cov.skipped} result(s) skipped: their element(s) no longer exist in the model (not analysed)"))
     if cov.unclassified:
         top = ", ".join(f"{k} ({v})" for k, v in list(cov.unclassified.items())[:4])
         warnings.append((f"elementos sin disciplina por categoría: {top}; ajustar perfil o asignar archivos"
                          if es else f"elements with no discipline: {top}; adjust the profile or assign files"))
     return {"complete": cov.complete, "tests": f"{cov.tests_ran}/{cov.tests_count}", "never_run": cov.never_run,
-            "pairs_without_results": cov.pairs_without_results, "warnings": warnings}
+            "pairs_without_results": cov.pairs_without_results, "skipped": cov.skipped, "warnings": warnings}
 
 
 def summary(result: AnalysisResult, profile: Profile, top: int = 10, lang: str | None = None) -> dict[str, Any]:

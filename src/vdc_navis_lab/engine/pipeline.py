@@ -91,10 +91,12 @@ class Coverage:
     silenced_tests: list[str] = field(default_factory=list)
     unclassified: dict[str, int] = field(default_factory=dict)
     truncated: bool = False
+    skipped: int = 0  # results dropped because an element no longer exists in the model
 
     @property
     def complete(self) -> bool:
-        return not (self.never_run or self.pairs_without_results or self.silenced_tests or self.truncated)
+        return not (self.never_run or self.pairs_without_results or self.silenced_tests
+                    or self.truncated or self.skipped)
 
 
 @dataclass(slots=True)
@@ -153,7 +155,8 @@ def _congestion(groups: list[list[Clash]], radius: float, saturation: float) -> 
 
 def _coverage(cs: ClashSet, profile: Profile, flt: Screened, unclassified: dict[str, int],
               seen_pairs: set[tuple[str, str]]) -> Coverage:
-    cov = Coverage(truncated=cs.truncated, unclassified=dict(sorted(unclassified.items(), key=lambda kv: -kv[1])[:8]))
+    cov = Coverage(truncated=cs.truncated, skipped=cs.skipped,
+                   unclassified=dict(sorted(unclassified.items(), key=lambda kv: -kv[1])[:8]))
     cov.tests_count = len(cs.tests)
     for t in cs.tests:
         if t.status == "new" and t.count == 0:

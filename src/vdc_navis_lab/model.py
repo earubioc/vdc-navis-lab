@@ -157,11 +157,12 @@ class ClashSet:
     document: dict[str, Any] = field(default_factory=dict)
     source: str = ""
     truncated: bool = False
+    skipped: int = 0  # results dropped by the extractor because an element no longer exists in the model
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "schema": SCHEMA, "source": self.source, "document": self.document,
-            "models": self.models, "truncated": self.truncated,
+            "models": self.models, "truncated": self.truncated, "skipped": self.skipped,
             "tests": [t.to_dict() for t in self.tests],
             "clashes": [c.to_dict() for c in self.clashes],
         }
@@ -177,6 +178,7 @@ class ClashSet:
             document=dict(raw.get("document") or {}),
             source=str(raw.get("source", "")),
             truncated=bool(raw.get("truncated", False)),
+            skipped=int(raw.get("skipped", 0) or 0),
         )
 
 

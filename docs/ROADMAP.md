@@ -5,7 +5,8 @@
 1. **Chunked extraction.** Process a few tests per UI slice so Navisworks stays responsive during long exports.
 2. **Field-test ingestion** with real Clash Detective XML and CSV exports from different Navisworks versions and languages.
 3. **Calibrate the profile** on real projects. The first real model (654 clashes) produced 52 critical and 60 high of 113 issues, and each of the ten top issues reported penetration equal to 100% of the smaller element's dimension (pipes and conduits crossing floors/walls). `score.sleeve` now dampens and caps clean through-crossings of a floor/wall by a small MEP run, keeping a beam or column at full severity; not yet confirmed against a real model (needs Navisworks open).
-4. **Report skipped results.** The add-in skips results whose elements are missing from the model (710 listed, 654 exported in the first real model) and should say so in the analysis coverage.
+
+The add-in now reports `skipped`, the count of results it dropped because an element no longer exists in the model (710 listed, 654 exported in the first real model); `nw_analyze`'s coverage warns about it and `complete` turns false, instead of staying silent about it.
 
 ## Add-in methods not yet implemented
 

@@ -9,6 +9,7 @@ from vdc_navis_lab.engine.scoring import Scorer, mover_and_anchor
 from vdc_navis_lab.engine.tagging import Tagger
 from vdc_navis_lab.model import CLEARANCE, HARD, Clash, ClashSet, Element, TestInfo
 from vdc_navis_lab.profile import Profile, ProfileError
+from vdc_navis_lab.views import coverage_view
 
 
 def el(disc_model="", cat="", **kw):
@@ -240,6 +241,16 @@ def test_coverage_is_honest_about_absence(result):
     assert "ARC-HVAC" in cov.pairs_without_results and "FIRE-HVAC" in cov.pairs_without_results
     assert "ARC vs STR" in cov.silenced_tests
     assert not cov.complete
+
+
+def test_coverage_reports_skipped_results(tower, profile):
+    tower.skipped = 4  # the add-in dropped 4 results whose elements no longer exist in the model
+    r = analyze(tower, profile)
+    assert r.coverage.skipped == 4
+    assert not r.coverage.complete, "a skipped result is not honestly 'complete' coverage"
+    cov = coverage_view(r, "es")
+    assert cov["skipped"] == 4
+    assert any("omitido" in w for w in cov["warnings"])
 
 
 def test_analysis_is_deterministic(tower, profile):

@@ -396,6 +396,7 @@ namespace VdcNavisLab.Addin
                 var tests = new List<object>();
                 var clashes = new List<object>();
                 bool truncated = false;
+                int skipped = 0;
                 foreach (var t in Tests(d))
                 {
                     if (job.Cancelled) { job.Finish("cancelled", null, ""); return; }
@@ -407,7 +408,7 @@ namespace VdcNavisLab.Addin
                     foreach (var r in results)
                     {
                         if (limit > 0 && clashes.Count >= limit) { truncated = true; break; }
-                        if (r.Item1 == null || r.Item2 == null) continue;
+                        if (r.Item1 == null || r.Item2 == null) { skipped++; continue; }  // element no longer in the model
                         var a = Describe(d, r.Item1); var b = Describe(d, r.Item2);
                         clashes.Add(new Dictionary<string, object> {
                             { "id", r.Guid.ToString() }, { "test", t.DisplayName }, { "name", r.DisplayName },
@@ -419,7 +420,7 @@ namespace VdcNavisLab.Addin
                 job.Finish("completed", new Dictionary<string, object> {
                     { "schema", "vdc_navis_lab.clashset/1" }, { "source", "navisworks" }, { "document", DocState(d) },
                     { "models", d.Models.Select(m => System.IO.Path.GetFileName(m.FileName ?? "")).ToArray() },
-                    { "truncated", truncated }, { "tests", tests }, { "clashes", clashes } }, "");
+                    { "truncated", truncated }, { "skipped", skipped }, { "tests", tests }, { "clashes", clashes } }, "");
             }
             catch (RpcException ex) { job.Finish("failed", null, ex.Message); }
             catch (Exception ex) { job.Finish("failed", null, ex.GetType().Name); }
