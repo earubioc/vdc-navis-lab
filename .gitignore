@@ -1,0 +1,32 @@
+# --- Claude working documents (private context, session history) ---
+CLAUDE.md
+CLAUDE.local.md
+historial.md
+contexto/
+.claude/
+insumos/
+*.claude.md
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+.coverage
+htmlcov/
+
+# --- .NET ---
+bin/
+obj/
+*.user
+.vs/
+
+# --- Local runtime data ---
+.navis_mcp/
+*.log
+.DS_Store
+Thumbs.db

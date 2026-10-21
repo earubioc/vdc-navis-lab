@@ -1,0 +1,138 @@
+# navis-mcp default profile. Every threshold the engine uses lives here.
+# Copy this file, edit it, and load it with nw_profile(action="load", path=...).
+
+schema = "navis_mcp.profile/1"
+name = "default"
+lang = "es"                    # "es" or "en": language of generated text
+expected_pairs = ["STR-HVAC", "STR-PLB", "STR-ELE", "HVAC-PLB", "HVAC-ELE", "PLB-ELE", "ARC-HVAC", "FIRE-HVAC"]
+
+# --- disciplines --------------------------------------------------------
+# mobility: 0 = never moves, 1 = trivial to reroute. Decides who must move.
+# name_patterns are matched against the tokens of the model file name (strongest signal):
+# a pattern matches a token when equal, or, for patterns of 4+ letters, when the token starts with it;
+# categories are matched against the element category (case-insensitive).
+
+[disciplines.STR]
+label = { es = "Estructura", en = "Structure" }
+mobility = 0.05
+name_patterns = ["est", "str", "estr", "struct"]
+categories = ["structural framing", "structural columns", "structural foundations", "structural trusses",
+  "floors", "slabs", "rebar", "armazón estructural", "pilares estructurales", "cimentaciones estructurales",
+  "suelos", "losas", "vigas", "columnas"]
+
+[disciplines.ARC]
+label = { es = "Arquitectura", en = "Architecture" }
+mobility = 0.25
+name_patterns = ["arq", "arqu", "arch"]
+categories = ["walls", "ceilings", "doors", "windows", "stairs", "railings", "roofs", "curtain panels",
+  "muros", "techos", "cielos rasos", "puertas", "ventanas", "escaleras", "barandillas", "cubiertas",
+  "modelos genéricos", "generic models"]
+
+[disciplines.HVAC]
+label = { es = "Climatización", en = "HVAC" }
+mobility = 0.45
+name_patterns = ["hvac", "mec", "meca", "mech", "clima", "aire", "ventil"]
+categories = ["ducts", "duct fittings", "duct accessories", "air terminals", "mechanical equipment", "flex ducts",
+  "conductos", "uniones de conducto", "accesorios de conducto", "terminales de aire", "equipos mecánicos"]
+
+[disciplines.PLB]
+label = { es = "Hidráulica", en = "Plumbing" }
+mobility = 0.55
+name_patterns = ["hid", "hidr", "plb", "plum", "agua"]
+categories = ["pipes", "pipe fittings", "pipe accessories", "plumbing fixtures", "flex pipes",
+  "tuberías", "uniones de tubería", "accesorios de tubería", "aparatos sanitarios"]
+
+[disciplines.DRN]
+label = { es = "Drenaje", en = "Drainage" }
+mobility = 0.15            # gravity lines keep their slope: they rarely move
+name_patterns = ["san", "sani", "drn", "desag", "drenaje"]
+categories = ["sanitary", "drainage", "sanitaria"]
+
+[disciplines.FIRE]
+label = { es = "Contra incendio", en = "Fire protection" }
+mobility = 0.6
+name_patterns = ["rci", "fire", "fp", "incend", "sprink", "rociad"]
+categories = ["sprinklers", "fire protection", "rociadores", "dispositivos de alarma de incendios"]
+
+[disciplines.ELE]
+label = { es = "Eléctrica", en = "Electrical" }
+mobility = 0.75
+name_patterns = ["ele", "elec"]
+# In Spanish Revit, "Tubos" are CONDUITS (electrical) and "Tuberías" are PIPES (plumbing).
+categories = ["cable trays", "cable tray fittings", "conduits", "conduit fittings", "electrical equipment",
+  "electrical fixtures", "lighting fixtures", "data devices", "communication devices",
+  "bandejas de cables", "tubos", "uniones de tubo", "equipos eléctricos", "aparatos eléctricos", "luminarias"]
+
+[disciplines.OTHER]
+label = { es = "Sin clasificar", en = "Unclassified" }
+mobility = 0.5
+name_patterns = []
+categories = []
+
+# --- noise filter --------------------------------------------------------
+
+[noise]
+min_depth_m = 0.005          # hard clashes shallower than this are tolerance noise
+drop_closed = true           # approved / resolved results leave the ranking (they stay counted)
+self_assembly = true         # an element clashing with its own assembly is not an interference
+opening_categories = ["doors", "windows", "openings", "puertas", "ventanas", "aberturas"]
+opening_family_hints = ["sleeve", "manguito", "pasamuro", "opening", "abertura"]
+host_types = ["walls", "floors", "muros", "suelos", "losas", "slabs"]
+opening_contain_ratio = 0.8  # share of the opening bbox that must lie inside the host bbox
+
+# --- clustering ----------------------------------------------------------
+
+[cluster]
+eps_m = 1.5                  # clashes of one discipline pair closer than this are one problem
+max_span_m = 12.0            # larger groups are bisected so one issue stays a place you can walk to
+
+# --- scoring -------------------------------------------------------------
+
+[score.weights]
+penetration = 0.25
+criticality = 0.20
+immovability = 0.20
+size = 0.15
+crowding = 0.10
+clearance = 0.10             # only applies to clearance results; renormalised away otherwise
+
+[score.params]
+size_saturation = 20         # clashes in one issue at which "size" reaches 1.0
+crowd_radius_m = 5.0
+crowd_saturation = 5    # distinct disciplines within the radius at which crowding reaches 1.0
+reference_depth_m = 0.30     # used when no bounding box is available to size the penetration
+
+[score.bands]                # priority = highest band whose minimum the score reaches
+critical = 70
+high = 52
+medium = 35
+
+# Floors: a hard clash this deep between these disciplines is never below `floor`.
+[[score.gates]]
+pair = "STR-*"
+min_depth_m = 0.05
+floor = "high"
+
+[[score.gates]]
+pair = "FIRE-*"
+min_depth_m = 0.02
+floor = "high"
+
+[score.criticality]          # 0..1, keyed by sorted pair. Missing pairs use `default`.
+default = 0.5
+"STR-HVAC" = 0.90
+"STR-PLB" = 0.85
+"STR-DRN" = 0.95
+"STR-ELE" = 0.70
+"STR-FIRE" = 0.85
+"HVAC-PLB" = 0.75
+"HVAC-ELE" = 0.60
+"PLB-ELE" = 0.80
+"ARC-HVAC" = 0.55
+"FIRE-HVAC" = 0.80
+
+# --- root causes ---------------------------------------------------------
+
+[causes]
+shared_element_min = 4       # one movable element involved in this many issues is one decision
+repeat_levels_min = 3        # the same detail on this many levels is one decision

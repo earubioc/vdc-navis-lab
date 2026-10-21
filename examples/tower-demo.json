@@ -1,0 +1,3366 @@
+{
+ "schema": "navis_mcp.clashset/1",
+ "source": "synthetic",
+ "document": {
+  "title": "TORRE-DEMO.nwf",
+  "fingerprint": "sim-torre-demo-0001"
+ },
+ "models": [
+  "TORRE-ARQ.nwc",
+  "TORRE-ELE.nwc",
+  "TORRE-EST.nwc",
+  "TORRE-HID.nwc",
+  "TORRE-HVAC.nwc",
+  "TORRE-RCI.nwc"
+ ],
+ "truncated": false,
+ "tests": [
+  {
+   "name": "STR vs HVAC",
+   "kind": "hard",
+   "status": "active",
+   "tolerance": 0.0,
+   "count": 23
+  },
+  {
+   "name": "HVAC vs PLB",
+   "kind": "hard",
+   "status": "active",
+   "tolerance": 0.0,
+   "count": 8
+  },
+  {
+   "name": "STR vs PLB",
+   "kind": "hard",
+   "status": "active",
+   "tolerance": 0.0,
+   "count": 4
+  },
+  {
+   "name": "ELE vs PLB",
+   "kind": "hard",
+   "status": "reviewed",
+   "tolerance": 0.0,
+   "count": 5
+  },
+  {
+   "name": "ARC vs STR",
+   "kind": "hard",
+   "status": "active",
+   "tolerance": 0.0,
+   "count": 5
+  },
+  {
+   "name": "ELE vs ARC",
+   "kind": "hard",
+   "status": "active",
+   "tolerance": 0.0,
+   "count": 5
+  },
+  {
+   "name": "HVAC vs ELE clearance",
+   "kind": "clearance",
+   "status": "active",
+   "tolerance": 0.05,
+   "count": 3
+  },
+  {
+   "name": "FIRE vs STR",
+   "kind": "hard",
+   "status": "active",
+   "tolerance": 0.0,
+   "count": 1
+  },
+  {
+   "name": "ELE vs STR",
+   "kind": "hard",
+   "status": "new",
+   "tolerance": 0.0,
+   "count": 0
+  }
+ ],
+ "clashes": [
+  {
+   "id": "c0001",
+   "test": "STR vs HVAC",
+   "name": "Clash1",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.09209825942831111,
+   "point": [
+    8,
+    4,
+    2.7
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:beam1-0",
+    "name": "Beam 1.0",
+    "category": "Structural Framing",
+    "family": "Concrete-Rectangular Beam",
+    "model": "TORRE-EST.nwc",
+    "level": "Level \"L1\", #9001",
+    "props": {
+     "Id": "beam1-0"
+    },
+    "bbox": [
+     [
+      0.0,
+      3.85,
+      2.55
+     ],
+     [
+      30.0,
+      4.15,
+      3.05
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HVAC.nwc:duct1",
+    "name": "Supply duct L1",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level \"L1\", #9001",
+    "system": "Supply Air 1",
+    "props": {
+     "Id": "duct1"
+    },
+    "bbox": [
+     [
+      7.8,
+      0.0,
+      2.6
+     ],
+     [
+      8.2,
+      20.0,
+      2.9
+     ]
+    ]
+   },
+   "level": "Level \"L1\", #9001"
+  },
+  {
+   "id": "c0002",
+   "test": "STR vs HVAC",
+   "name": "Clash2",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.06961039261018526,
+   "point": [
+    8,
+    10,
+    2.7
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:beam1-1",
+    "name": "Beam 1.1",
+    "category": "Structural Framing",
+    "family": "Concrete-Rectangular Beam",
+    "model": "TORRE-EST.nwc",
+    "level": "Level \"L1\", #9001",
+    "props": {
+     "Id": "beam1-1"
+    },
+    "bbox": [
+     [
+      0.0,
+      9.85,
+      2.55
+     ],
+     [
+      30.0,
+      10.15,
+      3.05
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HVAC.nwc:duct1",
+    "name": "Supply duct L1",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level \"L1\", #9001",
+    "system": "Supply Air 1",
+    "props": {
+     "Id": "duct1"
+    },
+    "bbox": [
+     [
+      7.8,
+      0.0,
+      2.6
+     ],
+     [
+      8.2,
+      20.0,
+      2.9
+     ]
+    ]
+   },
+   "level": "Level \"L1\", #9001"
+  },
+  {
+   "id": "c0003",
+   "test": "STR vs HVAC",
+   "name": "Clash3",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.134621481495181,
+   "point": [
+    8,
+    16,
+    2.7
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:beam1-2",
+    "name": "Beam 1.2",
+    "category": "Structural Framing",
+    "family": "Concrete-Rectangular Beam",
+    "model": "TORRE-EST.nwc",
+    "level": "Level \"L1\", #9001",
+    "props": {
+     "Id": "beam1-2"
+    },
+    "bbox": [
+     [
+      0.0,
+      15.85,
+      2.55
+     ],
+     [
+      30.0,
+      16.15,
+      3.05
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HVAC.nwc:duct1",
+    "name": "Supply duct L1",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level \"L1\", #9001",
+    "system": "Supply Air 1",
+    "props": {
+     "Id": "duct1"
+    },
+    "bbox": [
+     [
+      7.8,
+      0.0,
+      2.6
+     ],
+     [
+      8.2,
+      20.0,
+      2.9
+     ]
+    ]
+   },
+   "level": "Level \"L1\", #9001"
+  },
+  {
+   "id": "c0004",
+   "test": "ELE vs PLB",
+   "name": "Clash4",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.03,
+   "point": [
+    30,
+    10,
+    2.5
+   ],
+   "a": {
+    "id": "TORRE-ELE.nwc:tray1",
+    "name": "Tray L1",
+    "category": "Cable Trays",
+    "family": "Cable Tray:200x60",
+    "model": "TORRE-ELE.nwc",
+    "level": "Level \"L1\", #9001",
+    "props": {
+     "Id": "tray1"
+    },
+    "bbox": [
+     [
+      27.0,
+      9.9,
+      2.47
+     ],
+     [
+      33.0,
+      10.1,
+      2.53
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HID.nwc:cu1",
+    "name": "Copper 50 L1",
+    "category": "Pipes",
+    "family": "Pipe Types:Copper 50",
+    "model": "TORRE-HID.nwc",
+    "level": "Level \"L1\", #9001",
+    "system": "DHW",
+    "props": {
+     "Id": "cu1"
+    },
+    "bbox": [
+     [
+      29.975,
+      6.0,
+      2.475
+     ],
+     [
+      30.025,
+      14.0,
+      2.525
+     ]
+    ]
+   },
+   "level": "Level \"L1\", #9001"
+  },
+  {
+   "id": "c0005",
+   "test": "STR vs HVAC",
+   "name": "Clash5",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.06,
+   "point": [
+    35,
+    35,
+    0.0
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:slab1",
+    "name": "Slab L1",
+    "category": "Floors",
+    "family": "Floor:Concrete 200",
+    "model": "TORRE-EST.nwc",
+    "level": "Level \"L1\", #9001",
+    "props": {
+     "Id": "slab1"
+    },
+    "bbox": [
+     [
+      -5.0,
+      -5.0,
+      -0.1
+     ],
+     [
+      35.0,
+      35.0,
+      0.1
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HVAC.nwc:riser",
+    "name": "Riser duct R1",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level \"L1\", #9001",
+    "system": "Exhaust",
+    "props": {
+     "Id": "riser"
+    },
+    "bbox": [
+     [
+      34.7,
+      34.7,
+      0.0
+     ],
+     [
+      35.3,
+      35.3,
+      16.0
+     ]
+    ]
+   },
+   "level": "Level \"L1\", #9001"
+  },
+  {
+   "id": "c0006",
+   "test": "ARC vs STR",
+   "name": "Clash6",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.2,
+   "point": [
+    12,
+    20,
+    1.05
+   ],
+   "a": {
+    "id": "TORRE-ARQ.nwc:wall1",
+    "name": "Wall L1",
+    "category": "Walls",
+    "family": "Basic Wall",
+    "model": "TORRE-ARQ.nwc",
+    "level": "Level \"L1\", #9001",
+    "props": {
+     "Id": "wall1"
+    },
+    "bbox": [
+     [
+      11.9,
+      16.0,
+      0.0
+     ],
+     [
+      12.1,
+      24.0,
+      3.0
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-ARQ.nwc:door1",
+    "name": "Door L1",
+    "category": "Doors",
+    "family": "Single-Flush",
+    "model": "TORRE-ARQ.nwc",
+    "level": "Level \"L1\", #9001",
+    "props": {
+     "Id": "door1"
+    },
+    "bbox": [
+     [
+      11.9,
+      19.55,
+      0.0
+     ],
+     [
+      12.1,
+      20.45,
+      2.1
+     ]
+    ]
+   },
+   "level": "Level \"L1\", #9001"
+  },
+  {
+   "id": "c0007",
+   "test": "ELE vs ARC",
+   "name": "Clash7",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.025,
+   "point": [
+    12,
+    24,
+    1.6
+   ],
+   "a": {
+    "id": "TORRE-ELE.nwc:cond1",
+    "name": "Conduit L1",
+    "category": "Conduits",
+    "family": "Conduit:EMT 25",
+    "model": "TORRE-ELE.nwc",
+    "level": "Level \"L1\", #9001",
+    "props": {
+     "Id": "cond1"
+    },
+    "bbox": [
+     [
+      11.985,
+      22.5,
+      1.5850000000000002
+     ],
+     [
+      12.015,
+      25.5,
+      1.615
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-ARQ.nwc:wall1",
+    "name": "Wall L1",
+    "category": "Walls",
+    "family": "Basic Wall",
+    "model": "TORRE-ARQ.nwc",
+    "level": "Level \"L1\", #9001",
+    "props": {
+     "Id": "wall1"
+    },
+    "bbox": [
+     [
+      11.9,
+      16.0,
+      0.0
+     ],
+     [
+      12.1,
+      24.0,
+      3.0
+     ]
+    ]
+   },
+   "level": "Level \"L1\", #9001"
+  },
+  {
+   "id": "c0008",
+   "test": "STR vs HVAC",
+   "name": "Clash8",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.059416717266780564,
+   "point": [
+    8,
+    4,
+    5.9
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:beam2-0",
+    "name": "Beam 2.0",
+    "category": "Structural Framing",
+    "family": "Concrete-Rectangular Beam",
+    "model": "TORRE-EST.nwc",
+    "level": "Level L2",
+    "props": {
+     "Id": "beam2-0"
+    },
+    "bbox": [
+     [
+      0.0,
+      3.85,
+      5.75
+     ],
+     [
+      30.0,
+      4.15,
+      6.25
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HVAC.nwc:duct2",
+    "name": "Supply duct L2",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level L2",
+    "system": "Supply Air 1",
+    "props": {
+     "Id": "duct2"
+    },
+    "bbox": [
+     [
+      7.8,
+      0.0,
+      5.8
+     ],
+     [
+      8.2,
+      20.0,
+      6.1000000000000005
+     ]
+    ]
+   },
+   "level": "Level L2"
+  },
+  {
+   "id": "c0009",
+   "test": "STR vs HVAC",
+   "name": "Clash9",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.1196646605598696,
+   "point": [
+    8,
+    10,
+    5.9
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:beam2-1",
+    "name": "Beam 2.1",
+    "category": "Structural Framing",
+    "family": "Concrete-Rectangular Beam",
+    "model": "TORRE-EST.nwc",
+    "level": "Level L2",
+    "props": {
+     "Id": "beam2-1"
+    },
+    "bbox": [
+     [
+      0.0,
+      9.85,
+      5.75
+     ],
+     [
+      30.0,
+      10.15,
+      6.25
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HVAC.nwc:duct2",
+    "name": "Supply duct L2",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level L2",
+    "system": "Supply Air 1",
+    "props": {
+     "Id": "duct2"
+    },
+    "bbox": [
+     [
+      7.8,
+      0.0,
+      5.8
+     ],
+     [
+      8.2,
+      20.0,
+      6.1000000000000005
+     ]
+    ]
+   },
+   "level": "Level L2"
+  },
+  {
+   "id": "c0010",
+   "test": "STR vs HVAC",
+   "name": "Clash10",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.09753955919863613,
+   "point": [
+    8,
+    16,
+    5.9
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:beam2-2",
+    "name": "Beam 2.2",
+    "category": "Structural Framing",
+    "family": "Concrete-Rectangular Beam",
+    "model": "TORRE-EST.nwc",
+    "level": "Level L2",
+    "props": {
+     "Id": "beam2-2"
+    },
+    "bbox": [
+     [
+      0.0,
+      15.85,
+      5.75
+     ],
+     [
+      30.0,
+      16.15,
+      6.25
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HVAC.nwc:duct2",
+    "name": "Supply duct L2",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level L2",
+    "system": "Supply Air 1",
+    "props": {
+     "Id": "duct2"
+    },
+    "bbox": [
+     [
+      7.8,
+      0.0,
+      5.8
+     ],
+     [
+      8.2,
+      20.0,
+      6.1000000000000005
+     ]
+    ]
+   },
+   "level": "Level L2"
+  },
+  {
+   "id": "c0011",
+   "test": "HVAC vs PLB",
+   "name": "Clash11",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.04231995699098827,
+   "point": [
+    21.0,
+    12,
+    5.4
+   ],
+   "a": {
+    "id": "TORRE-HVAC.nwc:duct-rack",
+    "name": "Duct over rack",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level L2",
+    "system": "Supply Air 2",
+    "props": {
+     "Id": "duct-rack"
+    },
+    "bbox": [
+     [
+      21.75,
+      9.0,
+      5.2
+     ],
+     [
+      22.25,
+      15.0,
+      5.6000000000000005
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HID.nwc:rack0",
+    "name": "Rack pipe 0",
+    "category": "Pipes",
+    "family": "Pipe Types:Steel 100",
+    "model": "TORRE-HID.nwc",
+    "level": "Level L2",
+    "system": "CHW",
+    "props": {
+     "Id": "rack0"
+    },
+    "bbox": [
+     [
+      20.95,
+      9.0,
+      5.3500000000000005
+     ],
+     [
+      21.05,
+      15.0,
+      5.45
+     ]
+    ]
+   },
+   "level": "Level L2"
+  },
+  {
+   "id": "c0012",
+   "test": "HVAC vs PLB",
+   "name": "Clash12",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.06029742932757681,
+   "point": [
+    21.4,
+    12,
+    5.4
+   ],
+   "a": {
+    "id": "TORRE-HVAC.nwc:duct-rack",
+    "name": "Duct over rack",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level L2",
+    "system": "Supply Air 2",
+    "props": {
+     "Id": "duct-rack"
+    },
+    "bbox": [
+     [
+      21.75,
+      9.0,
+      5.2
+     ],
+     [
+      22.25,
+      15.0,
+      5.6000000000000005
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HID.nwc:rack1",
+    "name": "Rack pipe 1",
+    "category": "Pipes",
+    "family": "Pipe Types:Steel 100",
+    "model": "TORRE-HID.nwc",
+    "level": "Level L2",
+    "system": "CHW",
+    "props": {
+     "Id": "rack1"
+    },
+    "bbox": [
+     [
+      21.349999999999998,
+      9.0,
+      5.3500000000000005
+     ],
+     [
+      21.45,
+      15.0,
+      5.45
+     ]
+    ]
+   },
+   "level": "Level L2"
+  },
+  {
+   "id": "c0013",
+   "test": "HVAC vs PLB",
+   "name": "Clash13",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.041499826337679395,
+   "point": [
+    21.8,
+    12,
+    5.4
+   ],
+   "a": {
+    "id": "TORRE-HVAC.nwc:duct-rack",
+    "name": "Duct over rack",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level L2",
+    "system": "Supply Air 2",
+    "props": {
+     "Id": "duct-rack"
+    },
+    "bbox": [
+     [
+      21.75,
+      9.0,
+      5.2
+     ],
+     [
+      22.25,
+      15.0,
+      5.6000000000000005
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HID.nwc:rack2",
+    "name": "Rack pipe 2",
+    "category": "Pipes",
+    "family": "Pipe Types:Steel 100",
+    "model": "TORRE-HID.nwc",
+    "level": "Level L2",
+    "system": "CHW",
+    "props": {
+     "Id": "rack2"
+    },
+    "bbox": [
+     [
+      21.75,
+      9.0,
+      5.3500000000000005
+     ],
+     [
+      21.85,
+      15.0,
+      5.45
+     ]
+    ]
+   },
+   "level": "Level L2"
+  },
+  {
+   "id": "c0014",
+   "test": "HVAC vs PLB",
+   "name": "Clash14",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.05734582734649543,
+   "point": [
+    22.2,
+    12,
+    5.4
+   ],
+   "a": {
+    "id": "TORRE-HVAC.nwc:duct-rack",
+    "name": "Duct over rack",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level L2",
+    "system": "Supply Air 2",
+    "props": {
+     "Id": "duct-rack"
+    },
+    "bbox": [
+     [
+      21.75,
+      9.0,
+      5.2
+     ],
+     [
+      22.25,
+      15.0,
+      5.6000000000000005
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HID.nwc:rack3",
+    "name": "Rack pipe 3",
+    "category": "Pipes",
+    "family": "Pipe Types:Steel 100",
+    "model": "TORRE-HID.nwc",
+    "level": "Level L2",
+    "system": "CHW",
+    "props": {
+     "Id": "rack3"
+    },
+    "bbox": [
+     [
+      22.15,
+      9.0,
+      5.3500000000000005
+     ],
+     [
+      22.25,
+      15.0,
+      5.45
+     ]
+    ]
+   },
+   "level": "Level L2"
+  },
+  {
+   "id": "c0015",
+   "test": "HVAC vs PLB",
+   "name": "Clash15",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.042794216942984756,
+   "point": [
+    22.6,
+    12,
+    5.4
+   ],
+   "a": {
+    "id": "TORRE-HVAC.nwc:duct-rack",
+    "name": "Duct over rack",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level L2",
+    "system": "Supply Air 2",
+    "props": {
+     "Id": "duct-rack"
+    },
+    "bbox": [
+     [
+      21.75,
+      9.0,
+      5.2
+     ],
+     [
+      22.25,
+      15.0,
+      5.6000000000000005
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HID.nwc:rack4",
+    "name": "Rack pipe 4",
+    "category": "Pipes",
+    "family": "Pipe Types:Steel 100",
+    "model": "TORRE-HID.nwc",
+    "level": "Level L2",
+    "system": "CHW",
+    "props": {
+     "Id": "rack4"
+    },
+    "bbox": [
+     [
+      22.55,
+      9.0,
+      5.3500000000000005
+     ],
+     [
+      22.650000000000002,
+      15.0,
+      5.45
+     ]
+    ]
+   },
+   "level": "Level L2"
+  },
+  {
+   "id": "c0016",
+   "test": "ELE vs PLB",
+   "name": "Clash16",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.03,
+   "point": [
+    30,
+    10,
+    5.7
+   ],
+   "a": {
+    "id": "TORRE-ELE.nwc:tray2",
+    "name": "Tray L2",
+    "category": "Cable Trays",
+    "family": "Cable Tray:200x60",
+    "model": "TORRE-ELE.nwc",
+    "level": "Level L2",
+    "props": {
+     "Id": "tray2"
+    },
+    "bbox": [
+     [
+      27.0,
+      9.9,
+      5.67
+     ],
+     [
+      33.0,
+      10.1,
+      5.73
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HID.nwc:cu2",
+    "name": "Copper 50 L2",
+    "category": "Pipes",
+    "family": "Pipe Types:Copper 50",
+    "model": "TORRE-HID.nwc",
+    "level": "Level L2",
+    "system": "DHW",
+    "props": {
+     "Id": "cu2"
+    },
+    "bbox": [
+     [
+      29.975,
+      6.0,
+      5.675
+     ],
+     [
+      30.025,
+      14.0,
+      5.7250000000000005
+     ]
+    ]
+   },
+   "level": "Level L2"
+  },
+  {
+   "id": "c0017",
+   "test": "STR vs HVAC",
+   "name": "Clash17",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.06,
+   "point": [
+    35,
+    35,
+    3.2
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:slab2",
+    "name": "Slab L2",
+    "category": "Floors",
+    "family": "Floor:Concrete 200",
+    "model": "TORRE-EST.nwc",
+    "level": "Level L2",
+    "props": {
+     "Id": "slab2"
+    },
+    "bbox": [
+     [
+      -5.0,
+      -5.0,
+      3.1
+     ],
+     [
+      35.0,
+      35.0,
+      3.3000000000000003
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HVAC.nwc:riser",
+    "name": "Riser duct R1",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level \"L1\", #9001",
+    "system": "Exhaust",
+    "props": {
+     "Id": "riser"
+    },
+    "bbox": [
+     [
+      34.7,
+      34.7,
+      0.0
+     ],
+     [
+      35.3,
+      35.3,
+      16.0
+     ]
+    ]
+   },
+   "level": "Level L2"
+  },
+  {
+   "id": "c0018",
+   "test": "ARC vs STR",
+   "name": "Clash18",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.2,
+   "point": [
+    12,
+    20,
+    4.25
+   ],
+   "a": {
+    "id": "TORRE-ARQ.nwc:wall2",
+    "name": "Wall L2",
+    "category": "Walls",
+    "family": "Basic Wall",
+    "model": "TORRE-ARQ.nwc",
+    "level": "Level L2",
+    "props": {
+     "Id": "wall2"
+    },
+    "bbox": [
+     [
+      11.9,
+      16.0,
+      3.2
+     ],
+     [
+      12.1,
+      24.0,
+      6.2
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-ARQ.nwc:door2",
+    "name": "Door L2",
+    "category": "Doors",
+    "family": "Single-Flush",
+    "model": "TORRE-ARQ.nwc",
+    "level": "Level L2",
+    "props": {
+     "Id": "door2"
+    },
+    "bbox": [
+     [
+      11.9,
+      19.55,
+      3.2
+     ],
+     [
+      12.1,
+      20.45,
+      5.3
+     ]
+    ]
+   },
+   "level": "Level L2"
+  },
+  {
+   "id": "c0019",
+   "test": "ELE vs ARC",
+   "name": "Clash19",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.025,
+   "point": [
+    12,
+    24,
+    4.800000000000001
+   ],
+   "a": {
+    "id": "TORRE-ELE.nwc:cond2",
+    "name": "Conduit L2",
+    "category": "Conduits",
+    "family": "Conduit:EMT 25",
+    "model": "TORRE-ELE.nwc",
+    "level": "Level L2",
+    "props": {
+     "Id": "cond2"
+    },
+    "bbox": [
+     [
+      11.985,
+      22.5,
+      4.785000000000001
+     ],
+     [
+      12.015,
+      25.5,
+      4.815
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-ARQ.nwc:wall2",
+    "name": "Wall L2",
+    "category": "Walls",
+    "family": "Basic Wall",
+    "model": "TORRE-ARQ.nwc",
+    "level": "Level L2",
+    "props": {
+     "Id": "wall2"
+    },
+    "bbox": [
+     [
+      11.9,
+      16.0,
+      3.2
+     ],
+     [
+      12.1,
+      24.0,
+      6.2
+     ]
+    ]
+   },
+   "level": "Level L2"
+  },
+  {
+   "id": "c0020",
+   "test": "STR vs HVAC",
+   "name": "Clash20",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.3,
+   "point": [
+    8,
+    4,
+    9.100000000000001
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:beam3-0",
+    "name": "Beam 3.0",
+    "category": "Structural Framing",
+    "family": "Concrete-Rectangular Beam",
+    "model": "TORRE-EST.nwc",
+    "level": "Level \"L3\", #9003",
+    "props": {
+     "Id": "beam3-0"
+    },
+    "bbox": [
+     [
+      0.0,
+      3.85,
+      8.95
+     ],
+     [
+      30.0,
+      4.15,
+      9.45
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HVAC.nwc:duct3",
+    "name": "Supply duct L3",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level \"L3\", #9003",
+    "system": "Supply Air 1",
+    "props": {
+     "Id": "duct3"
+    },
+    "bbox": [
+     [
+      7.8,
+      0.0,
+      9.0
+     ],
+     [
+      8.2,
+      20.0,
+      9.3
+     ]
+    ]
+   },
+   "level": "Level \"L3\", #9003"
+  },
+  {
+   "id": "c0021",
+   "test": "STR vs HVAC",
+   "name": "Clash21",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.06179269173470246,
+   "point": [
+    8,
+    10,
+    9.100000000000001
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:beam3-1",
+    "name": "Beam 3.1",
+    "category": "Structural Framing",
+    "family": "Concrete-Rectangular Beam",
+    "model": "TORRE-EST.nwc",
+    "level": "Level \"L3\", #9003",
+    "props": {
+     "Id": "beam3-1"
+    },
+    "bbox": [
+     [
+      0.0,
+      9.85,
+      8.95
+     ],
+     [
+      30.0,
+      10.15,
+      9.45
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HVAC.nwc:duct3",
+    "name": "Supply duct L3",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level \"L3\", #9003",
+    "system": "Supply Air 1",
+    "props": {
+     "Id": "duct3"
+    },
+    "bbox": [
+     [
+      7.8,
+      0.0,
+      9.0
+     ],
+     [
+      8.2,
+      20.0,
+      9.3
+     ]
+    ]
+   },
+   "level": "Level \"L3\", #9003"
+  },
+  {
+   "id": "c0022",
+   "test": "STR vs HVAC",
+   "name": "Clash22",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.10518749458852682,
+   "point": [
+    8,
+    16,
+    9.100000000000001
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:beam3-2",
+    "name": "Beam 3.2",
+    "category": "Structural Framing",
+    "family": "Concrete-Rectangular Beam",
+    "model": "TORRE-EST.nwc",
+    "level": "Level \"L3\", #9003",
+    "props": {
+     "Id": "beam3-2"
+    },
+    "bbox": [
+     [
+      0.0,
+      15.85,
+      8.95
+     ],
+     [
+      30.0,
+      16.15,
+      9.45
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HVAC.nwc:duct3",
+    "name": "Supply duct L3",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level \"L3\", #9003",
+    "system": "Supply Air 1",
+    "props": {
+     "Id": "duct3"
+    },
+    "bbox": [
+     [
+      7.8,
+      0.0,
+      9.0
+     ],
+     [
+      8.2,
+      20.0,
+      9.3
+     ]
+    ]
+   },
+   "level": "Level \"L3\", #9003"
+  },
+  {
+   "id": "c0023",
+   "test": "ELE vs PLB",
+   "name": "Clash23",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.03,
+   "point": [
+    30,
+    10,
+    8.9
+   ],
+   "a": {
+    "id": "TORRE-ELE.nwc:tray3",
+    "name": "Tray L3",
+    "category": "Cable Trays",
+    "family": "Cable Tray:200x60",
+    "model": "TORRE-ELE.nwc",
+    "level": "Level \"L3\", #9003",
+    "props": {
+     "Id": "tray3"
+    },
+    "bbox": [
+     [
+      27.0,
+      9.9,
+      8.870000000000001
+     ],
+     [
+      33.0,
+      10.1,
+      8.93
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HID.nwc:cu3",
+    "name": "Copper 50 L3",
+    "category": "Pipes",
+    "family": "Pipe Types:Copper 50",
+    "model": "TORRE-HID.nwc",
+    "level": "Level \"L3\", #9003",
+    "system": "DHW",
+    "props": {
+     "Id": "cu3"
+    },
+    "bbox": [
+     [
+      29.975,
+      6.0,
+      8.875
+     ],
+     [
+      30.025,
+      14.0,
+      8.925
+     ]
+    ]
+   },
+   "level": "Level \"L3\", #9003"
+  },
+  {
+   "id": "c0024",
+   "test": "STR vs HVAC",
+   "name": "Clash24",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.06,
+   "point": [
+    35,
+    35,
+    6.4
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:slab3",
+    "name": "Slab L3",
+    "category": "Floors",
+    "family": "Floor:Concrete 200",
+    "model": "TORRE-EST.nwc",
+    "level": "Level \"L3\", #9003",
+    "props": {
+     "Id": "slab3"
+    },
+    "bbox": [
+     [
+      -5.0,
+      -5.0,
+      6.300000000000001
+     ],
+     [
+      35.0,
+      35.0,
+      6.5
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HVAC.nwc:riser",
+    "name": "Riser duct R1",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level \"L1\", #9001",
+    "system": "Exhaust",
+    "props": {
+     "Id": "riser"
+    },
+    "bbox": [
+     [
+      34.7,
+      34.7,
+      0.0
+     ],
+     [
+      35.3,
+      35.3,
+      16.0
+     ]
+    ]
+   },
+   "level": "Level \"L3\", #9003"
+  },
+  {
+   "id": "c0025",
+   "test": "ARC vs STR",
+   "name": "Clash25",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.2,
+   "point": [
+    12,
+    20,
+    7.45
+   ],
+   "a": {
+    "id": "TORRE-ARQ.nwc:wall3",
+    "name": "Wall L3",
+    "category": "Walls",
+    "family": "Basic Wall",
+    "model": "TORRE-ARQ.nwc",
+    "level": "Level \"L3\", #9003",
+    "props": {
+     "Id": "wall3"
+    },
+    "bbox": [
+     [
+      11.9,
+      16.0,
+      6.4
+     ],
+     [
+      12.1,
+      24.0,
+      9.4
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-ARQ.nwc:door3",
+    "name": "Door L3",
+    "category": "Doors",
+    "family": "Single-Flush",
+    "model": "TORRE-ARQ.nwc",
+    "level": "Level \"L3\", #9003",
+    "props": {
+     "Id": "door3"
+    },
+    "bbox": [
+     [
+      11.9,
+      19.55,
+      6.4
+     ],
+     [
+      12.1,
+      20.45,
+      8.5
+     ]
+    ]
+   },
+   "level": "Level \"L3\", #9003"
+  },
+  {
+   "id": "c0026",
+   "test": "ELE vs ARC",
+   "name": "Clash26",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.025,
+   "point": [
+    12,
+    24,
+    8.0
+   ],
+   "a": {
+    "id": "TORRE-ELE.nwc:cond3",
+    "name": "Conduit L3",
+    "category": "Conduits",
+    "family": "Conduit:EMT 25",
+    "model": "TORRE-ELE.nwc",
+    "level": "Level \"L3\", #9003",
+    "props": {
+     "Id": "cond3"
+    },
+    "bbox": [
+     [
+      11.985,
+      22.5,
+      7.985
+     ],
+     [
+      12.015,
+      25.5,
+      8.015
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-ARQ.nwc:wall3",
+    "name": "Wall L3",
+    "category": "Walls",
+    "family": "Basic Wall",
+    "model": "TORRE-ARQ.nwc",
+    "level": "Level \"L3\", #9003",
+    "props": {
+     "Id": "wall3"
+    },
+    "bbox": [
+     [
+      11.9,
+      16.0,
+      6.4
+     ],
+     [
+      12.1,
+      24.0,
+      9.4
+     ]
+    ]
+   },
+   "level": "Level \"L3\", #9003"
+  },
+  {
+   "id": "c0027",
+   "test": "STR vs HVAC",
+   "name": "Clash27",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.15749077620736496,
+   "point": [
+    8,
+    4,
+    12.3
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:beam4-0",
+    "name": "Beam 4.0",
+    "category": "Structural Framing",
+    "family": "Concrete-Rectangular Beam",
+    "model": "TORRE-EST.nwc",
+    "level": "Level L4",
+    "props": {
+     "Id": "beam4-0"
+    },
+    "bbox": [
+     [
+      0.0,
+      3.85,
+      12.150000000000002
+     ],
+     [
+      30.0,
+      4.15,
+      12.650000000000002
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HVAC.nwc:duct4",
+    "name": "Supply duct L4",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level L4",
+    "system": "Supply Air 1",
+    "props": {
+     "Id": "duct4"
+    },
+    "bbox": [
+     [
+      7.8,
+      0.0,
+      12.200000000000001
+     ],
+     [
+      8.2,
+      20.0,
+      12.500000000000002
+     ]
+    ]
+   },
+   "level": "Level L4"
+  },
+  {
+   "id": "c0028",
+   "test": "STR vs HVAC",
+   "name": "Clash28",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.06609425494945392,
+   "point": [
+    8,
+    10,
+    12.3
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:beam4-1",
+    "name": "Beam 4.1",
+    "category": "Structural Framing",
+    "family": "Concrete-Rectangular Beam",
+    "model": "TORRE-EST.nwc",
+    "level": "Level L4",
+    "props": {
+     "Id": "beam4-1"
+    },
+    "bbox": [
+     [
+      0.0,
+      9.85,
+      12.150000000000002
+     ],
+     [
+      30.0,
+      10.15,
+      12.650000000000002
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HVAC.nwc:duct4",
+    "name": "Supply duct L4",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level L4",
+    "system": "Supply Air 1",
+    "props": {
+     "Id": "duct4"
+    },
+    "bbox": [
+     [
+      7.8,
+      0.0,
+      12.200000000000001
+     ],
+     [
+      8.2,
+      20.0,
+      12.500000000000002
+     ]
+    ]
+   },
+   "level": "Level L4"
+  },
+  {
+   "id": "c0029",
+   "test": "STR vs HVAC",
+   "name": "Clash29",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.07902106539891189,
+   "point": [
+    8,
+    16,
+    12.3
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:beam4-2",
+    "name": "Beam 4.2",
+    "category": "Structural Framing",
+    "family": "Concrete-Rectangular Beam",
+    "model": "TORRE-EST.nwc",
+    "level": "Level L4",
+    "props": {
+     "Id": "beam4-2"
+    },
+    "bbox": [
+     [
+      0.0,
+      15.85,
+      12.150000000000002
+     ],
+     [
+      30.0,
+      16.15,
+      12.650000000000002
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HVAC.nwc:duct4",
+    "name": "Supply duct L4",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level L4",
+    "system": "Supply Air 1",
+    "props": {
+     "Id": "duct4"
+    },
+    "bbox": [
+     [
+      7.8,
+      0.0,
+      12.200000000000001
+     ],
+     [
+      8.2,
+      20.0,
+      12.500000000000002
+     ]
+    ]
+   },
+   "level": "Level L4"
+  },
+  {
+   "id": "c0030",
+   "test": "ELE vs PLB",
+   "name": "Clash30",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.03,
+   "point": [
+    30,
+    10,
+    12.100000000000001
+   ],
+   "a": {
+    "id": "TORRE-ELE.nwc:tray4",
+    "name": "Tray L4",
+    "category": "Cable Trays",
+    "family": "Cable Tray:200x60",
+    "model": "TORRE-ELE.nwc",
+    "level": "Level L4",
+    "props": {
+     "Id": "tray4"
+    },
+    "bbox": [
+     [
+      27.0,
+      9.9,
+      12.070000000000002
+     ],
+     [
+      33.0,
+      10.1,
+      12.13
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HID.nwc:cu4",
+    "name": "Copper 50 L4",
+    "category": "Pipes",
+    "family": "Pipe Types:Copper 50",
+    "model": "TORRE-HID.nwc",
+    "level": "Level L4",
+    "system": "DHW",
+    "props": {
+     "Id": "cu4"
+    },
+    "bbox": [
+     [
+      29.975,
+      6.0,
+      12.075000000000001
+     ],
+     [
+      30.025,
+      14.0,
+      12.125000000000002
+     ]
+    ]
+   },
+   "level": "Level L4"
+  },
+  {
+   "id": "c0031",
+   "test": "STR vs HVAC",
+   "name": "Clash31",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.06,
+   "point": [
+    35,
+    35,
+    9.600000000000001
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:slab4",
+    "name": "Slab L4",
+    "category": "Floors",
+    "family": "Floor:Concrete 200",
+    "model": "TORRE-EST.nwc",
+    "level": "Level L4",
+    "props": {
+     "Id": "slab4"
+    },
+    "bbox": [
+     [
+      -5.0,
+      -5.0,
+      9.500000000000002
+     ],
+     [
+      35.0,
+      35.0,
+      9.700000000000001
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HVAC.nwc:riser",
+    "name": "Riser duct R1",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level \"L1\", #9001",
+    "system": "Exhaust",
+    "props": {
+     "Id": "riser"
+    },
+    "bbox": [
+     [
+      34.7,
+      34.7,
+      0.0
+     ],
+     [
+      35.3,
+      35.3,
+      16.0
+     ]
+    ]
+   },
+   "level": "Level L4"
+  },
+  {
+   "id": "c0032",
+   "test": "ARC vs STR",
+   "name": "Clash32",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.2,
+   "point": [
+    12,
+    20,
+    10.650000000000002
+   ],
+   "a": {
+    "id": "TORRE-ARQ.nwc:wall4",
+    "name": "Wall L4",
+    "category": "Walls",
+    "family": "Basic Wall",
+    "model": "TORRE-ARQ.nwc",
+    "level": "Level L4",
+    "props": {
+     "Id": "wall4"
+    },
+    "bbox": [
+     [
+      11.9,
+      16.0,
+      9.600000000000001
+     ],
+     [
+      12.1,
+      24.0,
+      12.600000000000001
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-ARQ.nwc:door4",
+    "name": "Door L4",
+    "category": "Doors",
+    "family": "Single-Flush",
+    "model": "TORRE-ARQ.nwc",
+    "level": "Level L4",
+    "props": {
+     "Id": "door4"
+    },
+    "bbox": [
+     [
+      11.9,
+      19.55,
+      9.600000000000001
+     ],
+     [
+      12.1,
+      20.45,
+      11.700000000000003
+     ]
+    ]
+   },
+   "level": "Level L4"
+  },
+  {
+   "id": "c0033",
+   "test": "ELE vs ARC",
+   "name": "Clash33",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.025,
+   "point": [
+    12,
+    24,
+    11.200000000000001
+   ],
+   "a": {
+    "id": "TORRE-ELE.nwc:cond4",
+    "name": "Conduit L4",
+    "category": "Conduits",
+    "family": "Conduit:EMT 25",
+    "model": "TORRE-ELE.nwc",
+    "level": "Level L4",
+    "props": {
+     "Id": "cond4"
+    },
+    "bbox": [
+     [
+      11.985,
+      22.5,
+      11.185
+     ],
+     [
+      12.015,
+      25.5,
+      11.215000000000002
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-ARQ.nwc:wall4",
+    "name": "Wall L4",
+    "category": "Walls",
+    "family": "Basic Wall",
+    "model": "TORRE-ARQ.nwc",
+    "level": "Level L4",
+    "props": {
+     "Id": "wall4"
+    },
+    "bbox": [
+     [
+      11.9,
+      16.0,
+      9.600000000000001
+     ],
+     [
+      12.1,
+      24.0,
+      12.600000000000001
+     ]
+    ]
+   },
+   "level": "Level L4"
+  },
+  {
+   "id": "c0034",
+   "test": "STR vs HVAC",
+   "name": "Clash34",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.13156631891272663,
+   "point": [
+    8,
+    4,
+    15.5
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:beam5-0",
+    "name": "Beam 5.0",
+    "category": "Structural Framing",
+    "family": "Concrete-Rectangular Beam",
+    "model": "TORRE-EST.nwc",
+    "level": "Level \"L5\", #9005",
+    "props": {
+     "Id": "beam5-0"
+    },
+    "bbox": [
+     [
+      0.0,
+      3.85,
+      15.350000000000001
+     ],
+     [
+      30.0,
+      4.15,
+      15.850000000000001
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HVAC.nwc:duct5",
+    "name": "Supply duct L5",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level \"L5\", #9005",
+    "system": "Supply Air 1",
+    "props": {
+     "Id": "duct5"
+    },
+    "bbox": [
+     [
+      7.8,
+      0.0,
+      15.4
+     ],
+     [
+      8.2,
+      20.0,
+      15.700000000000001
+     ]
+    ]
+   },
+   "level": "Level \"L5\", #9005"
+  },
+  {
+   "id": "c0035",
+   "test": "STR vs HVAC",
+   "name": "Clash35",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.17320216251941073,
+   "point": [
+    8,
+    10,
+    15.5
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:beam5-1",
+    "name": "Beam 5.1",
+    "category": "Structural Framing",
+    "family": "Concrete-Rectangular Beam",
+    "model": "TORRE-EST.nwc",
+    "level": "Level \"L5\", #9005",
+    "props": {
+     "Id": "beam5-1"
+    },
+    "bbox": [
+     [
+      0.0,
+      9.85,
+      15.350000000000001
+     ],
+     [
+      30.0,
+      10.15,
+      15.850000000000001
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HVAC.nwc:duct5",
+    "name": "Supply duct L5",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level \"L5\", #9005",
+    "system": "Supply Air 1",
+    "props": {
+     "Id": "duct5"
+    },
+    "bbox": [
+     [
+      7.8,
+      0.0,
+      15.4
+     ],
+     [
+      8.2,
+      20.0,
+      15.700000000000001
+     ]
+    ]
+   },
+   "level": "Level \"L5\", #9005"
+  },
+  {
+   "id": "c0036",
+   "test": "STR vs HVAC",
+   "name": "Clash36",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.12502338332027485,
+   "point": [
+    8,
+    16,
+    15.5
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:beam5-2",
+    "name": "Beam 5.2",
+    "category": "Structural Framing",
+    "family": "Concrete-Rectangular Beam",
+    "model": "TORRE-EST.nwc",
+    "level": "Level \"L5\", #9005",
+    "props": {
+     "Id": "beam5-2"
+    },
+    "bbox": [
+     [
+      0.0,
+      15.85,
+      15.350000000000001
+     ],
+     [
+      30.0,
+      16.15,
+      15.850000000000001
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HVAC.nwc:duct5",
+    "name": "Supply duct L5",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level \"L5\", #9005",
+    "system": "Supply Air 1",
+    "props": {
+     "Id": "duct5"
+    },
+    "bbox": [
+     [
+      7.8,
+      0.0,
+      15.4
+     ],
+     [
+      8.2,
+      20.0,
+      15.700000000000001
+     ]
+    ]
+   },
+   "level": "Level \"L5\", #9005"
+  },
+  {
+   "id": "c0037",
+   "test": "ELE vs PLB",
+   "name": "Clash37",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.03,
+   "point": [
+    30,
+    10,
+    15.3
+   ],
+   "a": {
+    "id": "TORRE-ELE.nwc:tray5",
+    "name": "Tray L5",
+    "category": "Cable Trays",
+    "family": "Cable Tray:200x60",
+    "model": "TORRE-ELE.nwc",
+    "level": "Level \"L5\", #9005",
+    "props": {
+     "Id": "tray5"
+    },
+    "bbox": [
+     [
+      27.0,
+      9.9,
+      15.270000000000001
+     ],
+     [
+      33.0,
+      10.1,
+      15.33
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HID.nwc:cu5",
+    "name": "Copper 50 L5",
+    "category": "Pipes",
+    "family": "Pipe Types:Copper 50",
+    "model": "TORRE-HID.nwc",
+    "level": "Level \"L5\", #9005",
+    "system": "DHW",
+    "props": {
+     "Id": "cu5"
+    },
+    "bbox": [
+     [
+      29.975,
+      6.0,
+      15.275
+     ],
+     [
+      30.025,
+      14.0,
+      15.325000000000001
+     ]
+    ]
+   },
+   "level": "Level \"L5\", #9005"
+  },
+  {
+   "id": "c0038",
+   "test": "STR vs HVAC",
+   "name": "Clash38",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.06,
+   "point": [
+    35,
+    35,
+    12.8
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:slab5",
+    "name": "Slab L5",
+    "category": "Floors",
+    "family": "Floor:Concrete 200",
+    "model": "TORRE-EST.nwc",
+    "level": "Level \"L5\", #9005",
+    "props": {
+     "Id": "slab5"
+    },
+    "bbox": [
+     [
+      -5.0,
+      -5.0,
+      12.700000000000001
+     ],
+     [
+      35.0,
+      35.0,
+      12.9
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HVAC.nwc:riser",
+    "name": "Riser duct R1",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level \"L1\", #9001",
+    "system": "Exhaust",
+    "props": {
+     "Id": "riser"
+    },
+    "bbox": [
+     [
+      34.7,
+      34.7,
+      0.0
+     ],
+     [
+      35.3,
+      35.3,
+      16.0
+     ]
+    ]
+   },
+   "level": "Level \"L5\", #9005"
+  },
+  {
+   "id": "c0039",
+   "test": "ARC vs STR",
+   "name": "Clash39",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.2,
+   "point": [
+    12,
+    20,
+    13.850000000000001
+   ],
+   "a": {
+    "id": "TORRE-ARQ.nwc:wall5",
+    "name": "Wall L5",
+    "category": "Walls",
+    "family": "Basic Wall",
+    "model": "TORRE-ARQ.nwc",
+    "level": "Level \"L5\", #9005",
+    "props": {
+     "Id": "wall5"
+    },
+    "bbox": [
+     [
+      11.9,
+      16.0,
+      12.8
+     ],
+     [
+      12.1,
+      24.0,
+      15.8
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-ARQ.nwc:door5",
+    "name": "Door L5",
+    "category": "Doors",
+    "family": "Single-Flush",
+    "model": "TORRE-ARQ.nwc",
+    "level": "Level \"L5\", #9005",
+    "props": {
+     "Id": "door5"
+    },
+    "bbox": [
+     [
+      11.9,
+      19.55,
+      12.8
+     ],
+     [
+      12.1,
+      20.45,
+      14.900000000000002
+     ]
+    ]
+   },
+   "level": "Level \"L5\", #9005"
+  },
+  {
+   "id": "c0040",
+   "test": "ELE vs ARC",
+   "name": "Clash40",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.025,
+   "point": [
+    12,
+    24,
+    14.4
+   ],
+   "a": {
+    "id": "TORRE-ELE.nwc:cond5",
+    "name": "Conduit L5",
+    "category": "Conduits",
+    "family": "Conduit:EMT 25",
+    "model": "TORRE-ELE.nwc",
+    "level": "Level \"L5\", #9005",
+    "props": {
+     "Id": "cond5"
+    },
+    "bbox": [
+     [
+      11.985,
+      22.5,
+      14.385
+     ],
+     [
+      12.015,
+      25.5,
+      14.415000000000001
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-ARQ.nwc:wall5",
+    "name": "Wall L5",
+    "category": "Walls",
+    "family": "Basic Wall",
+    "model": "TORRE-ARQ.nwc",
+    "level": "Level \"L5\", #9005",
+    "props": {
+     "Id": "wall5"
+    },
+    "bbox": [
+     [
+      11.9,
+      16.0,
+      12.8
+     ],
+     [
+      12.1,
+      24.0,
+      15.8
+     ]
+    ]
+   },
+   "level": "Level \"L5\", #9005"
+  },
+  {
+   "id": "c0041",
+   "test": "STR vs PLB",
+   "name": "Clash41",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.002,
+   "point": [
+    3,
+    4,
+    2.8
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:beam1-0",
+    "name": "Beam 1.0",
+    "category": "Structural Framing",
+    "family": "Concrete-Rectangular Beam",
+    "model": "TORRE-EST.nwc",
+    "level": "Level \"L1\", #9001",
+    "props": {
+     "Id": "beam1-0"
+    },
+    "bbox": [
+     [
+      0.0,
+      3.85,
+      2.55
+     ],
+     [
+      30.0,
+      4.15,
+      3.05
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HID.nwc:thin0",
+    "name": "Thin pipe 0",
+    "category": "Pipes",
+    "family": "Pipe Types:PVC 25",
+    "model": "TORRE-HID.nwc",
+    "level": "Level L1",
+    "props": {
+     "Id": "thin0"
+    },
+    "bbox": [
+     [
+      2.985,
+      2.5,
+      2.7849999999999997
+     ],
+     [
+      3.015,
+      5.5,
+      2.815
+     ]
+    ]
+   },
+   "level": "Level L1"
+  },
+  {
+   "id": "c0042",
+   "test": "STR vs PLB",
+   "name": "Clash42",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.002,
+   "point": [
+    4,
+    4,
+    2.8
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:beam1-0",
+    "name": "Beam 1.0",
+    "category": "Structural Framing",
+    "family": "Concrete-Rectangular Beam",
+    "model": "TORRE-EST.nwc",
+    "level": "Level \"L1\", #9001",
+    "props": {
+     "Id": "beam1-0"
+    },
+    "bbox": [
+     [
+      0.0,
+      3.85,
+      2.55
+     ],
+     [
+      30.0,
+      4.15,
+      3.05
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HID.nwc:thin1",
+    "name": "Thin pipe 1",
+    "category": "Pipes",
+    "family": "Pipe Types:PVC 25",
+    "model": "TORRE-HID.nwc",
+    "level": "Level L1",
+    "props": {
+     "Id": "thin1"
+    },
+    "bbox": [
+     [
+      3.985,
+      2.5,
+      2.7849999999999997
+     ],
+     [
+      4.015,
+      5.5,
+      2.815
+     ]
+    ]
+   },
+   "level": "Level L1"
+  },
+  {
+   "id": "c0043",
+   "test": "STR vs PLB",
+   "name": "Clash43",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.002,
+   "point": [
+    5,
+    4,
+    2.8
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:beam1-0",
+    "name": "Beam 1.0",
+    "category": "Structural Framing",
+    "family": "Concrete-Rectangular Beam",
+    "model": "TORRE-EST.nwc",
+    "level": "Level \"L1\", #9001",
+    "props": {
+     "Id": "beam1-0"
+    },
+    "bbox": [
+     [
+      0.0,
+      3.85,
+      2.55
+     ],
+     [
+      30.0,
+      4.15,
+      3.05
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HID.nwc:thin2",
+    "name": "Thin pipe 2",
+    "category": "Pipes",
+    "family": "Pipe Types:PVC 25",
+    "model": "TORRE-HID.nwc",
+    "level": "Level L1",
+    "props": {
+     "Id": "thin2"
+    },
+    "bbox": [
+     [
+      4.985,
+      2.5,
+      2.7849999999999997
+     ],
+     [
+      5.015,
+      5.5,
+      2.815
+     ]
+    ]
+   },
+   "level": "Level L1"
+  },
+  {
+   "id": "c0044",
+   "test": "STR vs PLB",
+   "name": "Clash44",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.002,
+   "point": [
+    6,
+    4,
+    2.8
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:beam1-0",
+    "name": "Beam 1.0",
+    "category": "Structural Framing",
+    "family": "Concrete-Rectangular Beam",
+    "model": "TORRE-EST.nwc",
+    "level": "Level \"L1\", #9001",
+    "props": {
+     "Id": "beam1-0"
+    },
+    "bbox": [
+     [
+      0.0,
+      3.85,
+      2.55
+     ],
+     [
+      30.0,
+      4.15,
+      3.05
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HID.nwc:thin3",
+    "name": "Thin pipe 3",
+    "category": "Pipes",
+    "family": "Pipe Types:PVC 25",
+    "model": "TORRE-HID.nwc",
+    "level": "Level L1",
+    "props": {
+     "Id": "thin3"
+    },
+    "bbox": [
+     [
+      5.985,
+      2.5,
+      2.7849999999999997
+     ],
+     [
+      6.015,
+      5.5,
+      2.815
+     ]
+    ]
+   },
+   "level": "Level L1"
+  },
+  {
+   "id": "c0045",
+   "test": "HVAC vs PLB",
+   "name": "Clash45",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.04,
+   "point": [
+    40,
+    6,
+    1
+   ],
+   "a": {
+    "id": "TORRE-HID.nwc:asm0",
+    "name": "Assembly pipe 0",
+    "category": "Pipes",
+    "family": "Pipe Types:Steel 50",
+    "model": "TORRE-HID.nwc",
+    "level": "Level L1",
+    "host_id": "TORRE-HID.nwc:asm0",
+    "props": {
+     "Id": "asm0"
+    },
+    "bbox": [
+     [
+      39.975,
+      4.0,
+      0.975
+     ],
+     [
+      40.025,
+      6.0,
+      1.025
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HID.nwc:asm0f",
+    "name": "Elbow 0",
+    "category": "Pipe Fittings",
+    "family": "Pipe Fittings:Elbow",
+    "model": "TORRE-HID.nwc",
+    "level": "Level L1",
+    "host_id": "TORRE-HID.nwc:asm0",
+    "props": {
+     "Id": "asm0f"
+    },
+    "bbox": [
+     [
+      39.96,
+      5.96,
+      0.96
+     ],
+     [
+      40.04,
+      6.04,
+      1.04
+     ]
+    ]
+   },
+   "level": "Level L1"
+  },
+  {
+   "id": "c0046",
+   "test": "HVAC vs PLB",
+   "name": "Clash46",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.04,
+   "point": [
+    40,
+    7,
+    1
+   ],
+   "a": {
+    "id": "TORRE-HID.nwc:asm1",
+    "name": "Assembly pipe 1",
+    "category": "Pipes",
+    "family": "Pipe Types:Steel 50",
+    "model": "TORRE-HID.nwc",
+    "level": "Level L1",
+    "host_id": "TORRE-HID.nwc:asm1",
+    "props": {
+     "Id": "asm1"
+    },
+    "bbox": [
+     [
+      39.975,
+      5.0,
+      0.975
+     ],
+     [
+      40.025,
+      7.0,
+      1.025
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HID.nwc:asm1f",
+    "name": "Elbow 1",
+    "category": "Pipe Fittings",
+    "family": "Pipe Fittings:Elbow",
+    "model": "TORRE-HID.nwc",
+    "level": "Level L1",
+    "host_id": "TORRE-HID.nwc:asm1",
+    "props": {
+     "Id": "asm1f"
+    },
+    "bbox": [
+     [
+      39.96,
+      6.96,
+      0.96
+     ],
+     [
+      40.04,
+      7.04,
+      1.04
+     ]
+    ]
+   },
+   "level": "Level L1"
+  },
+  {
+   "id": "c0047",
+   "test": "HVAC vs PLB",
+   "name": "Clash47",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.04,
+   "point": [
+    40,
+    8,
+    1
+   ],
+   "a": {
+    "id": "TORRE-HID.nwc:asm2",
+    "name": "Assembly pipe 2",
+    "category": "Pipes",
+    "family": "Pipe Types:Steel 50",
+    "model": "TORRE-HID.nwc",
+    "level": "Level L1",
+    "host_id": "TORRE-HID.nwc:asm2",
+    "props": {
+     "Id": "asm2"
+    },
+    "bbox": [
+     [
+      39.975,
+      6.0,
+      0.975
+     ],
+     [
+      40.025,
+      8.0,
+      1.025
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-HID.nwc:asm2f",
+    "name": "Elbow 2",
+    "category": "Pipe Fittings",
+    "family": "Pipe Fittings:Elbow",
+    "model": "TORRE-HID.nwc",
+    "level": "Level L1",
+    "host_id": "TORRE-HID.nwc:asm2",
+    "props": {
+     "Id": "asm2f"
+    },
+    "bbox": [
+     [
+      39.96,
+      7.96,
+      0.96
+     ],
+     [
+      40.04,
+      8.04,
+      1.04
+     ]
+    ]
+   },
+   "level": "Level L1"
+  },
+  {
+   "id": "c0048",
+   "test": "STR vs HVAC",
+   "name": "Clash48",
+   "status": "approved",
+   "kind": "hard",
+   "distance": -0.09,
+   "point": [
+    45,
+    5,
+    2.8
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:beam1-0",
+    "name": "Beam 1.0",
+    "category": "Structural Framing",
+    "family": "Concrete-Rectangular Beam",
+    "model": "TORRE-EST.nwc",
+    "level": "Level \"L1\", #9001",
+    "props": {
+     "Id": "beam1-0"
+    },
+    "bbox": [
+     [
+      0.0,
+      3.85,
+      2.55
+     ],
+     [
+      30.0,
+      4.15,
+      3.05
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-ELE.nwc:old0",
+    "name": "Old conduit 0",
+    "category": "Conduits",
+    "family": "Conduit:EMT 20",
+    "model": "TORRE-ELE.nwc",
+    "level": "Level L1",
+    "props": {
+     "Id": "old0"
+    },
+    "bbox": [
+     [
+      44.985,
+      4.0,
+      2.7849999999999997
+     ],
+     [
+      45.015,
+      6.0,
+      2.815
+     ]
+    ]
+   },
+   "level": "Level L1"
+  },
+  {
+   "id": "c0049",
+   "test": "STR vs HVAC",
+   "name": "Clash49",
+   "status": "approved",
+   "kind": "hard",
+   "distance": -0.09,
+   "point": [
+    45,
+    7,
+    2.8
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:beam1-0",
+    "name": "Beam 1.0",
+    "category": "Structural Framing",
+    "family": "Concrete-Rectangular Beam",
+    "model": "TORRE-EST.nwc",
+    "level": "Level \"L1\", #9001",
+    "props": {
+     "Id": "beam1-0"
+    },
+    "bbox": [
+     [
+      0.0,
+      3.85,
+      2.55
+     ],
+     [
+      30.0,
+      4.15,
+      3.05
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-ELE.nwc:old1",
+    "name": "Old conduit 1",
+    "category": "Conduits",
+    "family": "Conduit:EMT 20",
+    "model": "TORRE-ELE.nwc",
+    "level": "Level L1",
+    "props": {
+     "Id": "old1"
+    },
+    "bbox": [
+     [
+      44.985,
+      6.0,
+      2.7849999999999997
+     ],
+     [
+      45.015,
+      8.0,
+      2.815
+     ]
+    ]
+   },
+   "level": "Level L1"
+  },
+  {
+   "id": "c0050",
+   "test": "STR vs HVAC",
+   "name": "Clash50",
+   "status": "approved",
+   "kind": "hard",
+   "distance": -0.09,
+   "point": [
+    45,
+    9,
+    2.8
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:beam1-0",
+    "name": "Beam 1.0",
+    "category": "Structural Framing",
+    "family": "Concrete-Rectangular Beam",
+    "model": "TORRE-EST.nwc",
+    "level": "Level \"L1\", #9001",
+    "props": {
+     "Id": "beam1-0"
+    },
+    "bbox": [
+     [
+      0.0,
+      3.85,
+      2.55
+     ],
+     [
+      30.0,
+      4.15,
+      3.05
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-ELE.nwc:old2",
+    "name": "Old conduit 2",
+    "category": "Conduits",
+    "family": "Conduit:EMT 20",
+    "model": "TORRE-ELE.nwc",
+    "level": "Level L1",
+    "props": {
+     "Id": "old2"
+    },
+    "bbox": [
+     [
+      44.985,
+      8.0,
+      2.7849999999999997
+     ],
+     [
+      45.015,
+      10.0,
+      2.815
+     ]
+    ]
+   },
+   "level": "Level L1"
+  },
+  {
+   "id": "c0051",
+   "test": "HVAC vs ELE clearance",
+   "name": "Clash51",
+   "status": "new",
+   "kind": "clearance",
+   "distance": 0.02,
+   "point": [
+    5,
+    30,
+    13
+   ],
+   "a": {
+    "id": "TORRE-HVAC.nwc:clrd0",
+    "name": "Clearance duct 0",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level L5",
+    "props": {
+     "Id": "clrd0"
+    },
+    "bbox": [
+     [
+      4.8,
+      27.83,
+      12.85
+     ],
+     [
+      5.2,
+      32.83,
+      13.15
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-ELE.nwc:clr0",
+    "name": "Clearance tray 0",
+    "category": "Cable Trays",
+    "family": "Cable Tray:300x60",
+    "model": "TORRE-ELE.nwc",
+    "level": "Level L5",
+    "props": {
+     "Id": "clr0"
+    },
+    "bbox": [
+     [
+      3.0,
+      29.85,
+      12.97
+     ],
+     [
+      7.0,
+      30.15,
+      13.03
+     ]
+    ]
+   },
+   "level": "Level L5"
+  },
+  {
+   "id": "c0052",
+   "test": "HVAC vs ELE clearance",
+   "name": "Clash52",
+   "status": "new",
+   "kind": "clearance",
+   "distance": 0.02,
+   "point": [
+    11,
+    30,
+    13
+   ],
+   "a": {
+    "id": "TORRE-HVAC.nwc:clrd1",
+    "name": "Clearance duct 1",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level L5",
+    "props": {
+     "Id": "clrd1"
+    },
+    "bbox": [
+     [
+      10.8,
+      27.83,
+      12.85
+     ],
+     [
+      11.2,
+      32.83,
+      13.15
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-ELE.nwc:clr1",
+    "name": "Clearance tray 1",
+    "category": "Cable Trays",
+    "family": "Cable Tray:300x60",
+    "model": "TORRE-ELE.nwc",
+    "level": "Level L5",
+    "props": {
+     "Id": "clr1"
+    },
+    "bbox": [
+     [
+      9.0,
+      29.85,
+      12.97
+     ],
+     [
+      13.0,
+      30.15,
+      13.03
+     ]
+    ]
+   },
+   "level": "Level L5"
+  },
+  {
+   "id": "c0053",
+   "test": "HVAC vs ELE clearance",
+   "name": "Clash53",
+   "status": "new",
+   "kind": "clearance",
+   "distance": 0.02,
+   "point": [
+    17,
+    30,
+    13
+   ],
+   "a": {
+    "id": "TORRE-HVAC.nwc:clrd2",
+    "name": "Clearance duct 2",
+    "category": "Ducts",
+    "family": "Rectangular Duct",
+    "model": "TORRE-HVAC.nwc",
+    "level": "Level L5",
+    "props": {
+     "Id": "clrd2"
+    },
+    "bbox": [
+     [
+      16.8,
+      27.83,
+      12.85
+     ],
+     [
+      17.2,
+      32.83,
+      13.15
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-ELE.nwc:clr2",
+    "name": "Clearance tray 2",
+    "category": "Cable Trays",
+    "family": "Cable Tray:300x60",
+    "model": "TORRE-ELE.nwc",
+    "level": "Level L5",
+    "props": {
+     "Id": "clr2"
+    },
+    "bbox": [
+     [
+      15.0,
+      29.85,
+      12.97
+     ],
+     [
+      19.0,
+      30.15,
+      13.03
+     ]
+    ]
+   },
+   "level": "Level L5"
+  },
+  {
+   "id": "c0054",
+   "test": "FIRE vs STR",
+   "name": "Clash54",
+   "status": "new",
+   "kind": "hard",
+   "distance": -0.03,
+   "point": [
+    3,
+    8,
+    5.8
+   ],
+   "a": {
+    "id": "TORRE-EST.nwc:beam1-0",
+    "name": "Beam 1.0",
+    "category": "Structural Framing",
+    "family": "Concrete-Rectangular Beam",
+    "model": "TORRE-EST.nwc",
+    "level": "Level \"L1\", #9001",
+    "props": {
+     "Id": "beam1-0"
+    },
+    "bbox": [
+     [
+      0.0,
+      3.85,
+      2.55
+     ],
+     [
+      30.0,
+      4.15,
+      3.05
+     ]
+    ]
+   },
+   "b": {
+    "id": "TORRE-RCI.nwc:sprk1",
+    "name": "Sprinkler main",
+    "category": "Pipes",
+    "family": "Pipe Types:Black steel 65",
+    "model": "TORRE-RCI.nwc",
+    "level": "Level L2",
+    "system": "Fire",
+    "props": {
+     "Id": "sprk1"
+    },
+    "bbox": [
+     [
+      2.965,
+      5.0,
+      5.765
+     ],
+     [
+      3.035,
+      11.0,
+      5.835
+     ]
+    ]
+   },
+   "level": "Level L2"
+  }
+ ]
+}

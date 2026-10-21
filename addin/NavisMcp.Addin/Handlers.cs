@@ -1,0 +1,264 @@
+// DRAFT, not compiled. Navisworks API calls, all executed on the UI thread through UiThread.Run.
+// Every API detail marked VERIFY has to be checked against the installed Autodesk.Navisworks.* assemblies.
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using Autodesk.Navisworks.Api;
+using Autodesk.Navisworks.Api.Clash;
+
+namespace NavisMcp.Addin
+{
+    internal sealed class Handlers
+    {
+        private static readonly DateTime Started = DateTime.UtcNow;
+        private readonly string _instance = Guid.NewGuid().ToString("N").Substring(0, 8);
+        private readonly Jobs _jobs = new Jobs();
+
+        // ------------------------------------------------------------ document
+        private static Document Doc()
+        {
+            var d = Autodesk.Navisworks.Api.Application.ActiveDocument;
+            if (d == null || d.IsClear) throw new RpcException("no_document", "no document is open in Navisworks");
+            return d;
+        }
+
+        private static string Fingerprint(Document d)
+        {
+            var parts = new List<string> { d.FileName ?? d.Title ?? "" };
+            parts.AddRange(d.Models.Select(m => m.FileName ?? "").OrderBy(x => x, StringComparer.Ordinal));
+            return Sha1(string.Join("|", parts)).Substring(0, 16);
+        }
+
+        // Revision: a hash of what a clash analysis depends on (tests, result guids, result statuses).
+        private static string Revision(Document d)
+        {
+            var sb = new StringBuilder();
+            foreach (var t in Tests(d))
+            {
+                sb.Append(t.Guid).Append(t.Status);
+                foreach (var r in Results(t)) sb.Append(r.Guid).Append(r.Status);
+            }
+            return Sha1(sb.ToString()).Substring(0, 12);
+        }
+
+        private static string Sha1(string s)
+        {
+            using (var h = SHA1.Create())
+                return string.Concat(h.ComputeHash(Encoding.UTF8.GetBytes(s)).Select(b => b.ToString("x2")));
+        }
+
+        private static Dictionary<string, object> DocState(Document d)
+        {
+            return new Dictionary<string, object>
+            {
+                { "open", true }, { "title", d.Title }, { "fingerprint", Fingerprint(d) }, { "revision", Revision(d) }
+            };
+        }
+
+        public object Hello(string[] methods)
+        {
+            return UiThread.Run<object>(() =>
+            {
+                var d = Autodesk.Navisworks.Api.Application.ActiveDocument;
+                var doc = (d == null || d.IsClear) ? new Dictionary<string, object> { { "open", false } } : DocState(d);
+                return new Dictionary<string, object>
+                {
+                    { "product", "navisworks" }, { "version", Autodesk.Navisworks.Api.Application.Version.ToString() }, // VERIFY
+                    { "api", 1 }, { "instance_id", _instance },
+                    { "started", (Started - new DateTime(1970, 1, 1)).TotalSeconds }, { "doc", doc }, { "methods", methods }
+                };
+            });
+        }
+
+        public object DocInfo()
+        {
+            return UiThread.Run<object>(() =>
+            {
+                var d = Doc();
+                var info = DocState(d);
+                info["models"] = d.Models.Select(m => m.FileName).ToArray();
+                info["units"] = "m";  // exported coordinates are always converted to metres
+                return info;
+            });
+        }
+
+        // ------------------------------------------------------------ clash data
+        private static IEnumerable<ClashTest> Tests(Document d)
+        {
+            return d.GetClash().TestsData.Tests.OfType<ClashTest>();  // VERIFY: DocumentClash.TestsData.Tests
+        }
+
+        private static IEnumerable<ClashResult> Results(ClashTest t)
+        {
+            foreach (SavedItem child in t.Children)
+            {
+                var r = child as ClashResult;
+                if (r != null) { yield return r; continue; }
+                var g = child as ClashResultGroup;
+                if (g != null) foreach (SavedItem inner in g.Children) { var rr = inner as ClashResult; if (rr != null) yield return rr; }
+            }
+        }
+
+        private static string Kind(ClashTest t)
+        {
+            switch (t.TestType)  // VERIFY enum names
+            {
+                case ClashTestType.Clearance: return "clearance";
+                case ClashTestType.Duplicate: return "duplicate";
+                default: return "hard";
+            }
+        }
+
+        private static string TestStatus(ClashTest t) { return t.Status == ClashTestStatus.New ? "new" : "active"; }  // VERIFY
+
+        public object ClashTests()
+        {
+            return UiThread.Run<object>(() =>
+            {
+                var d = Doc();
+                return Tests(d).Select(t => (object)new Dictionary<string, object>
+                {
+                    { "name", t.DisplayName }, { "kind", Kind(t) }, { "status", TestStatus(t) },
+                    { "tolerance", Metres(d, t.Tolerance) }, { "count", Results(t).Count() }
+                }).ToList();
+            });
+        }
+
+        // ------------------------------------------------------------ units
+        private static double UnitFactor(Document d)
+        {
+            switch (d.Units)  // VERIFY: Document.Units / Units enum
+            {
+                case Units.Millimeters: return 0.001;
+                case Units.Centimeters: return 0.01;
+                case Units.Meters: return 1.0;
+                case Units.Kilometers: return 1000.0;
+                case Units.Inches: return 0.0254;
+                case Units.Feet: return 0.3048;
+                case Units.Yards: return 0.9144;
+                case Units.Miles: return 1609.344;
+                default: return 1.0;
+            }
+        }
+
+        private static double Metres(Document d, double v) { return Math.Round(v * UnitFactor(d), 6); }
+
+        // ------------------------------------------------------------ element description
+        private static string Prop(ModelItem item, string category, string name)
+        {
+            try
+            {
+                var p = item.PropertyCategories.FindPropertyByDisplayName(category, name);
+                return p == null ? "" : p.Value.ToDisplayString();
+            }
+            catch { return ""; }
+        }
+
+        private static string FirstProp(ModelItem item, params string[][] where)
+        {
+            foreach (var w in where) { var v = Prop(item, w[0], w[1]); if (v.Length > 0) return v; }
+            return "";
+        }
+
+        private static Dictionary<string, object> Describe(Document d, ModelItem item)
+        {
+            var bb = item.BoundingBox();
+            double f = UnitFactor(d);
+            var elementId = FirstProp(item, new[] { "Element ID", "Value" }, new[] { "Element", "Id" });
+            var modelFile = item.Model != null ? System.IO.Path.GetFileName(item.Model.FileName ?? "") : "";
+            var o = new Dictionary<string, object>
+            {
+                { "id", modelFile + ":" + (elementId.Length > 0 ? elementId : item.InstanceGuid.ToString()) },
+                { "name", item.DisplayName ?? "" },
+                { "category", FirstProp(item, new[] { "Item", "Type" }, new[] { "Element", "Category" }) },
+                { "family", FirstProp(item, new[] { "Element", "Family" }, new[] { "Item", "Type" }) },
+                { "model", modelFile },
+                { "level", FirstProp(item, new[] { "Element", "Level" }, new[] { "Item", "Level" }) },
+                { "props", elementId.Length > 0 ? new Dictionary<string, object> { { "Id", elementId } } : new Dictionary<string, object>() },
+                { "bbox", new object[] {
+                    new object[] { Math.Round(bb.Min.X * f, 4), Math.Round(bb.Min.Y * f, 4), Math.Round(bb.Min.Z * f, 4) },
+                    new object[] { Math.Round(bb.Max.X * f, 4), Math.Round(bb.Max.Y * f, 4), Math.Round(bb.Max.Z * f, 4) } } }
+            };
+            var system = FirstProp(item, new[] { "Element", "System Name" }, new[] { "Element", "System Type" });
+            if (system.Length > 0) o["system"] = system;
+            return o;
+        }
+
+        private static string ResultStatus(ClashResult r)
+        {
+            switch (r.Status)  // VERIFY ClashResultStatus names
+            {
+                case ClashResultStatus.Active: return "active";
+                case ClashResultStatus.Reviewed: return "reviewed";
+                case ClashResultStatus.Approved: return "approved";
+                case ClashResultStatus.Resolved: return "resolved";
+                default: return "new";
+            }
+        }
+
+        // ------------------------------------------------------------ export job
+        public object StartExport(Dictionary<string, object> p)
+        {
+            var names = new HashSet<string>(((p.ContainsKey("tests") ? p["tests"] as System.Collections.ArrayList : null) ?? new System.Collections.ArrayList())
+                .Cast<object>().Select(x => Convert.ToString(x)));
+            int limit = p.ContainsKey("limit") ? Convert.ToInt32(p["limit"]) : 0;
+            var job = _jobs.Create("clash.export");
+            // 0.1 limitation: extraction runs on the UI thread in one block, so Navisworks is unresponsive meanwhile.
+            // Chunked extraction (a few tests per UI slice) is the first item on the add-in roadmap.
+            UiThreadPost(() => Export(job, names, limit));
+            return new Dictionary<string, object> { { "job_id", job.Id } };
+        }
+
+        private static void UiThreadPost(Action a) { System.Threading.ThreadPool.QueueUserWorkItem(_ => { try { UiThread.Run<object>(() => { a(); return null; }, 600000); } catch { } }); }
+
+        private void Export(Jobs.Job job, HashSet<string> names, int limit)
+        {
+            try
+            {
+                var d = Doc();
+                var tests = new List<object>();
+                var clashes = new List<object>();
+                bool truncated = false;
+                foreach (var t in Tests(d))
+                {
+                    if (job.Cancelled) { job.Finish("cancelled", null, ""); return; }
+                    if (names.Count > 0 && !names.Contains(t.DisplayName)) continue;
+                    var results = Results(t).ToList();
+                    tests.Add(new Dictionary<string, object> {
+                        { "name", t.DisplayName }, { "kind", Kind(t) }, { "status", TestStatus(t) },
+                        { "tolerance", Metres(d, t.Tolerance) }, { "count", results.Count } });
+                    foreach (var r in results)
+                    {
+                        if (limit > 0 && clashes.Count >= limit) { truncated = true; break; }
+                        if (r.Item1 == null || r.Item2 == null) continue;
+                        var a = Describe(d, r.Item1); var b = Describe(d, r.Item2);
+                        clashes.Add(new Dictionary<string, object> {
+                            { "id", r.Guid.ToString() }, { "test", t.DisplayName }, { "name", r.DisplayName },
+                            { "status", ResultStatus(r) }, { "kind", Kind(t) }, { "distance", Metres(d, r.Distance) },
+                            { "point", new object[] { Metres(d, r.Center.X), Metres(d, r.Center.Y), Metres(d, r.Center.Z) } },
+                            { "a", a }, { "b", b }, { "level", a["level"] } });
+                    }
+                }
+                job.Finish("completed", new Dictionary<string, object> {
+                    { "schema", "navis_mcp.clashset/1" }, { "source", "navisworks" }, { "document", DocState(d) },
+                    { "models", d.Models.Select(m => System.IO.Path.GetFileName(m.FileName ?? "")).ToArray() },
+                    { "truncated", truncated }, { "tests", tests }, { "clashes", clashes } }, "");
+            }
+            catch (RpcException ex) { job.Finish("failed", null, ex.Message); }
+            catch (Exception ex) { job.Finish("failed", null, ex.GetType().Name); }
+        }
+
+        // ------------------------------------------------------------ jobs
+        public object JobStatus(Dictionary<string, object> p) { return _jobs.Get(p).Status(); }
+        public object JobResult(Dictionary<string, object> p)
+        {
+            var j = _jobs.Get(p);
+            if (j.State != "completed") throw new RpcException("busy", "job is " + j.State);
+            return j.Result;
+        }
+        public object JobCancel(Dictionary<string, object> p) { var j = _jobs.Get(p); j.Cancel(); return new Dictionary<string, object> { { "job_id", j.Id }, { "state", j.State } }; }
+        public object JobList() { return _jobs.All(); }
+    }
+}

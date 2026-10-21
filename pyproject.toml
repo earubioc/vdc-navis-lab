@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "navis-mcp"
+version = "0.1.0"
+description = "MCP server for clash coordination in Autodesk Navisworks Manage: fewer tools, offline-capable, verified writes"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["navisworks", "bim", "clash-detection", "coordination", "mcp", "vdc"]
+dependencies = ["mcp>=2.0,<3"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "xmlschema>=3"]
+
+[project.scripts]
+navis-mcp = "navis_mcp.server:main"
+navis-mcp-cli = "navis_mcp.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+navis_mcp = ["profiles/*.toml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

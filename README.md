@@ -1,0 +1,93 @@
+# navis-mcp
+
+Clash coordination for Autodesk Navisworks Manage, exposed as an [MCP](https://modelcontextprotocol.io) server so any MCP-capable assistant can read, rank and act on clash results.
+
+Navisworks reports thousands of raw clashes. The hard part of coordination is deciding which ones matter, which discipline has to move, and which fifty of them are the same mistake repeated on every floor. `navis-mcp` does that analysis in a deterministic engine and gives the assistant a small set of tools to work with the result, instead of handing it a pile of raw rows.
+
+> **Status: v0.1, early.** The analysis engine, file ingestion, exports, the MCP server and a Navisworks simulator are implemented and tested (79 tests). The Navisworks add-in is a draft that has not been compiled or run against a real Navisworks yet. See [What is verified](#what-is-verified).
+
+## What it does
+
+- **Issues, not clashes.** Raw clashes are tagged by discipline, stripped of noise (designed openings, shallow touches, self-assemblies), clustered into issues, and ranked with a score whose every component is explained.
+- **Root causes.** Detects one element involved in many issues (a riser, a rack) and one detail repeated across levels, so one decision closes many issues.
+- **Who has to move.** Each issue names the discipline that should adjust, based on how movable each side is.
+- **Honest coverage.** Reports tests that never ran, discipline pairs with no results, and tests whose results were all filtered. "No clashes" is never reported as "clean" without saying what was not checked.
+- **Safe writes.** Changes to the Navisworks document are two-step: a dry run returns a `plan_id`, and only that id can be executed. Execution is bound to the document and revision, refuses stale analyses, and reports what was verified by re-reading the document.
+- **Works without Navisworks.** Reads Clash Detective XML, CSV and its own JSON export, so analysis, reports and BCF export run anywhere.
+- **Your criteria, in a file.** Disciplines, weights, tolerances and priority bands live in a TOML profile you can version and review.
+
+## Quick start
+
+```bash
+pip install -e ".[dev]"
+navis-mcp-cli sample examples/tower-demo.json         # a synthetic 5-level tower
+navis-mcp-cli analyze examples/tower-demo.json --lang en
+```
+
+Run the whole stack with no Navisworks, against the simulator:
+
+```bash
+navis-mcp-cli simulate        # terminal 1: fake add-in on loopback
+navis-mcp                     # terminal 2: the MCP server (stdio), finds the simulator by itself
+```
+
+### Connect an assistant
+
+Claude Desktop / any stdio MCP client:
+
+```json
+{
+  "mcpServers": {
+    "navis-mcp": { "command": "navis-mcp", "env": { "NAVIS_MCP_READ_ONLY": "0" } }
+  }
+}
+```
+
+Claude Code: `claude mcp add navis-mcp -- navis-mcp`
+
+## Tools
+
+Fourteen tools, prefix `nw_`. Heavy data never enters the conversation: results are summaries or file paths. Details in [docs/TOOLS.md](docs/TOOLS.md).
+
+| Area | Tools |
+|---|---|
+| State | `nw_status`, `nw_connect`, `nw_job` |
+| Criteria | `nw_profile` |
+| Model | `nw_model`, `nw_query` |
+| Analysis | `nw_run`, `nw_analyze`, `nw_issues`, `nw_issue` |
+| Output | `nw_report` (markdown, csv, bcf, json, plan), `nw_snapshot` |
+| Writes | `nw_apply`, `nw_document` |
+
+## Safety defaults
+
+| Setting | Effect |
+|---|---|
+| `NAVIS_MCP_READ_ONLY=1` | Blocks every write to Navisworks. Previews still work. |
+| `NAVIS_MCP_OUTPUT_ROOTS` | Folders (OS path separator) where files may be written. The default is `~/.navis_mcp/exports`. |
+| `NAVIS_MCP_HOME` | Data folder (snapshots, endpoint registry). |
+| `NAVIS_MCP_ENDPOINT` | Skip discovery: `pipe://NAME` or `tcp://127.0.0.1:PORT`. TCP is loopback only. |
+
+The add-in listens on a Windows named pipe restricted to the current user. File reads are limited to known extensions and 256 MB, XML with DTDs is refused, CSV cells that look like formulas are neutralised, and error messages never echo model content.
+
+## What is verified
+
+| Part | State |
+|---|---|
+| Analysis engine, profile, exports (CSV, Markdown, BCF 2.1 against the official XSD), snapshots | Tested on synthetic data |
+| MCP server over stdio, 14 tools, write flow, read-only mode | Tested end to end against the simulator |
+| Clash Detective XML ingestion | Tested on a synthetic file in the common layout; real exports vary and need field testing |
+| Windows named pipe client | Written, not run on Windows |
+| Navisworks add-in (C#) | Draft, not compiled, Navisworks API calls unverified |
+| Scoring weights and bands | Reasonable defaults, not calibrated on real projects |
+
+## Documentation
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): layers, the analysis pipeline, design decisions
+- [docs/PROTOCOL.md](docs/PROTOCOL.md): wire protocol between server and add-in
+- [docs/TOOLS.md](docs/TOOLS.md): tool reference
+- [docs/ROADMAP.md](docs/ROADMAP.md): what is next
+- [addin/README.md](addin/README.md): building and installing the add-in
+
+## License
+
+MIT, see [LICENSE](LICENSE).
