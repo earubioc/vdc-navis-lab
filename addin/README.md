@@ -18,7 +18,7 @@ Requires the .NET SDK and the Navisworks assemblies copied to `addin\refs\2026\`
 powershell -ExecutionPolicy Bypass -File D:\IA_WORK\MCP_NAVIS\addin\build-and-install.ps1
 ```
 
-It builds, copies the bundle to `%APPDATA%\Autodesk\ApplicationPlugins\VdcNavisLab.bundle` (current user, no administrator rights) and lists what it installed. Then open Navisworks.
+It builds and copies `VdcNavisLab.dll` to `%APPDATA%\Autodesk\Navisworks Manage 2026\Plugins\VdcNavisLab\` (current user, no administrator rights), the same layout other third-party plugins use. The folder name must equal the DLL name. Then open Navisworks and run `addin\check.ps1` to see whether it loaded.
 
 ## First test
 
