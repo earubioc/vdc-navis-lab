@@ -1,6 +1,25 @@
 # navis-mcp: manual for dummies
 
-A short, jargon-free guide to installing and trying navis-mcp. Current state: **v0.1**. It works with exported files and with a simulated Navisworks. The connection to a real Navisworks is not ready yet (the add-in is uncompiled), so today it cannot read or change your open model.
+A step-by-step guide to installing and trying navis-mcp. Every step says **where** to type it (which terminal) and **what you should see**.
+
+Current state: **v0.1**. It works with exported files and with a simulated Navisworks. The connection to a real Navisworks is not ready yet (the add-in is uncompiled), so today it cannot read or change your open model.
+
+## 0. How to open a terminal ready for work
+
+Repeat this **every time you open a new terminal**. Each terminal is independent: one with the environment active shares nothing with another.
+
+1. Start menu, type `PowerShell`, Enter.
+2. Type and press Enter:
+   ```powershell
+   cd D:\IA_WORK\MCP_NAVIS
+   ```
+3. Activate the environment:
+   ```powershell
+   .\.venv\Scripts\Activate.ps1
+   ```
+   **You should see** the line start with `(.venv)`. If it does not, the `navis-mcp...` commands will not work or will use the general Python.
+
+If step 3 says script execution is disabled, type `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, answer `Y`, and repeat step 3.
 
 ## 1. What it is, in one sentence
 
@@ -8,34 +27,46 @@ A bridge between an AI assistant (Claude, for example) and Navisworks clash dete
 
 ## 2. Installation (once)
 
-You need Python 3.11 or newer. Open PowerShell in the project folder and create a private environment:
+You need Python 3.11 or newer. With a terminal open in the project folder (steps 1 and 2 of section 0, no environment yet):
 
 ```powershell
-cd D:\IA_WORK\MCP_NAVIS
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
 ```
 
-**Important:** always use the `.venv` environment. Without it, pip puts the dependencies into your general Python and can break other programs. This happened once: `mcp` brings newer versions of `starlette` and `websockets`, while other packages on the machine (for example `gradio` or `fastapi`) ask for older ones. The "dependency conflicts" warning says exactly that. It does not affect navis-mcp, only those other applications. If one of them broke, run this outside the `.venv` environment:
+**You should see** `(.venv)` at the start of the line and, at the end, `Successfully installed ... navis-mcp-0.1.0`.
+
+**Why always `.venv`:** without it, pip puts the dependencies into your general Python and can break other programs. This happened once: `mcp` brings newer versions of `starlette` and `websockets`, while other packages on the machine (for example `gradio` or `fastapi`) ask for older ones. The "dependency conflicts" warning says exactly that. It does not affect navis-mcp, only those other applications. If one of them broke, open a terminal **without** an active environment (no `(.venv)`) and run:
 
 ```powershell
 pip install "starlette<0.49" "websockets<12"
 ```
 
-That should bring `fastapi` and `gradio` back to normal (not checked on your machine). From then on, use navis-mcp only inside `.venv`.
+That should bring `fastapi` and `gradio` back to normal (not checked on your machine).
 
-Every time you open a new terminal, activate the environment again: `.\.venv\Scripts\Activate.ps1`.
+## 3. Updating to the latest version
 
-## 3. The easiest test: the guided walk-through
+When an improvement is published, in a prepared terminal (section 0):
+
+```powershell
+git pull origin main
+git log --oneline -1
+```
+
+The second line shows the commit you are on. No reinstall is needed: the environment points straight at the folder. Type `git pull origin main` in full, because a bare `git pull` does not know where to pull from.
+
+## 4. The easiest test: the guided walk-through
+
+In a prepared terminal (section 0):
 
 ```powershell
 navis-mcp-cli demo
 ```
 
-In a few seconds it goes through the whole flow against a fake Navisworks: status, analysis, change plan, execution and verification. It needs nothing else and does not touch your data. For Spanish: `navis-mcp-cli demo --lang es`.
+In a few seconds it goes through the whole flow against a fake Navisworks: status, analysis, change plan, execution and verification. **You should see** five numbered steps and, at the end, "Done.". It needs nothing else and does not touch your data. For Spanish: `navis-mcp-cli demo --lang es`.
 
-Other useful commands:
+Other commands, in the same terminal:
 
 | Command | What it does |
 |---|---|
@@ -44,26 +75,41 @@ Other useful commands:
 | `navis-mcp-cli sample examples\tower.json` | Creates a sample file (a 5-level tower) |
 | `navis-mcp-cli analyze examples\tower.json --lang en` | Analyzes a file and prints the report |
 
-## 4. Why `navis-mcp` and `navis-mcp-cli simulate` look frozen
+## 5. Why `navis-mcp` and `navis-mcp-cli simulate` look frozen
 
 They are not. They are programs that **wait**:
 
-- `navis-mcp` is the server. It is not operated by hand: an assistant (Claude Desktop or Claude Code) starts it and talks to it behind the scenes. If you open it in a terminal, it now prints a note and exits.
-- `navis-mcp-cli simulate` is the fake Navisworks. It waits for connections until you press `Ctrl+C`. You only need it if you want an assistant to use it.
+- `navis-mcp` is the server. It is not operated by hand: the assistant (Claude Desktop or Claude Code) starts it and talks to it behind the scenes. If you type it in a terminal, it prints a note and exits.
+- `navis-mcp-cli simulate` is the fake Navisworks. It waits until you press `Ctrl+C`. You only need it if you want an assistant to use it, and it **needs its own open terminal** while you use it.
 
-## 5. Connecting an assistant
+## 6. Connecting Claude Desktop, step by step
 
-### Claude Desktop
+### 6.1 Register navis-mcp in Claude Desktop (once)
 
-The safe way, with the `.venv` environment active:
+1. Open a prepared terminal (section 0).
+2. Type:
+   ```powershell
+   navis-mcp-cli desktop-config --write
+   ```
+   **You should see** `backup: ...` and `navis-mcp added to ...claude_desktop_config.json`. The command saves a backup copy of the file and does not touch your other servers.
+3. If it says `is not valid JSON (line N ...)` instead, the configuration file has a previous error and **nothing was written**. Fix it: close Claude Desktop, type `notepad "$env:APPDATA\Claude\claude_desktop_config.json"`, go to the indicated line with `Ctrl+G`, fix or delete the extra text, save, and repeat step 2.
+4. Close Claude Desktop **completely**: click the `^` arrow next to the Windows clock, right-click the Claude icon, Quit. Closing only the window is not enough.
+5. Open Claude Desktop again.
 
-```powershell
-navis-mcp-cli desktop-config --write
-```
+### 6.2 Using it with the fake Navisworks (every time)
 
-It backs up the file, adds `navis-mcp` without touching your other servers, and refuses to write if the file is already broken. Then quit Claude Desktop completely (also from the system tray) and open it again. Without `--write` it only shows the entry that would be added.
+1. Open a prepared terminal (section 0) and type:
+   ```powershell
+   navis-mcp-cli simulate
+   ```
+   **You should see** `Navisworks simulator listening on tcp://127.0.0.1:...`. **Leave that terminal open**, typing nothing else in it.
+2. In Claude Desktop open a new chat. Ask: "Check the Navisworks status and analyze the worst issues".
+3. The first time Claude will ask permission to use the tool: accept. **You should see** 35 issues, one critical.
+4. When done, go back to the simulator terminal and press `Ctrl+C`.
 
-By hand: open `%APPDATA%\Claude\claude_desktop_config.json`. If the file already has `"mcpServers"`, **do not paste the whole block**: add only the `"navis-mcp": {...}` entry inside that object, with a comma after the previous entry. Pasting a new block after the final closing brace `}` makes the file invalid and Claude Desktop will not start ("Unexpected non-whitespace character after JSON"). The full block is for an empty file only (adjust the path if your folder differs):
+### Registering by hand (only if you cannot use the command)
+
+Open `%APPDATA%\Claude\claude_desktop_config.json`. If it already has `"mcpServers"`, **do not paste the whole block**: add only the `"navis-mcp": {...}` entry inside that object, with a comma after the previous entry. Pasting a new block after the final closing brace `}` makes the file invalid and Claude Desktop will not start ("Unexpected non-whitespace character after JSON"). The full block, for an empty file only:
 
 ```json
 {
@@ -76,19 +122,15 @@ By hand: open `%APPDATA%\Claude\claude_desktop_config.json`. If the file already
 }
 ```
 
-Quit Claude Desktop completely and open it again. The `nw_*` tools will appear.
-
 ### Claude Code
+
+In a prepared terminal (section 0):
 
 ```powershell
 claude mcp add navis-mcp -- D:\IA_WORK\MCP_NAVIS\.venv\Scripts\navis-mcp.exe
 ```
 
-### With the fake Navisworks
-
-Keep a terminal open with `navis-mcp-cli simulate` and connect the assistant as above. It finds the simulator by itself.
-
-## 6. What to ask the assistant
+## 7. What to ask the assistant
 
 - "Check the Navisworks status."
 - "Analyze the file `D:\...\clash.xml` and give me the five worst issues."
@@ -99,22 +141,24 @@ Keep a terminal open with `navis-mcp-cli simulate` and connect the assistant as 
 
 To analyze your own clashes without a live Navisworks: in Navisworks, Clash Detective, Report tab, XML format, and give the assistant the file path. CSV files and navis-mcp JSON files work too. Real exports vary between versions; if one fails, keep it and report it, that is useful information to improve the reader.
 
-## 7. Safety: what to know
+## 8. Safety: what to know
 
-- `NAVIS_MCP_READ_ONLY=1` blocks every write to Navisworks. Leave it on while testing.
+- `NAVIS_MCP_READ_ONLY=1` blocks every write to Navisworks. `desktop-config` leaves it on; to allow writes, run the command again with `--allow-writes`.
 - Reports are saved only under `%USERPROFILE%\.navis_mcp\exports`, unless you set `NAVIS_MCP_OUTPUT_ROOTS`.
 - Changing anything in Navisworks is always two steps: a plan (which modifies nothing) and its execution by `plan_id`.
 
-## 8. When something fails
+## 9. When something fails
 
 | Symptom | What to do |
 |---|---|
-| `navis-mcp` is not recognized as a command | Activate the environment: `.\.venv\Scripts\Activate.ps1` |
-| The assistant does not see the tools | Check the `.exe` path in the configuration and fully restart the assistant |
-| "no Navisworks instance" | Expected without Navisworks: use a file (`path=`) or start `simulate` |
+| `navis-mcp-cli` is not recognized as a command | The terminal has no environment: repeat section 0 |
+| `invalid choice: '...'` when typing a manual command | Your copy is outdated: section 3 |
+| `desktop-config` says the file is not valid JSON | Step 3 of section 6.1 |
+| Claude Desktop does not show the tools | Quit it completely (step 4 of 6.1) and open it again |
+| "no Navisworks instance" | Expected without Navisworks: use a file, or keep `simulate` open in another terminal |
 | An XML is not read | Try CSV, or report the case |
 | Results say "never run" | That test was not run in Navisworks: no clashes does not mean clean |
 
-## 9. What it does not do yet
+## 10. What it does not do yet
 
 Read or modify a real open Navisworks, create viewpoints, color the model or produce PDF. See [docs/ROADMAP.md](docs/ROADMAP.md).
