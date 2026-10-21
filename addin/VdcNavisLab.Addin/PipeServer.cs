@@ -35,7 +35,7 @@ namespace VdcNavisLab.Addin
         {
             var sec = new PipeSecurity();
             var me = WindowsIdentity.GetCurrent().User;
-            sec.AddAccessRule(new PipeAccessRule(me, PipeAccessRights.ReadWrite, AccessControlType.Allow));
+            sec.AddAccessRule(new PipeAccessRule(me, PipeAccessRights.ReadWrite | PipeAccessRights.CreateNewInstance, AccessControlType.Allow));
             return sec;
         }
 
@@ -59,7 +59,8 @@ namespace VdcNavisLab.Addin
                     next = null;
                     current.WaitForConnection();
                     if (_stop) break;
-                    next = NewListener();
+                    try { next = NewListener(); }
+                    catch (Exception ex) { Log.Write("cannot prepare next pipe instance: " + ex.GetType().Name + ": " + ex.Message); next = null; }
                     var captured = current;
                     current = null;  // ownership moves to the worker
                     new Thread(() => Serve(captured)) { IsBackground = true }.Start();
