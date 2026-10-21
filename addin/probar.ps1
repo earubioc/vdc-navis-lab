@@ -12,7 +12,17 @@ for ($i = 0; $i -lt 90; $i++) {
 }
 if (-not $ok) { Write-Host "NO apareció el pipe. Navisworks no cargó el add-in."; Get-Content (Join-Path $env:LOCALAPPDATA "vdc-navis-lab\addin.log") -Tail 10 -ErrorAction SilentlyContinue; return }
 Write-Host "Pipe encontrado: $pipes"
-Start-Sleep -Seconds 3
+Write-Host "Esperando a que haya un modelo abierto en Navisworks (hasta 3 minutos)..."
+$open = $false
+for ($i = 0; $i -lt 90; $i++) {
+    try {
+        $st = (& $cli call nw_status 2>$null) -join "`n" | ConvertFrom-Json
+        if ($st.bridge.instances | Where-Object { $_.open }) { $open = $true; break }
+    } catch { }
+    Start-Sleep -Seconds 2
+}
+if (-not $open) { Write-Host "Navisworks esta abierto pero sin modelo. Abre tu .nwd/.nwf y vuelve a ejecutar este script."; return }
+Write-Host "Modelo abierto. Probando..."
 foreach ($step in @(@("nw_status"), @("nw_status"), @("nw_document"), @("nw_analyze"))) {
     Write-Host ""
     Write-Host "=== vdc-navis-lab-cli call $($step -join ' ') ==="
