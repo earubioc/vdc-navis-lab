@@ -1,7 +1,7 @@
 # Coordination report
 
 **Document:** TORRE-DEMO.nwf  
-**Profile:** default (81b8bf1fa6e8)  
+**Profile:** default (8df36eb5ded1)  
 **Raw clashes:** 54, **issues:** 35, **decisions:** 9
 
 CRITICAL 1 · HIGH 26 · MEDIUM 8 · LOW 0
