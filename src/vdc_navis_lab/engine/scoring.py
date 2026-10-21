@@ -11,7 +11,7 @@ import math
 from dataclasses import dataclass, field
 from fnmatch import fnmatch
 
-from ..model import CLEARANCE, HARD, Clash, TestInfo
+from ..model import CLEARANCE, HARD, Clash, Element, TestInfo
 from ..profile import PRIORITIES, Profile
 
 
@@ -48,6 +48,17 @@ class Scorer:
         self.bands = profile.section("score", "bands")
         self.gates = profile.section("score").get("gates", [])
 
+        # A small MEP run crossing a floor or wall it is expected to pass through (a riser, a feed) is
+        # routed through a sleeve or opening far more often than it is a true conflict; nothing in the
+        # exported geometry says whether that sleeve exists, so this only dampens the signal and says why,
+        # it never drops the clash.
+        sleeve = profile.section("score", "sleeve")
+        self.sleeve_hosts = {str(c).lower() for c in sleeve.get("host_categories", [])}
+        self.sleeve_crossings = {str(c).lower() for c in sleeve.get("crossing_categories", [])}
+        self.sleeve_depth_tolerance = float(sleeve.get("depth_tolerance", 1.5))
+        self.sleeve_damping = float(sleeve.get("damping", 1.0))
+        self.sleeve_cap = sleeve.get("gate_floor_cap") or None
+
     def priority_of(self, score: float) -> str:
         if score >= self.bands["critical"]:
             return "critical"
@@ -56,6 +67,21 @@ class Scorer:
         if score >= self.bands["medium"]:
             return "medium"
         return "low"
+
+    def _sleeve_host(self, a: Element, b: Element, depth: float) -> Element | None:
+        """The host element, if this crossing looks like a clean through-penetration of a floor or wall
+        by a small MEP run, rather than a true conflict. Proven by geometry, not just category: the depth
+        has to be consistent with simply passing through the host's own thickness."""
+        if not self.sleeve_hosts or not self.sleeve_crossings:
+            return None
+        for host, cross in ((a, b), (b, a)):
+            if host.category.lower() not in self.sleeve_hosts or cross.category.lower() not in self.sleeve_crossings:
+                continue
+            if not host.min_dim:
+                continue  # cannot prove it, so the clash keeps its full severity
+            if depth <= host.min_dim * self.sleeve_depth_tolerance:
+                return host
+        return None
 
     def score(self, group: list[Clash], crowding: float = 0.0, crowd: int = 0) -> Verdict:
         p = self.profile
@@ -68,6 +94,7 @@ class Scorer:
 
         comps: dict[str, float] = {}
         applicable: set[str] = {"criticality", "immovability", "size", "crowding"}
+        sleeve_cap: str | None = None
 
         max_depth = max((c.depth for c in hard), default=0.0)
         if hard:
@@ -81,6 +108,12 @@ class Scorer:
             else:
                 comps["penetration"] = _clamp(deep.depth / self.ref_depth)
                 reasons.append(("depth_abs", {"depth_mm": deep.depth * 1000}))
+
+            host = self._sleeve_host(deep.a, deep.b, deep.depth)
+            if host is not None:
+                comps["penetration"] *= self.sleeve_damping
+                reasons.append(("sleeve_candidate", {"host": host.category, "depth_mm": deep.depth * 1000}))
+                sleeve_cap = self.sleeve_cap
 
         crit = p.criticality(a, b)
         comps["criticality"] = crit
@@ -123,6 +156,8 @@ class Scorer:
                 if PRIORITIES.index(floor) < PRIORITIES.index(priority):
                     priority = floor
                     reasons.append(("gate", {"pair": f"{a}-{b}", "depth_mm": max_depth * 1000, "floor": floor}))
+        if sleeve_cap and PRIORITIES.index(priority) < PRIORITIES.index(sleeve_cap):
+            priority = sleeve_cap  # a sleeve candidate: no depth gate pushes it past this on its own
 
         return Verdict(score, priority, {k: round(v, 3) for k, v in comps.items()}, reasons, mover, anchor)
 

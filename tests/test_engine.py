@@ -174,6 +174,23 @@ def test_gate_raises_priority_and_says_why(profile):
     assert v.score < 52 or v.priority != "low"
 
 
+def test_sleeve_candidate_is_dampened_and_capped_but_a_beam_is_not(profile):
+    s = Scorer(profile, [])
+    floor = Element(id="f", discipline="STR", category="Floors", bbox=((0, 0, 0), (2.0, 2.0, 0.10)))
+    pipe = Element(id="p", discipline="PLB", category="Pipes", bbox=((0, 0, 0), (0.05, 0.05, 0.05)))
+    through_floor = s.score([clash(floor, pipe, depth=0.09)])  # a riser, not deeper than the slab itself
+    assert any(code == "sleeve_candidate" for code, _ in through_floor.reasons)
+    assert through_floor.priority in ("medium", "low"), "capped below the STR-* depth gate's 'high' floor"
+
+    beam = Element(id="be", discipline="STR", category="Structural Framing", bbox=((0, 0, 0), (0.3, 0.3, 0.3)))
+    through_beam = s.score([clash(beam, pipe, depth=0.09)])  # a beam is never a sleeve candidate
+    assert not any(code == "sleeve_candidate" for code, _ in through_beam.reasons)
+    assert through_beam.priority in ("high", "critical")
+
+    too_deep = s.score([clash(floor, pipe, depth=0.5)])  # far past the slab's own thickness
+    assert not any(code == "sleeve_candidate" for code, _ in too_deep.reasons)
+
+
 # ---------------------------------------------------------------- level
 @pytest.mark.parametrize("raw,clean", [('Level "2th FLOOR", #9946', "2th FLOOR"), ("Level 1", "Level 1"),
                                         ("Level L2", "L2"), ("", "")])

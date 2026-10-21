@@ -118,6 +118,21 @@ pair = "FIRE-*"
 min_depth_m = 0.02
 floor = "high"
 
+# A small MEP run crossing a floor or wall it is expected to pass through (a riser, a feed) is routed
+# through a sleeve or opening far more often than it is a true conflict, but nothing in the exported
+# geometry says whether that sleeve exists: this only dampens the signal and explains why, it never
+# drops the clash the way [noise] does. depth_tolerance: still looks like a clean crossing when the
+# penetration is no deeper than the host's own thickness times this factor.
+[score.sleeve]
+host_categories = ["floors", "slabs", "walls", "losas", "suelos", "muros"]
+crossing_categories = ["pipes", "pipe fittings", "flex pipes", "conduits", "conduit fittings",
+  "ducts", "duct fittings", "flex ducts", "cable trays", "cable tray fittings",
+  "tuberías", "uniones de tubería", "tubos", "uniones de tubo", "conductos", "uniones de conducto",
+  "bandejas de cables"]
+depth_tolerance = 1.5
+damping = 0.45
+gate_floor_cap = "medium"    # no depth gate pushes a sleeve candidate past this on its own
+
 [score.criticality]          # 0..1, keyed by sorted pair. Missing pairs use `default`.
 default = 0.5
 "STR-HVAC" = 0.90
