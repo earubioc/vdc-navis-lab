@@ -2,7 +2,7 @@
 
 A step-by-step guide to installing and trying vdc-navis-lab. Every step says **where** to type it (which terminal) and **what you should see**.
 
-Current state: **v0.1**. It works with exported files, with a simulated Navisworks and with a real Navisworks Manage 2026 (reads Clash Detective tests and analyses them; see section 10). It does not change the open model yet.
+Current state: **v0.2**. It works with exported files, with a simulated Navisworks and with a real Navisworks Manage 2026: it reads Clash Detective tests, analyses them, and writes back (grouping, status, save) verified by re-reading the document (see section 10).
 
 ## 0. How to open a terminal ready for work
 
@@ -35,7 +35,7 @@ python -m venv .venv
 pip install -e ".[dev]"
 ```
 
-**You should see** `(.venv)` at the start of the line and, at the end, `Successfully installed ... vdc-navis-lab-0.1.1`.
+**You should see** `(.venv)` at the start of the line and, at the end, `Successfully installed ... vdc-navis-lab-0.2.0`.
 
 **Why always `.venv`:** without it, pip puts the dependencies into your general Python and can break other programs. This happened once: `mcp` brings newer versions of `starlette` and `websockets`, while other packages on the machine (for example `gradio` or `fastapi`) ask for older ones. The "dependency conflicts" warning says exactly that. It does not affect vdc-navis-lab, only those other applications. If one of them broke, open a terminal **without** an active environment (no `(.venv)`) and run:
 
@@ -65,7 +65,7 @@ The product is now called `vdc-navis-lab`. The commands changed: `navis-mcp` bec
    ```powershell
    pip install -e ".[dev]"
    ```
-   **You should see** `Successfully installed ... vdc-navis-lab-0.1.1`.
+   **You should see** `Successfully installed ... vdc-navis-lab-0.2.0`.
 5. Replace the old Claude Desktop entry with the new one:
    ```powershell
    vdc-navis-lab-cli desktop-config --write
@@ -187,7 +187,7 @@ To analyze your own clashes without a live Navisworks: in Navisworks, Clash Dete
 
 ## 9. What it does not do yet
 
-Changing a real open Navisworks (saving, setting statuses), creating viewpoints, colouring the model or producing a PDF. See [docs/ROADMAP.md](docs/ROADMAP.md).
+Running Clash Detective tests, a census of the federated model, creating viewpoints, colouring the model or producing a PDF. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## 10. Connecting to a real Navisworks Manage 2026
 

@@ -4,7 +4,7 @@ Clash coordination for Autodesk Navisworks Manage, exposed as an [MCP](https://m
 
 Navisworks reports thousands of raw clashes. The hard part of coordination is deciding which ones matter, which discipline has to move, and which fifty of them are the same mistake repeated on every floor. `vdc-navis-lab` does that analysis in a deterministic engine and gives the assistant a small set of tools to work with the result, instead of handing it a pile of raw rows.
 
-> **Status: v0.1, early.** The analysis engine, file ingestion, exports, the MCP server and a Navisworks simulator are implemented and tested (93 tests). The Navisworks add-in is built and verified against a real Navisworks Manage 2026: it reads the Clash Detective tests, analyses a real federated model, and writes back (`clash.apply`, `doc.save`), verified by re-reading the document. See [What is verified](#what-is-verified).
+> **Status: v0.2, early.** The analysis engine, file ingestion, exports, the MCP server and a Navisworks simulator are implemented and tested (94 tests). The Navisworks add-in is built and verified against a real Navisworks Manage 2026: it reads the Clash Detective tests, analyses a real federated model, and writes back (`clash.apply`, `doc.save`), verified by re-reading the document. Tested on one real model, one installation; several capabilities (`model.census`, `clash.run`, viewpoints, Navisworks 2025) are still missing. See [What is verified](#what-is-verified).
 
 ## What it does
 

@@ -2,7 +2,7 @@
 
 Guía paso a paso para instalar vdc-navis-lab y probarlo. Cada paso dice **dónde** se escribe (qué terminal) y **qué debes ver**.
 
-Estado actual: **v0.1**. Funciona con archivos exportados, con un Navisworks simulado y con Navisworks Manage 2026 real (lectura de pruebas de Clash Detective y análisis; ver la sección 10). Todavía no modifica el modelo abierto.
+Estado actual: **v0.2**. Funciona con archivos exportados, con un Navisworks simulado y con Navisworks Manage 2026 real: lee pruebas de Clash Detective, las analiza, y escribe de vuelta (agrupar, estado, guardar) verificado releyendo el documento (ver la sección 10).
 
 ## 0. Cómo abrir una terminal lista para trabajar
 
@@ -35,7 +35,7 @@ python -m venv .venv
 pip install -e ".[dev]"
 ```
 
-**Debes ver** `(.venv)` al inicio de la línea y, al final, `Successfully installed ... vdc-navis-lab-0.1.1`.
+**Debes ver** `(.venv)` al inicio de la línea y, al final, `Successfully installed ... vdc-navis-lab-0.2.0`.
 
 **Por qué siempre `.venv`:** sin él, pip mete las dependencias en el Python general y puede dañar otros programas. Pasó una vez: `mcp` trae versiones nuevas de `starlette` y `websockets`, y otros paquetes del equipo (por ejemplo `gradio` o `fastapi`) piden versiones más viejas. El aviso "dependency conflicts" dice exactamente eso. No afecta a vdc-navis-lab, solo a esas otras aplicaciones. Si alguna se rompió, abre una terminal **sin** entorno activo (sin `(.venv)`) y ejecuta:
 
@@ -65,7 +65,7 @@ El producto ahora se llama `vdc-navis-lab`. Cambiaron los comandos: `navis-mcp` 
    ```powershell
    pip install -e ".[dev]"
    ```
-   **Debes ver** `Successfully installed ... vdc-navis-lab-0.1.1`.
+   **Debes ver** `Successfully installed ... vdc-navis-lab-0.2.0`.
 5. Reemplaza la entrada vieja de Claude Desktop por la nueva:
    ```powershell
    vdc-navis-lab-cli desktop-config --write
@@ -187,7 +187,7 @@ Para analizar tus propios clashes sin Navisworks conectado: en Navisworks, Clash
 
 ## 9. Qué no hace todavía
 
-Modificar un Navisworks real abierto (guardar, asignar estados), crear viewpoints, colorear el modelo ni generar PDF. Ver [docs/ROADMAP.md](docs/ROADMAP.md).
+Correr las pruebas de Clash Detective, un censo del modelo federado, crear viewpoints, colorear el modelo ni generar PDF. Ver [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## 10. Conectar con Navisworks Manage 2026 real
 
