@@ -2,15 +2,15 @@
   <!-- DRAFT: not compiled yet. See ../README.md. -->
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
-    <AssemblyName>NavisMcp.Addin</AssemblyName>
-    <RootNamespace>NavisMcp.Addin</RootNamespace>
+    <AssemblyName>VdcNavisLab.Addin</AssemblyName>
+    <RootNamespace>VdcNavisLab.Addin</RootNamespace>
     <LangVersion>9.0</LangVersion>
     <Nullable>disable</Nullable>
     <PlatformTarget>x64</PlatformTarget>
     <!-- Override on the command line: dotnet build -p:NavisworksDir="C:\Program Files\Autodesk\Navisworks Manage 2025" -->
     <NavisworksDir Condition="'$(NavisworksDir)' == ''">C:\Program Files\Autodesk\Navisworks Manage 2025</NavisworksDir>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Autodesk.Navisworks.Api"><HintPath>$(NavisworksDir)\Autodesk.Navisworks.Api.dll</HintPath><Private>false</Private></Reference>

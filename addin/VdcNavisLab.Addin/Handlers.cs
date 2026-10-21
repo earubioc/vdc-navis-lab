@@ -8,7 +8,7 @@ using System.Text;
 using Autodesk.Navisworks.Api;
 using Autodesk.Navisworks.Api.Clash;
 
-namespace NavisMcp.Addin
+namespace VdcNavisLab.Addin
 {
     internal sealed class Handlers
     {
@@ -242,7 +242,7 @@ namespace NavisMcp.Addin
                     }
                 }
                 job.Finish("completed", new Dictionary<string, object> {
-                    { "schema", "navis_mcp.clashset/1" }, { "source", "navisworks" }, { "document", DocState(d) },
+                    { "schema", "vdc_navis_lab.clashset/1" }, { "source", "navisworks" }, { "document", DocState(d) },
                     { "models", d.Models.Select(m => System.IO.Path.GetFileName(m.FileName ?? "")).ToArray() },
                     { "truncated", truncated }, { "tests", tests }, { "clashes", clashes } }, "");
             }

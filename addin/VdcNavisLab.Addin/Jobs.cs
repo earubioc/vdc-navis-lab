@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace NavisMcp.Addin
+namespace VdcNavisLab.Addin
 {
     internal sealed class Jobs
     {

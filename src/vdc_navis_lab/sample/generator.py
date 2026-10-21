@@ -1,6 +1,6 @@
 """Deterministic synthetic project: a 5-level tower with every situation the engine must handle.
 
-Used by the tests, by the simulator that stands in for Navisworks, and by `navis-mcp-cli sample`.
+Used by the tests, by the simulator that stands in for Navisworks, and by `vdc-navis-lab-cli sample`.
 Nothing here is real project data.
 """
 

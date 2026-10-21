@@ -59,7 +59,7 @@ class Bridge:
         found, _ = self.instances()
         if not found:
             raise BridgeError(NO_INSTANCE, "no Navisworks instance with the add-in is reachable",
-                              "open Navisworks with the navis-mcp add-in loaded, or start the simulator")
+                              "open Navisworks with the vdc-navis-lab add-in loaded, or start the simulator")
         if self.pinned_id:
             match = next((i for i in found if i.get("instance_id") == self.pinned_id), None)
             if match is None:

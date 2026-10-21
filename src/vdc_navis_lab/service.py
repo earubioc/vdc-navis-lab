@@ -75,11 +75,11 @@ class App:
     # ------------------------------------------------------------ helpers
     @property
     def read_only(self) -> bool:
-        return os.environ.get("NAVIS_MCP_READ_ONLY", "").lower() in ("1", "true", "yes")
+        return os.environ.get("VDC_NAVIS_LAB_READ_ONLY", "").lower() in ("1", "true", "yes")
 
     def _refuse_if_read_only(self) -> None:
         if self.read_only:
-            raise ToolFault("read_only", "NAVIS_MCP_READ_ONLY is set: this server will not modify the document",
+            raise ToolFault("read_only", "VDC_NAVIS_LAB_READ_ONLY is set: this server will not modify the document",
                             "unset it in the server environment to allow writes")
 
     def _lang(self, lang: str | None) -> str:
@@ -376,7 +376,7 @@ class App:
         ext = {"markdown": "md", "csv": "csv", "bcf": "bcf", "json": "json"}.get(kind)
         if ext is None:
             raise ToolFault(INVALID_PARAMS, "kind must be summary, matrix, hotspots, plan, markdown, csv, bcf or json")
-        target = _output(path, f"navis-mcp-{r.analysis_id}.{ext}", overwrite)
+        target = _output(path, f"vdc-navis-lab-{r.analysis_id}.{ext}", overwrite)
         if kind == "markdown":
             data = exports.to_markdown(r, self.profile, min(limit, 500)).encode("utf-8")
         elif kind == "csv":

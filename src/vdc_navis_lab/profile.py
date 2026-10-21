@@ -10,7 +10,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "navis_mcp.profile/1"
+SCHEMA = "vdc_navis_lab.profile/1"
 MAX_PROFILE_BYTES = 256 * 1024
 PRIORITIES = ("critical", "high", "medium", "low")
 _CODE = re.compile(r"^[A-Z][A-Z0-9_]{1,11}$")
@@ -41,7 +41,7 @@ class Profile:
     # ---- loading
     @classmethod
     def default(cls) -> "Profile":
-        text = resources.files("navis_mcp").joinpath("profiles/default.toml").read_text(encoding="utf-8")
+        text = resources.files("vdc_navis_lab").joinpath("profiles/default.toml").read_text(encoding="utf-8")
         return cls.from_text(text)
 
     @classmethod

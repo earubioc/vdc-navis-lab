@@ -2,7 +2,7 @@
 
 JSON-RPC 2.0, UTF-8, one JSON object per line, **one request per connection**. The server connects, writes one line, reads one line, closes.
 
-Transport: Windows named pipe `\\.\pipe\navis-mcp.<pid>` (ACL: current user only). Development and the simulator use loopback TCP, `tcp://127.0.0.1:PORT`. Maximum line: 64 MB.
+Transport: Windows named pipe `\\.\pipe\vdc-navis-lab.<pid>` (ACL: current user only). Development and the simulator use loopback TCP, `tcp://127.0.0.1:PORT`. Maximum line: 64 MB.
 
 ## Errors
 
@@ -22,7 +22,7 @@ Transport: Windows named pipe `\\.\pipe\navis-mcp.<pid>` (ACL: current user only
 | `elements.query` | `criteria[]`, `group_by`, `limit` | `count`, `groups[]`, `sample[]` |
 | `clash.tests` | none | list of `{name, kind, status, tolerance, count}` |
 | `clash.run` | `tests[]` | `{job_id}` |
-| `clash.export` | `tests[]`, `limit` | `{job_id}`; the result is a `navis_mcp.clashset/1` document |
+| `clash.export` | `tests[]`, `limit` | `{job_id}`; the result is a `vdc_navis_lab.clashset/1` document |
 | `clash.apply` | `if_fingerprint`, `dedupe_key`, `groups[]`, `statuses[]` | `applied`, `verified`, `missing` |
 | `doc.save` | `if_fingerprint`, `path?` | `saved`, `verified`, `path` |
 | `job.status` / `job.result` / `job.cancel` / `job.list` | `job_id` | job state, result, or list |
@@ -35,7 +35,7 @@ Long operations return a `job_id` immediately. States: `running`, `completed`, `
 
 `doc.fingerprint` identifies the document (path and model files); `doc.revision` changes whenever tests, results or result statuses change. Writes carry `if_fingerprint` and fail with `stale_document` on mismatch.
 
-## `navis_mcp.clashset/1`
+## `vdc_navis_lab.clashset/1`
 
 ```
 { schema, source, document{title,fingerprint,revision}, models[], truncated,

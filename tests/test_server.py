@@ -26,7 +26,7 @@ def _err(result):
 
 
 async def _session(env, body):
-    params = StdioServerParameters(command=sys.executable, args=["-m", "navis_mcp.server"], env=env)
+    params = StdioServerParameters(command=sys.executable, args=["-m", "vdc_navis_lab.server"], env=env)
     async with stdio_client(params) as (r, w):
         async with ClientSession(r, w) as s:
             await s.initialize()
@@ -34,8 +34,8 @@ async def _session(env, body):
 
 
 def _env(sim, tmp_path, **extra):
-    env = {**os.environ, "PYTHONPATH": SRC, "NAVIS_MCP_ENDPOINT": sim.endpoint,
-           "NAVIS_MCP_HOME": str(tmp_path / "home")}
+    env = {**os.environ, "PYTHONPATH": SRC, "VDC_NAVIS_LAB_ENDPOINT": sim.endpoint,
+           "VDC_NAVIS_LAB_HOME": str(tmp_path / "home")}
     env.update(extra)
     return env
 
@@ -76,15 +76,15 @@ def test_read_only_flag_reaches_the_process(sim, tmp_path):
         res = await s.call_tool("nw_apply", {"plan_id": plan["plan_id"], "dry_run": False})
         assert _err(res)["error"] == "read_only"
 
-    anyio.run(_session, _env(sim, tmp_path, NAVIS_MCP_READ_ONLY="1"), body)
+    anyio.run(_session, _env(sim, tmp_path, VDC_NAVIS_LAB_READ_ONLY="1"), body)
 
 
 def test_offline_mode_without_navisworks(tmp_path):
-    from navis_mcp.sample.generator import build
+    from vdc_navis_lab.sample.generator import build
     f = tmp_path / "export.json"
     f.write_text(json.dumps(build()[0].to_dict()), encoding="utf-8")
-    env = {**os.environ, "PYTHONPATH": SRC, "NAVIS_MCP_HOME": str(tmp_path / "home"),
-           "NAVIS_MCP_ENDPOINT": ""}
+    env = {**os.environ, "PYTHONPATH": SRC, "VDC_NAVIS_LAB_HOME": str(tmp_path / "home"),
+           "VDC_NAVIS_LAB_ENDPOINT": ""}
 
     async def body(s):
         st = json.loads(_text(await s.call_tool("nw_status", {})))

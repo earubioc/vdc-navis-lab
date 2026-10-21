@@ -1,7 +1,7 @@
-# navis-mcp default profile. Every threshold the engine uses lives here.
+# vdc-navis-lab default profile. Every threshold the engine uses lives here.
 # Copy this file, edit it, and load it with nw_profile(action="load", path=...).
 
-schema = "navis_mcp.profile/1"
+schema = "vdc_navis_lab.profile/1"
 name = "default"
 lang = "es"                    # "es" or "en": language of generated text
 expected_pairs = ["STR-HVAC", "STR-PLB", "STR-ELE", "HVAC-PLB", "HVAC-ELE", "PLB-ELE", "ARC-HVAC", "FIRE-HVAC"]

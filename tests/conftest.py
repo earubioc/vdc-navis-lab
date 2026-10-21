@@ -1,20 +1,20 @@
 import pytest
 
-from navis_mcp.bridge import Bridge
-from navis_mcp.bridge.simulator import Simulator
-from navis_mcp.bridge.transport import Endpoint
-from navis_mcp.engine import analyze
-from navis_mcp.profile import Profile
-from navis_mcp.sample.generator import build
-from navis_mcp.service import App
+from vdc_navis_lab.bridge import Bridge
+from vdc_navis_lab.bridge.simulator import Simulator
+from vdc_navis_lab.bridge.transport import Endpoint
+from vdc_navis_lab.engine import analyze
+from vdc_navis_lab.profile import Profile
+from vdc_navis_lab.sample.generator import build
+from vdc_navis_lab.service import App
 
 
 @pytest.fixture(autouse=True)
 def _home(tmp_path, monkeypatch):
-    monkeypatch.setenv("NAVIS_MCP_HOME", str(tmp_path / "home"))
-    monkeypatch.delenv("NAVIS_MCP_OUTPUT_ROOTS", raising=False)
-    monkeypatch.delenv("NAVIS_MCP_READ_ONLY", raising=False)
-    monkeypatch.delenv("NAVIS_MCP_ENDPOINT", raising=False)
+    monkeypatch.setenv("VDC_NAVIS_LAB_HOME", str(tmp_path / "home"))
+    monkeypatch.delenv("VDC_NAVIS_LAB_OUTPUT_ROOTS", raising=False)
+    monkeypatch.delenv("VDC_NAVIS_LAB_READ_ONLY", raising=False)
+    monkeypatch.delenv("VDC_NAVIS_LAB_ENDPOINT", raising=False)
 
 
 @pytest.fixture

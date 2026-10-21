@@ -3,13 +3,13 @@ import socket
 
 import pytest
 
-from navis_mcp.bridge import Bridge, BridgeError
-from navis_mcp.bridge.simulator import Simulator
-from navis_mcp.bridge.transport import Endpoint, discover
+from vdc_navis_lab.bridge import Bridge, BridgeError
+from vdc_navis_lab.bridge.simulator import Simulator
+from vdc_navis_lab.bridge.transport import Endpoint, discover
 
 
 def test_endpoint_parsing_refuses_non_loopback_tcp():
-    assert str(Endpoint.parse("pipe://navis-mcp.123")) == "pipe://navis-mcp.123"
+    assert str(Endpoint.parse("pipe://vdc-navis-lab.123")) == "pipe://vdc-navis-lab.123"
     with pytest.raises(BridgeError):
         Endpoint.parse("tcp://192.168.1.5:9000")
     with pytest.raises(BridgeError):
@@ -107,3 +107,13 @@ def test_registry_discovery_drops_stale_entries(tmp_path):
     finally:
         s.stop()
     assert not any(str(e) == s.endpoint for e in discover())
+
+
+def test_registry_entry_of_a_killed_simulator_is_dropped_on_any_platform():
+    import socket as _s
+    from vdc_navis_lab.bridge.transport import registry_dir
+    free = _s.socket(); free.bind(("127.0.0.1", 0)); port = free.getsockname()[1]; free.close()  # nobody listens here
+    stale = registry_dir() / "sim-dead.json"
+    stale.write_text(json.dumps({"endpoint": f"tcp://127.0.0.1:{port}", "pid": 0}), encoding="utf-8")
+    assert not any(f"{port}" in str(e) for e in discover())
+    assert not stale.exists()

@@ -1,8 +1,8 @@
-# navis-mcp
+# vdc-navis-lab
 
 Clash coordination for Autodesk Navisworks Manage, exposed as an [MCP](https://modelcontextprotocol.io) server so any MCP-capable assistant can read, rank and act on clash results.
 
-Navisworks reports thousands of raw clashes. The hard part of coordination is deciding which ones matter, which discipline has to move, and which fifty of them are the same mistake repeated on every floor. `navis-mcp` does that analysis in a deterministic engine and gives the assistant a small set of tools to work with the result, instead of handing it a pile of raw rows.
+Navisworks reports thousands of raw clashes. The hard part of coordination is deciding which ones matter, which discipline has to move, and which fifty of them are the same mistake repeated on every floor. `vdc-navis-lab` does that analysis in a deterministic engine and gives the assistant a small set of tools to work with the result, instead of handing it a pile of raw rows.
 
 > **Status: v0.1, early.** The analysis engine, file ingestion, exports, the MCP server and a Navisworks simulator are implemented and tested (87 tests). The Navisworks add-in is a draft that has not been compiled or run against a real Navisworks yet. See [What is verified](#what-is-verified).
 
@@ -23,28 +23,28 @@ Use a virtual environment, not your global Python (the `mcp` dependency pulls re
 ```bash
 python -m venv .venv && source .venv/bin/activate      # Windows: .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
-navis-mcp-cli demo                                      # guided walk-through, no setup, touches nothing
-navis-mcp-cli sample examples/tower-demo.json           # a synthetic 5-level tower
-navis-mcp-cli analyze examples/tower-demo.json --lang en
+vdc-navis-lab-cli demo                                      # guided walk-through, no setup, touches nothing
+vdc-navis-lab-cli sample examples/tower-demo.json           # a synthetic 5-level tower
+vdc-navis-lab-cli analyze examples/tower-demo.json --lang en
 ```
 
-`navis-mcp` itself is a stdio server meant to be launched by an MCP client; typed into a terminal it prints a note and exits (`--serve` forces it). To let a client talk to a simulated Navisworks, keep `navis-mcp-cli simulate` running in another terminal.
+`vdc-navis-lab` itself is a stdio server meant to be launched by an MCP client; typed into a terminal it prints a note and exits (`--serve` forces it). To let a client talk to a simulated Navisworks, keep `vdc-navis-lab-cli simulate` running in another terminal.
 
 Step-by-step guides for non-programmers: [manual_para_dummies.md](manual_para_dummies.md) (es), [manual_for_dummies.md](manual_for_dummies.md) (en).
 
 ### Connect an assistant
 
-Claude Desktop: `navis-mcp-cli desktop-config --write` merges the entry safely (backup first). Any stdio MCP client:
+Claude Desktop: `vdc-navis-lab-cli desktop-config --write` merges the entry safely (backup first). Any stdio MCP client:
 
 ```json
 {
   "mcpServers": {
-    "navis-mcp": { "command": "navis-mcp", "env": { "NAVIS_MCP_READ_ONLY": "0" } }
+    "vdc-navis-lab": { "command": "vdc-navis-lab", "env": { "VDC_NAVIS_LAB_READ_ONLY": "0" } }
   }
 }
 ```
 
-Claude Code: `claude mcp add navis-mcp -- navis-mcp`
+Claude Code: `claude mcp add vdc-navis-lab -- vdc-navis-lab`
 
 ## Tools
 
@@ -63,10 +63,10 @@ Fourteen tools, prefix `nw_`. Heavy data never enters the conversation: results 
 
 | Setting | Effect |
 |---|---|
-| `NAVIS_MCP_READ_ONLY=1` | Blocks every write to Navisworks. Previews still work. |
-| `NAVIS_MCP_OUTPUT_ROOTS` | Folders (OS path separator) where files may be written. The default is `~/.navis_mcp/exports`. |
-| `NAVIS_MCP_HOME` | Data folder (snapshots, endpoint registry). |
-| `NAVIS_MCP_ENDPOINT` | Skip discovery: `pipe://NAME` or `tcp://127.0.0.1:PORT`. TCP is loopback only. |
+| `VDC_NAVIS_LAB_READ_ONLY=1` | Blocks every write to Navisworks. Previews still work. |
+| `VDC_NAVIS_LAB_OUTPUT_ROOTS` | Folders (OS path separator) where files may be written. The default is `~/.vdc_navis_lab/exports`. |
+| `VDC_NAVIS_LAB_HOME` | Data folder (snapshots, endpoint registry). |
+| `VDC_NAVIS_LAB_ENDPOINT` | Skip discovery: `pipe://NAME` or `tcp://127.0.0.1:PORT`. TCP is loopback only. |
 
 The add-in listens on a Windows named pipe restricted to the current user. File reads are limited to known extensions and 256 MB, XML with DTDs is refused, CSV cells that look like formulas are neutralised, and error messages never echo model content.
 

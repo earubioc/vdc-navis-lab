@@ -1,6 +1,6 @@
 """A stand-in for the Navisworks add-in, speaking the real protocol over loopback TCP.
 
-It serves the synthetic tower from navis_mcp.sample, keeps clash groups and statuses in memory, and
+It serves the synthetic tower from vdc_navis_lab.sample, keeps clash groups and statuses in memory, and
 re-reads them to report what was *verified*. It exists so the server, the tests and demos run on
 any machine; it is not a model of Navisworks' behaviour beyond the contract in docs/PROTOCOL.md.
 """

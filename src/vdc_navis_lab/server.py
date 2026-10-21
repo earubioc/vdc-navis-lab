@@ -19,10 +19,10 @@ from .profile import ProfileError
 from .service import App, ToolFault
 
 INSTRUCTIONS = """\
-navis-mcp coordinates clashes from Autodesk Navisworks Manage. Typical flow:
+vdc-navis-lab coordinates clashes from Autodesk Navisworks Manage. Typical flow:
 1. nw_status: is Navisworks reachable, is there an analysis, is it stale.
 2. nw_run (only if tests never ran), then nw_analyze: ranked issues, root causes, coverage warnings.
-   No Navisworks? nw_analyze(path=...) reads a Clash Detective XML/CSV or navis-mcp JSON export.
+   No Navisworks? nw_analyze(path=...) reads a Clash Detective XML/CSV or vdc-navis-lab JSON export.
 3. nw_issues / nw_issue to drill down; nw_report for markdown, csv, bcf, plan.
 4. Writes are two steps: nw_apply(ops=[...]) previews and returns a plan_id; nw_apply(plan_id=...) executes
    and reports what was VERIFIED by re-reading the document.
@@ -30,7 +30,7 @@ Heavy data never enters the conversation: results are summaries or file paths.
 Read the coverage warnings before claiming a discipline pair is clean: no results can mean never tested.
 """
 
-mcp = MCPServer("navis-mcp", version=__version__, instructions=INSTRUCTIONS)
+mcp = MCPServer("vdc-navis-lab", version=__version__, instructions=INSTRUCTIONS)
 APP = App()
 
 
@@ -149,7 +149,7 @@ def nw_issue(id: str, lang: str = "") -> dict[str, Any]:
 def nw_report(kind: str = "summary", path: str = "", overwrite: bool = False, limit: int = 25, lang: str = "") -> dict[str, Any]:
     """kind: summary | matrix | hotspots | plan (work packages) return inline; markdown returns inline unless path is
     given; csv | bcf (BCF 2.1) | json (re-readable export) write a file. Files go only under the allowed output
-    folders (NAVIS_MCP_OUTPUT_ROOTS); a bare name lands in the default folder; overwrite defaults to false."""
+    folders (VDC_NAVIS_LAB_OUTPUT_ROOTS); a bare name lands in the default folder; overwrite defaults to false."""
     return APP.report(kind, path, overwrite, limit, lang or None)
 
 
@@ -180,18 +180,18 @@ def nw_document(action: str = "save", path: str = "", confirm: bool = False, ove
 
 
 TERMINAL_NOTE = """\
-navis-mcp is an MCP server: it talks JSON over stdin/stdout and is meant to be started by an
+vdc-navis-lab is an MCP server: it talks JSON over stdin/stdout and is meant to be started by an
 MCP client (Claude Desktop, Claude Code, ...), not typed into a terminal. Waiting silently is
 what a server does, so this window now exits instead of looking frozen.
-navis-mcp es un servidor MCP: lo lanza un cliente (Claude Desktop, Claude Code...), no se usa
+vdc-navis-lab es un servidor MCP: lo lanza un cliente (Claude Desktop, Claude Code...), no se usa
 a mano en una terminal.
 
 To try it by hand / para probarlo a mano:
-  navis-mcp-cli demo              recorrido completo contra un Navisworks simulado
-  navis-mcp-cli tools             lista las 14 herramientas
-  navis-mcp-cli call nw_status    llama una herramienta
+  vdc-navis-lab-cli demo              recorrido completo contra un Navisworks simulado
+  vdc-navis-lab-cli tools             lista las 14 herramientas
+  vdc-navis-lab-cli call nw_status    llama una herramienta
 To connect a client / para conectar un cliente: see manual_para_dummies.md
-To force the server in a terminal anyway: navis-mcp --serve
+To force the server in a terminal anyway: vdc-navis-lab --serve
 """
 
 

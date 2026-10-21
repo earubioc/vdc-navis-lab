@@ -26,7 +26,7 @@ obj/
 .vs/
 
 # --- Local runtime data ---
-.navis_mcp/
+.vdc_navis_lab/
 *.log
 .DS_Store
 Thumbs.db

@@ -84,7 +84,7 @@ def to_bcf(result: AnalysisResult, profile: Profile, limit: int = 200) -> bytes:
         z.writestr("bcf.version",
                    '<?xml version="1.0" encoding="UTF-8"?>\n<Version VersionId="2.1">\n  <DetailedVersion>2.1</DetailedVersion>\n</Version>\n')
         for i in result.issues[:limit]:
-            guid = str(uuid.uuid5(uuid.NAMESPACE_URL, f"navis-mcp/{i.identity}"))
+            guid = str(uuid.uuid5(uuid.NAMESPACE_URL, f"vdc-navis-lab/{i.identity}"))
             title = f"[{texts.PRIORITY[lang][i.priority]}] {pair_label(i, profile, lang)} {i.level} {i.id}".replace("  ", " ")
             desc = "\n".join(reasons_text(i, profile, lang, 6) + [action_text(i, profile, lang)])
             xml = (
@@ -95,7 +95,7 @@ def to_bcf(result: AnalysisResult, profile: Profile, limit: int = 200) -> bytes:
                 f"    <Priority>{_BCF_PRIORITY[i.priority]}</Priority>\n"
                 f"    <Labels>{escape('-'.join(i.pair))}</Labels>\n"
                 f"    <CreationDate>{now}</CreationDate>\n"
-                "    <CreationAuthor>navis-mcp</CreationAuthor>\n"
+                "    <CreationAuthor>vdc-navis-lab</CreationAuthor>\n"
                 f"    <AssignedTo>{escape(i.responsible)}</AssignedTo>\n"
                 f"    <Description>{escape(desc)}</Description>\n"
                 "  </Topic>\n</Markup>\n"

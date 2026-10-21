@@ -82,10 +82,10 @@ def _cmd_demo(args: argparse.Namespace) -> int:
     from .service import App, ToolFault
     es = args.lang == "es"
     sim = Simulator(job_delay=0.05)
-    scratch = tempfile.TemporaryDirectory(prefix="navis-mcp-demo-")  # the demo never touches your own data folder
-    os.environ["NAVIS_MCP_HOME"] = scratch.name
-    os.environ["NAVIS_MCP_ENDPOINT"] = sim.start()
-    os.environ["NAVIS_MCP_READ_ONLY"] = "0"
+    scratch = tempfile.TemporaryDirectory(prefix="vdc-navis-lab-demo-")  # the demo never touches your own data folder
+    os.environ["VDC_NAVIS_LAB_HOME"] = scratch.name
+    os.environ["VDC_NAVIS_LAB_ENDPOINT"] = sim.start()
+    os.environ["VDC_NAVIS_LAB_READ_ONLY"] = "0"
     app = App()
 
     def step(n: int, es_text: str, en_text: str) -> None:
@@ -131,6 +131,9 @@ def _cmd_demo(args: argparse.Namespace) -> int:
         scratch.cleanup()
 
 
+LEGACY_NAME = "navis" + "-mcp"
+
+
 def _desktop_config_path() -> Path:
     if sys.platform == "win32":
         return Path(os.environ.get("APPDATA", str(Path.home()))) / "Claude" / "claude_desktop_config.json"
@@ -140,19 +143,19 @@ def _desktop_config_path() -> Path:
 
 
 def _server_command() -> str:
-    exe = "navis-mcp.exe" if sys.platform == "win32" else "navis-mcp"
+    exe = "vdc-navis-lab.exe" if sys.platform == "win32" else "vdc-navis-lab"
     beside = Path(sys.executable).parent / exe  # the venv this command runs from
-    return str(beside) if beside.exists() else (shutil.which("navis-mcp") or str(beside))
+    return str(beside) if beside.exists() else (shutil.which("vdc-navis-lab") or str(beside))
 
 
 def _cmd_desktop_config(args: argparse.Namespace) -> int:
     """Print the Claude Desktop entry, or merge it into the config file without touching anything else."""
-    entry = {"command": _server_command(), "env": {"NAVIS_MCP_READ_ONLY": "0" if args.allow_writes else "1"}}
+    entry = {"command": _server_command(), "env": {"VDC_NAVIS_LAB_READ_ONLY": "0" if args.allow_writes else "1"}}
     path = Path(args.config) if args.config else _desktop_config_path()
     if not args.write:
         print(f"Config file: {path}")
         print("Add this INSIDE the existing \"mcpServers\" object (comma after the previous entry), or run again with --write:\n")
-        print(json.dumps({"navis-mcp": entry}, indent=2)[2:-2])
+        print(json.dumps({"vdc-navis-lab": entry}, indent=2)[2:-2])
         return 0
     data: dict = {}
     if path.exists():
@@ -170,9 +173,14 @@ def _cmd_desktop_config(args: argparse.Namespace) -> int:
         print(f"backup: {backup}")
     else:
         path.parent.mkdir(parents=True, exist_ok=True)
-    data.setdefault("mcpServers", {})["navis-mcp"] = entry
+    servers = data.setdefault("mcpServers", {})
+    legacy = servers.get(LEGACY_NAME)  # the entry from before the project was renamed
+    if isinstance(legacy, dict) and LEGACY_NAME in str(legacy.get("command", "")):
+        del servers[LEGACY_NAME]
+        print(f"removed the old '{LEGACY_NAME}' entry (replaced by 'vdc-navis-lab')")
+    servers["vdc-navis-lab"] = entry
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"navis-mcp added to {path}. Quit Claude Desktop completely and open it again.")
+    print(f"vdc-navis-lab added to {path}. Quit Claude Desktop completely and open it again.")
     return 0
 
 
@@ -187,7 +195,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="navis-mcp-cli", description=__doc__)
+    parser = argparse.ArgumentParser(prog="vdc-navis-lab-cli", description=__doc__)
     sub = parser.add_subparsers(dest="cmd", required=True)
     a = sub.add_parser("analyze", help="analyse a .json/.xml/.csv clash export and print a report")
     a.add_argument("file")
@@ -196,7 +204,7 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--top", type=int, default=15)
     a.add_argument("--json", action="store_true")
     a.set_defaults(fn=_cmd_analyze)
-    s = sub.add_parser("sample", help="write the synthetic tower as a navis-mcp JSON export")
+    s = sub.add_parser("sample", help="write the synthetic tower as a vdc-navis-lab JSON export")
     s.add_argument("path")
     s.add_argument("--seed", type=int, default=7)
     s.set_defaults(fn=_cmd_sample)
@@ -209,13 +217,13 @@ def main(argv: list[str] | None = None) -> int:
     d.set_defaults(fn=_cmd_demo)
     tl = sub.add_parser("tools", help="list the MCP tools")
     tl.set_defaults(fn=_cmd_tools)
-    ca = sub.add_parser("call", help="call one tool once: navis-mcp-cli call nw_profile '{\"action\":\"show\"}'")
+    ca = sub.add_parser("call", help="call one tool once: vdc-navis-lab-cli call nw_profile '{\"action\":\"show\"}'")
     ca.add_argument("tool")
     ca.add_argument("args", nargs="?", default="")
     ca.set_defaults(fn=_cmd_call)
     dc = sub.add_parser("desktop-config", help="print or safely merge the Claude Desktop entry for this install")
     dc.add_argument("--write", action="store_true", help="merge into the config file (a backup is made first)")
-    dc.add_argument("--allow-writes", action="store_true", help="do not set NAVIS_MCP_READ_ONLY=1")
+    dc.add_argument("--allow-writes", action="store_true", help="do not set VDC_NAVIS_LAB_READ_ONLY=1")
     dc.add_argument("--config", default=None, help="config file path (default: the Claude Desktop location)")
     dc.set_defaults(fn=_cmd_desktop_config)
     c = sub.add_parser("check-profile", help="validate a profile .toml")

@@ -7,7 +7,7 @@ using System.Security.Principal;
 using System.Text;
 using System.Threading;
 
-namespace NavisMcp.Addin
+namespace VdcNavisLab.Addin
 {
     internal sealed class PipeServer
     {
@@ -21,7 +21,7 @@ namespace NavisMcp.Addin
 
         public void Start()
         {
-            _thread = new Thread(Loop) { IsBackground = true, Name = "navis-mcp pipe" };
+            _thread = new Thread(Loop) { IsBackground = true, Name = "vdc-navis-lab pipe" };
             _thread.Start();
         }
 

@@ -3,8 +3,8 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "navis-mcp"
-version = "0.1.0"
+name = "vdc-navis-lab"
+version = "0.1.1"
 description = "MCP server for clash coordination in Autodesk Navisworks Manage: fewer tools, offline-capable, verified writes"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -17,14 +17,14 @@ dependencies = ["mcp>=2.0,<3"]
 dev = ["pytest>=8", "xmlschema>=3"]
 
 [project.scripts]
-navis-mcp = "navis_mcp.server:main"
-navis-mcp-cli = "navis_mcp.cli:main"
+vdc-navis-lab = "vdc_navis_lab.server:main"
+vdc-navis-lab-cli = "vdc_navis_lab.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-navis_mcp = ["profiles/*.toml"]
+vdc_navis_lab = ["profiles/*.toml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

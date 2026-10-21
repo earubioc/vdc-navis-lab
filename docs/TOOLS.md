@@ -1,6 +1,6 @@
 # Tool reference
 
-Try them by hand: `navis-mcp-cli tools` lists them, `navis-mcp-cli call nw_profile '{"action":"show"}'` calls one, `navis-mcp-cli demo` runs a whole flow.
+Try them by hand: `vdc-navis-lab-cli tools` lists them, `vdc-navis-lab-cli call nw_profile '{"action":"show"}'` calls one, `vdc-navis-lab-cli demo` runs a whole flow.
 
 All tools return JSON. Failures come back as `{"error": code, "detail": ..., "hint": ...}`. Tools that accept `lang` use `es` or `en` (default from the profile).
 

@@ -3,9 +3,9 @@ using System;
 using System.Threading;
 using Autodesk.Navisworks.Api.Plugins;
 
-namespace NavisMcp.Addin
+namespace VdcNavisLab.Addin
 {
-    [Plugin("NavisMcp.Watcher", "VDCL", DisplayName = "navis-mcp bridge")]
+    [Plugin("VdcNavisLab.Watcher", "VDCL", DisplayName = "vdc-navis-lab bridge")]
     public class Watcher : EventWatcherPlugin
     {
         private PipeServer _server;
@@ -14,7 +14,7 @@ namespace NavisMcp.Addin
         {
             // OnLoaded runs on the Navisworks UI thread: this context is how every request gets back to it.
             UiThread.Capture(SynchronizationContext.Current);
-            _server = new PipeServer("navis-mcp." + System.Diagnostics.Process.GetCurrentProcess().Id, new Dispatcher());
+            _server = new PipeServer("vdc-navis-lab." + System.Diagnostics.Process.GetCurrentProcess().Id, new Dispatcher());
             _server.Start();
         }
 

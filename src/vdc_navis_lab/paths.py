@@ -15,14 +15,14 @@ class PathError(ValueError):
 
 
 def home() -> Path:
-    base = os.environ.get("NAVIS_MCP_HOME")
-    root = Path(base) if base else Path.home() / ".navis_mcp"
+    base = os.environ.get("VDC_NAVIS_LAB_HOME")
+    root = Path(base) if base else Path.home() / ".vdc_navis_lab"
     root.mkdir(parents=True, exist_ok=True)
     return root
 
 
 def output_roots() -> list[Path]:
-    raw = os.environ.get("NAVIS_MCP_OUTPUT_ROOTS", "")
+    raw = os.environ.get("VDC_NAVIS_LAB_OUTPUT_ROOTS", "")
     roots = [Path(p).resolve() for p in raw.split(os.pathsep) if p.strip()]
     default = (home() / "exports")
     default.mkdir(parents=True, exist_ok=True)
@@ -46,7 +46,7 @@ def resolve_output(requested: str, default_name: str, overwrite: bool = False) -
         raise PathError("reserved device name")
     resolved = candidate.resolve()
     if not any(resolved == r or r in resolved.parents for r in output_roots()):
-        raise PathError("outside the allowed output folders (set NAVIS_MCP_OUTPUT_ROOTS to add one)")
+        raise PathError("outside the allowed output folders (set VDC_NAVIS_LAB_OUTPUT_ROOTS to add one)")
     if resolved.exists() and not overwrite:
         raise PathError("file exists; pass overwrite=true to replace it")
     resolved.parent.mkdir(parents=True, exist_ok=True)

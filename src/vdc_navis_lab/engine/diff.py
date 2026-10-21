@@ -17,7 +17,7 @@ MATCH_MIN = 0.5
 
 def snapshot_of(result) -> dict[str, Any]:
     return {
-        "schema": "navis_mcp.snapshot/1",
+        "schema": "vdc_navis_lab.snapshot/1",
         "created": result.created,
         "analysis_id": result.analysis_id,
         "source": result.source,

@@ -1,14 +1,14 @@
 import pytest
 
-from navis_mcp.engine import analyze
-from navis_mcp.engine.cluster import cluster
-from navis_mcp.engine.screen import NoiseScreen
-from navis_mcp.engine.pipeline import level_label
-from navis_mcp.engine.plan import hotspots, matrix, work_packages
-from navis_mcp.engine.scoring import Scorer, mover_and_anchor
-from navis_mcp.engine.tagging import Tagger
-from navis_mcp.model import CLEARANCE, HARD, Clash, ClashSet, Element, TestInfo
-from navis_mcp.profile import Profile, ProfileError
+from vdc_navis_lab.engine import analyze
+from vdc_navis_lab.engine.cluster import cluster
+from vdc_navis_lab.engine.screen import NoiseScreen
+from vdc_navis_lab.engine.pipeline import level_label
+from vdc_navis_lab.engine.plan import hotspots, matrix, work_packages
+from vdc_navis_lab.engine.scoring import Scorer, mover_and_anchor
+from vdc_navis_lab.engine.tagging import Tagger
+from vdc_navis_lab.model import CLEARANCE, HARD, Clash, ClashSet, Element, TestInfo
+from vdc_navis_lab.profile import Profile, ProfileError
 
 
 def el(disc_model="", cat="", **kw):
@@ -27,7 +27,7 @@ def test_default_profile_is_valid(profile):
 
 
 @pytest.mark.parametrize("bad", [
-    'schema = "x"', 'schema="navis_mcp.profile/1"\nlang="fr"',
+    'schema = "x"', 'schema="vdc_navis_lab.profile/1"\nlang="fr"',
 ])
 def test_invalid_profiles_are_rejected(bad):
     with pytest.raises(ProfileError):
@@ -37,7 +37,7 @@ def test_invalid_profiles_are_rejected(bad):
 def test_profile_rejects_bad_bands_and_unknown_pairs():
     text = Profile.default().raw
     import tomllib
-    base = open(str(__import__("importlib").resources.files("navis_mcp").joinpath("profiles/default.toml")), encoding="utf-8").read()
+    base = open(str(__import__("importlib").resources.files("vdc_navis_lab").joinpath("profiles/default.toml")), encoding="utf-8").read()
     with pytest.raises(ProfileError, match="bands"):
         Profile.from_text(base.replace("critical = 70\nhigh = 52", "critical = 40\nhigh = 52"))
     with pytest.raises(ProfileError, match="unknown"):
@@ -226,7 +226,7 @@ def test_coverage_is_honest_about_absence(result):
 
 
 def test_analysis_is_deterministic(tower, profile):
-    from navis_mcp.sample.generator import build
+    from vdc_navis_lab.sample.generator import build
     r1 = analyze(build()[0], profile)
     r2 = analyze(build()[0], profile)
     assert [i.id for i in r1.issues] == [i.id for i in r2.issues]

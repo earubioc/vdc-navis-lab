@@ -3,9 +3,9 @@
 ```
  MCP client (any LLM)
         | stdio
- navis_mcp.server      14 tools, thin wrappers, error mapping
+ vdc_navis_lab.server      14 tools, thin wrappers, error mapping
         |
- navis_mcp.service     App: state, plans, jobs, snapshots
+ vdc_navis_lab.service     App: state, plans, jobs, snapshots
      |         |
  engine/      bridge/            exports, views, ingest, paths
  (pure)       client -> transport (pipe | tcp) -> add-in or simulator
@@ -24,7 +24,7 @@ Pipeline: tag, filter noise, cluster, measure crowding, score, find root causes,
 - **Causes.** `shared_element` (one element in many issues) and `repeated_detail` (same crossing across levels). Shared elements weigh more, because closing one removes several issues.
 - **Decisions.** Issues grouped by cause so a single change is a single line in the work plan.
 
-**Bridge** (`bridge/`) is how the server talks to Navisworks. One JSON-RPC request per connection over a Windows named pipe (loopback TCP for the simulator). Discovery looks for pipes named `navis-mcp.<pid>`; several instances can be open and writes refuse to guess between them.
+**Bridge** (`bridge/`) is how the server talks to Navisworks. One JSON-RPC request per connection over a Windows named pipe (loopback TCP for the simulator). Discovery looks for pipes named `vdc-navis-lab.<pid>`; several instances can be open and writes refuse to guess between them.
 
 **Service** (`service.py`) holds the session: the current analysis and which instance and revision it came from, saved plans, pending jobs. It is the only place that decides whether an analysis is stale.
 

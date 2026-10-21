@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-SCHEMA = "navis_mcp.clashset/1"
+SCHEMA = "vdc_navis_lab.clashset/1"
 
 Point = tuple[float, float, float]
 BBox = tuple[Point, Point]

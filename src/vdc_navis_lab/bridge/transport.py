@@ -17,8 +17,8 @@ from pathlib import Path
 from ..paths import home
 from .protocol import MAX_LINE, TIMEOUT, UNREACHABLE, BridgeError
 
-PIPE_PREFIX = "navis-mcp."
-ENV_ENDPOINT = "NAVIS_MCP_ENDPOINT"
+PIPE_PREFIX = "vdc-navis-lab."
+ENV_ENDPOINT = "VDC_NAVIS_LAB_ENDPOINT"
 
 
 @dataclass(frozen=True, slots=True)
@@ -156,6 +156,9 @@ def discover() -> list[Endpoint]:
             pid = int(info.get("pid", 0))
             if pid and sys.platform != "win32":
                 os.kill(pid, 0)
+            if ep.scheme == "tcp":  # a registered simulator that was killed leaves its file behind
+                host, _, port = ep.target.rpartition(":")
+                socket.create_connection((host, int(port)), timeout=0.5).close()
             found.append(ep)
         except (OSError, ValueError, KeyError, BridgeError):
             try:

@@ -2,9 +2,9 @@ import json
 
 import pytest
 
-from navis_mcp.bridge import Bridge
-from navis_mcp.bridge.transport import Endpoint
-from navis_mcp.service import App, ToolFault
+from vdc_navis_lab.bridge import Bridge
+from vdc_navis_lab.bridge.transport import Endpoint
+from vdc_navis_lab.service import App, ToolFault
 
 
 def live(app):
@@ -20,7 +20,7 @@ def test_status_without_navisworks_does_not_fail():
 
 
 def test_live_analysis_matches_offline_analysis(app, tower, profile):
-    from navis_mcp.engine import analyze
+    from vdc_navis_lab.engine import analyze
     out = live(app)
     offline = analyze(tower, profile)
     assert out["issues"] == len(offline.issues) and out["raw_count"] == len(tower.clashes)
@@ -76,7 +76,7 @@ def test_external_change_makes_analysis_stale_and_blocks_writes(app, sim):
 
 def test_writes_need_a_live_analysis(app, tmp_path):
     f = tmp_path / "a.json"
-    from navis_mcp.sample.generator import build
+    from vdc_navis_lab.sample.generator import build
     f.write_text(json.dumps(build()[0].to_dict()), encoding="utf-8")
     assert app.analyze(str(f), None, 5, 1, "", None)["issues"] > 0
     with pytest.raises(ToolFault) as exc:
@@ -87,7 +87,7 @@ def test_writes_need_a_live_analysis(app, tmp_path):
 def test_read_only_mode_blocks_every_write(app, monkeypatch):
     live(app)
     plan = app.apply([{"op": "group", "issues": "top:1"}], "", True)  # previews are allowed
-    monkeypatch.setenv("NAVIS_MCP_READ_ONLY", "1")
+    monkeypatch.setenv("VDC_NAVIS_LAB_READ_ONLY", "1")
     for call in (lambda: app.apply(None, plan["plan_id"], False), lambda: app.run(None, 1),
                  lambda: app.document("save", "", True, False)):
         with pytest.raises(ToolFault) as exc:
@@ -185,7 +185,7 @@ def test_document_save_requires_preview_first(app, sim):
 
 
 def test_slow_extraction_returns_a_job_to_collect():
-    from navis_mcp.bridge.simulator import Simulator
+    from vdc_navis_lab.bridge.simulator import Simulator
     s = Simulator(job_delay=0.6)
     app = App(bridge=Bridge(lambda: [Endpoint.parse(s.start())]))
     try:
@@ -208,5 +208,5 @@ def test_status_lists_tests_and_flags_the_ones_never_run(app):
 
 
 def test_status_survives_an_addin_without_clash_tests(app, sim, monkeypatch):
-    monkeypatch.setattr(sim, "m_clash_tests", lambda p: (_ for _ in ()).throw(__import__("navis_mcp.bridge.simulator", fromlist=["Fault"]).Fault("unsupported", "no")))
+    monkeypatch.setattr(sim, "m_clash_tests", lambda p: (_ for _ in ()).throw(__import__("vdc_navis_lab.bridge.simulator", fromlist=["Fault"]).Fault("unsupported", "no")))
     assert app.status()["tests"] == {"available": False, "reason": "unsupported"}

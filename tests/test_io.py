@@ -5,11 +5,11 @@ from xml.etree import ElementTree as ET
 
 import pytest
 
-from navis_mcp import exports, ingest
-from navis_mcp.engine import analyze
-from navis_mcp.engine.diff import compare, snapshot_of
-from navis_mcp.model import ClashSet
-from navis_mcp.paths import PathError, resolve_output
+from vdc_navis_lab import exports, ingest
+from vdc_navis_lab.engine import analyze
+from vdc_navis_lab.engine.diff import compare, snapshot_of
+from vdc_navis_lab.model import ClashSet
+from vdc_navis_lab.paths import PathError, resolve_output
 
 NAVIS_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <exchange xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" units="mm" filename="demo.nwf">
@@ -44,7 +44,7 @@ def test_navisworks_xml_is_read_and_units_converted():
     assert c.distance == pytest.approx(-0.15) and c.point == pytest.approx((10.0, 2.0, 3.0))
     assert c.a.model == "TORRE-EST.nwc" and c.a.category == "Structural Framing" and c.a.id == "TORRE-EST.nwc:5551"
     assert cs.tests[1].tolerance == pytest.approx(0.05) and cs.tests[1].kind == "clearance"
-    assert analyze(cs, __import__("navis_mcp.profile", fromlist=["Profile"]).Profile.default()).issues
+    assert analyze(cs, __import__("vdc_navis_lab.profile", fromlist=["Profile"]).Profile.default()).issues
 
 
 def test_xml_with_dtd_is_refused():
@@ -160,7 +160,7 @@ def test_compare_survives_reclustering(tower, profile):
 def test_output_paths_are_confined(tmp_path, monkeypatch):
     root = tmp_path / "out"
     root.mkdir()
-    monkeypatch.setenv("NAVIS_MCP_OUTPUT_ROOTS", str(root))
+    monkeypatch.setenv("VDC_NAVIS_LAB_OUTPUT_ROOTS", str(root))
     ok = resolve_output(str(root / "a" / "x.csv"), "d.csv")
     assert str(ok).startswith(str(root.resolve()))
     for bad in ["../../etc/passwd", str(tmp_path / "elsewhere.csv"), "\\\\host\\share\\x.csv", "C:\\a\\b.txt:hidden",
