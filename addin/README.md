@@ -1,14 +1,14 @@
 # Navisworks add-in
 
-**Status: verified on Navisworks Manage 2026 (net48).** Connection, test listing and clash extraction work on a real federated NWD built from Revit exports. Not yet verified: Navisworks 2025 (its folder on the test machine had no API DLLs), writes (not implemented).
+**Status: reads verified on Navisworks Manage 2026 (net48); writes implemented, not yet run against a real document.** Connection, test listing and clash extraction work on a real federated NWD built from Revit exports. `clash.apply` (status, grouping) and `doc.save` are written but still await a first real-world run. Not yet verified: Navisworks 2025 (its folder on the test machine had no API DLLs).
 
 ## What it does
 
 An `EventWatcherPlugin` loads with Navisworks, captures the UI thread, and opens the named pipe `vdc-navis-lab.<pid>`, accessible to the current user only. Requests are handled on a worker thread and any Navisworks API call is marshalled to the UI thread, because the API is single-threaded.
 
-Implemented: `hello`, `doc.info`, `clash.tests`, `clash.export`, `job.status`, `job.result`, `job.cancel`, `job.list`. Everything else answers `unsupported` and `hello.methods` says so. Wire format: [../docs/PROTOCOL.md](../docs/PROTOCOL.md).
+Implemented: `hello`, `doc.info`, `clash.tests`, `clash.export`, `clash.apply`, `doc.save`, `job.status`, `job.result`, `job.cancel`, `job.list`. Everything else answers `unsupported` and `hello.methods` says so. Wire format: [../docs/PROTOCOL.md](../docs/PROTOCOL.md).
 
-Known limits of 0.1: extraction runs on the UI thread in one block (Navisworks is unresponsive meanwhile); writes (`clash.apply`, `doc.save`) are not implemented.
+Known limits of 0.1: extraction runs on the UI thread in one block (Navisworks is unresponsive meanwhile); `model.census`, `elements.query` and `clash.run` are not implemented; clash grouping moves a result between `ClashResultGroup` nodes with API calls marked `VERIFY` in `Handlers.cs` and has not run against real Navisworks yet.
 
 ## Build and install (one command)
 

@@ -425,6 +425,191 @@ namespace VdcNavisLab.Addin
             catch (Exception ex) { job.Finish("failed", null, ex.GetType().Name); }
         }
 
+        // ------------------------------------------------------------ writes
+        // Idempotency: a dedupe_key that was already applied replays its result instead of acting twice
+        // (the MCP client retries a timed-out call). Kept in memory only; cleared when Navisworks reloads the add-in.
+        private readonly Dictionary<string, Dictionary<string, object>> _applied = new Dictionary<string, Dictionary<string, object>>();
+        private readonly object _appliedGate = new object();
+
+        private static List<string> Strings(object v)
+        {
+            var list = new List<string>();
+            var al = v as System.Collections.ArrayList;
+            if (al != null) foreach (var x in al) { var s = Convert.ToString(x); if (s.Length > 0) list.Add(s); }
+            return list;
+        }
+
+        private static ClashResultStatus? ParseStatus(string s)
+        {
+            switch (s)  // VERIFY enum names; "new" is intentionally not reachable here (server never offers it, see SETTABLE_STATUS)
+            {
+                case "active": return ClashResultStatus.Active;
+                case "reviewed": return ClashResultStatus.Reviewed;
+                case "approved": return ClashResultStatus.Approved;
+                case "resolved": return ClashResultStatus.Resolved;
+                default: return null;
+            }
+        }
+
+        /// <summary>A group with this name directly under the test, or null.</summary>
+        private static ClashResultGroup FindGroup(ClashTest t, string name)
+        {
+            foreach (SavedItem child in t.Children)
+            {
+                var g = child as ClashResultGroup;
+                if (g != null && g.DisplayName == name) return g;
+            }
+            return null;
+        }
+
+        public object ClashApply(Dictionary<string, object> p)
+        {
+            return UiThread.Run<object>(() =>
+            {
+                var d = Doc();
+                var fp = p.ContainsKey("if_fingerprint") ? Convert.ToString(p["if_fingerprint"]) : "";
+                if (fp != Fingerprint(d))
+                    throw new RpcException("stale_document", "the open document is not the one the plan was made for",
+                        "run nw_status and re-analyze before applying");
+
+                var key = p.ContainsKey("dedupe_key") ? Convert.ToString(p["dedupe_key"]) : "";
+                lock (_appliedGate)
+                {
+                    Dictionary<string, object> cached;
+                    if (key.Length > 0 && _applied.TryGetValue(key, out cached))
+                    {
+                        var replay = new Dictionary<string, object>(cached) { ["replayed"] = true };
+                        return (object)replay;
+                    }
+                }
+
+                // Index every result by guid, which test it belongs to, which group (if any) currently holds it,
+                // and a closure that moves it into a different group -- this never has to name the exact
+                // collection type behind `.Children`, only that it has Add/Remove, which Results() already relies on.
+                var byGuid = new Dictionary<string, ClashResult>();
+                var ownerTest = new Dictionary<string, ClashTest>();
+                var ownerGroup = new Dictionary<string, ClashResultGroup>();  // null: directly under the test
+                var moveTo = new Dictionary<string, Action<ClashResultGroup>>();
+                foreach (var t in Tests(d))
+                    foreach (SavedItem child in t.Children)
+                    {
+                        var r = child as ClashResult;
+                        if (r != null)
+                        {
+                            var g = r.Guid.ToString();
+                            byGuid[g] = r; ownerTest[g] = t; ownerGroup[g] = null;
+                            moveTo[g] = target => { t.Children.Remove(r); target.Children.Add(r); };  // VERIFY: Add/Remove on Children
+                            continue;
+                        }
+                        var grp = child as ClashResultGroup;
+                        if (grp == null) continue;
+                        foreach (SavedItem inner in grp.Children)
+                        {
+                            var rr = inner as ClashResult;
+                            if (rr == null) continue;
+                            var g = rr.Guid.ToString();
+                            byGuid[g] = rr; ownerTest[g] = t; ownerGroup[g] = grp;
+                            moveTo[g] = target => { grp.Children.Remove(rr); target.Children.Add(rr); };
+                        }
+                    }
+
+                var missing = new List<string>();
+                int groupsAdded = 0, groupsReused = 0, statusesSet = 0, verifiedStatuses = 0;
+                var groupChecks = new List<KeyValuePair<ClashResultGroup, List<string>>>();
+
+                var groupsArg = p.ContainsKey("groups") ? p["groups"] as System.Collections.ArrayList : null;
+                if (groupsArg != null)
+                    foreach (var go in groupsArg)
+                    {
+                        var gd = (Dictionary<string, object>)go;
+                        var name = Convert.ToString(gd["name"]);
+                        var guids = Strings(gd["guids"]);
+                        var known = guids.Where(byGuid.ContainsKey).ToList();
+                        missing.AddRange(guids.Except(known));
+                        if (known.Count == 0) continue;
+                        var test = ownerTest[known[0]];
+                        // A group lives under one test; members already in a different test are left alone and reported missing.
+                        var sameTest = known.Where(g => ownerTest[g] == test).ToList();
+                        missing.AddRange(known.Except(sameTest));
+                        try
+                        {
+                            var group = FindGroup(test, name);
+                            if (group == null) { group = new ClashResultGroup { DisplayName = name }; test.Children.Add(group); groupsAdded++; }  // VERIFY: constructor and DisplayName setter, Add on Children
+                            else groupsReused++;
+                            foreach (var g in sameTest)
+                            {
+                                if (ownerGroup[g] == group) continue;  // already a member
+                                moveTo[g](group);
+                                ownerGroup[g] = group;
+                            }
+                            groupChecks.Add(new KeyValuePair<ClashResultGroup, List<string>>(group, sameTest));
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Write("clash.apply group '" + name + "' failed: " + ex.GetType().Name + ": " + ex.Message);
+                            missing.AddRange(sameTest);
+                        }
+                    }
+
+                var statusesArg = p.ContainsKey("statuses") ? p["statuses"] as System.Collections.ArrayList : null;
+                if (statusesArg != null)
+                    foreach (var so in statusesArg)
+                    {
+                        var sd = (Dictionary<string, object>)so;
+                        var want = ParseStatus(Convert.ToString(sd["status"]));
+                        var guids = Strings(sd["guids"]);
+                        if (want == null) { Log.Write("clash.apply: unknown status word"); continue; }
+                        foreach (var g in guids)
+                        {
+                            ClashResult r;
+                            if (!byGuid.TryGetValue(g, out r)) { missing.Add(g); continue; }
+                            try
+                            {
+                                r.Status = want.Value;  // VERIFY: ClashResult.Status setter
+                                statusesSet++;
+                                if (r.Status == want.Value) verifiedStatuses++;
+                            }
+                            catch (Exception ex)
+                            {
+                                Log.Write("clash.apply status for " + g + " failed: " + ex.GetType().Name);
+                                missing.Add(g);
+                            }
+                        }
+                    }
+
+                int verifiedGroups = groupChecks.Count(kv => kv.Value.All(g => ownerGroup[g] == kv.Key));
+                var result = new Dictionary<string, object>
+                {
+                    { "applied", new Dictionary<string, object> { { "groups_added", groupsAdded }, { "groups_reused", groupsReused }, { "statuses_set", statusesSet } } },
+                    { "verified", new Dictionary<string, object> { { "groups", verifiedGroups }, { "statuses", verifiedStatuses } } },
+                    { "missing", missing.Distinct().OrderBy(x => x, StringComparer.Ordinal).ToList() }
+                };
+                if (key.Length > 0) lock (_appliedGate) { _applied[key] = result; }
+                return (object)result;
+            }, 120000);
+        }
+
+        public object DocSave(Dictionary<string, object> p)
+        {
+            return UiThread.Run<object>(() =>
+            {
+                var d = Doc();
+                var fp = p.ContainsKey("if_fingerprint") ? Convert.ToString(p["if_fingerprint"]) : "";
+                if (fp != Fingerprint(d))
+                    throw new RpcException("stale_document", "the open document is not the one the save was requested for");
+                var path = p.ContainsKey("path") ? Convert.ToString(p["path"]) : "";
+                try
+                {
+                    if (path.Length > 0) d.SaveFile(path);  // VERIFY: Document.SaveFile(string) for save_as
+                    else d.SaveFile();                        // VERIFY: Document.SaveFile() for save in place
+                }
+                catch (Exception ex) { throw new RpcException("internal", "save failed: " + ex.GetType().Name); }
+                var verified = path.Length == 0
+                    || string.Equals(System.IO.Path.GetFullPath(d.FileName ?? ""), System.IO.Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase);
+                return new Dictionary<string, object> { { "saved", true }, { "verified", verified }, { "path", d.FileName ?? path } };
+            }, 120000);
+        }
+
         // ------------------------------------------------------------ jobs
         public object JobStatus(Dictionary<string, object> p) { return _jobs.Get(p).Status(); }
         public object JobResult(Dictionary<string, object> p)

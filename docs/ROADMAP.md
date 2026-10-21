@@ -9,7 +9,9 @@
 
 ## Add-in methods not yet implemented
 
-`model.census`, `elements.query`, `clash.run`, `clash.apply`, `doc.save`. The server already speaks them and the simulator implements them.
+`model.census`, `elements.query`, `clash.run`. The server already speaks them and the simulator implements them.
+
+`clash.apply` and `doc.save` are implemented (status, grouping, save) but have not run against a real Navisworks document yet; several Navisworks API calls inside them are marked `VERIFY` in `Handlers.cs` and need a first real test.
 
 ## Capabilities under consideration
 

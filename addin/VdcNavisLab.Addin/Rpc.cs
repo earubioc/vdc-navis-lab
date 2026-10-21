@@ -54,11 +54,13 @@ namespace VdcNavisLab.Addin
                 { "doc.sample", p => _h.Sample(p) },
                 { "clash.tests", p => _h.ClashTests() },
                 { "clash.export", p => _h.StartExport(p) },
+                { "clash.apply", p => _h.ClashApply(p) },
+                { "doc.save", p => _h.DocSave(p) },
                 { "job.status", p => _h.JobStatus(p) },
                 { "job.result", p => _h.JobResult(p) },
                 { "job.cancel", p => _h.JobCancel(p) },
                 { "job.list", p => _h.JobList() },
-                // Not implemented in 0.1: model.census, elements.query, clash.run, clash.apply, doc.save
+                // Not implemented in 0.1: model.census, elements.query, clash.run
             };
         }
 
