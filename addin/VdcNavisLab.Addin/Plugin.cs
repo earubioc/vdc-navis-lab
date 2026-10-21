@@ -12,16 +12,42 @@ namespace VdcNavisLab.Addin
 
         public override void OnLoaded()
         {
-            // OnLoaded runs on the Navisworks UI thread: this context is how every request gets back to it.
-            UiThread.Capture(SynchronizationContext.Current);
-            _server = new PipeServer("vdc-navis-lab." + System.Diagnostics.Process.GetCurrentProcess().Id, new Dispatcher());
-            _server.Start();
+            try
+            {
+                // OnLoaded runs on the Navisworks UI thread: this context is how every request gets back to it.
+                UiThread.Capture(SynchronizationContext.Current);
+                var name = "vdc-navis-lab." + System.Diagnostics.Process.GetCurrentProcess().Id;
+                _server = new PipeServer(name, new Dispatcher());
+                _server.Start();
+                Log.Write("loaded; listening on pipe " + name);
+            }
+            catch (Exception ex) { Log.Write("OnLoaded failed: " + ex); }
         }
 
         public override void OnUnloading()
         {
             if (_server != null) _server.Stop();
             _server = null;
+            Log.Write("unloaded");
+        }
+    }
+
+    /// <summary>Plain-text log at %LOCALAPPDATA%\vdc-navis-lab\addin.log, to see whether Navisworks loaded the add-in.</summary>
+    internal static class Log
+    {
+        private static readonly object Gate = new object();
+
+        public static void Write(string message)
+        {
+            try
+            {
+                var dir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "vdc-navis-lab");
+                System.IO.Directory.CreateDirectory(dir);
+                lock (Gate)
+                    System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "addin.log"),
+                        DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " [pid " + System.Diagnostics.Process.GetCurrentProcess().Id + "] " + message + Environment.NewLine);
+            }
+            catch { }
         }
     }
 

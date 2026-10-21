@@ -55,6 +55,7 @@ namespace VdcNavisLab.Addin
                     new Thread(() => Serve(captured)) { IsBackground = true }.Start();
                 }
                 catch (IOException) { Thread.Sleep(100); }
+                catch (Exception ex) { Log.Write("pipe loop: " + ex.GetType().Name + ": " + ex.Message); Thread.Sleep(1000); }
                 finally { if (pipe != null) pipe.Dispose(); }
             }
         }
