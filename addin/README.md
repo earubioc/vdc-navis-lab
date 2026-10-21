@@ -1,6 +1,6 @@
-# Navisworks add-in (draft)
+# Navisworks add-in
 
-**Status: draft. Never compiled, never run inside Navisworks.** It was written against the public API from documentation and memory; every call marked `VERIFY` in `Handlers.cs` has to be checked against the installed assemblies. Do not rely on it until it has been built and tested.
+**Status: compiles against the Navisworks Manage 2026 API (net48); never yet run inside Navisworks.** Calls marked `VERIFY` in `Handlers.cs` type-check, but their runtime behaviour is still unconfirmed.
 
 ## What it does
 
@@ -10,17 +10,15 @@ Implemented: `hello`, `doc.info`, `clash.tests`, `clash.export`, `job.status`, `
 
 Known limits of 0.1: extraction runs on the UI thread in one block (Navisworks is unresponsive meanwhile); writes (`clash.apply`, `doc.save`) are not implemented.
 
-## Build
+## Build and install (one command)
 
-Requires the .NET SDK and a Navisworks Manage installation (the project references its assemblies; the target framework must match your version, `net48` for current releases).
+Requires the .NET SDK and the Navisworks assemblies copied to `addin\refs\2026\` (the folder is git-ignored; never commit them). Close Navisworks, then in PowerShell:
 
 ```powershell
-dotnet build addin/VdcNavisLab.Addin -c Release -p:NavisworksDir="C:\Program Files\Autodesk\Navisworks Manage 2025"
+powershell -ExecutionPolicy Bypass -File D:\IA_WORK\MCP_NAVIS\addin\build-and-install.ps1
 ```
 
-## Install
-
-Copy `addin/bundle/VdcNavisLab.bundle` to `%ProgramData%\Autodesk\ApplicationPlugins\`, put `VdcNavisLab.Addin.dll` in its `Contents` folder, and restart Navisworks. Then, from a terminal, `vdc-navis-lab-cli` or an MCP client can find the instance through its pipe.
+It builds, copies the bundle to `%APPDATA%\Autodesk\ApplicationPlugins\VdcNavisLab.bundle` (current user, no administrator rights) and lists what it installed. Then open Navisworks.
 
 ## First test
 

@@ -1,4 +1,4 @@
-// DRAFT, not compiled. In-memory job table for operations that outlive one request.
+// In-memory job table for operations that outlive one request.
 using System;
 using System.Collections.Generic;
 using System.Linq;

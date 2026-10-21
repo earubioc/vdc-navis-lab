@@ -1,4 +1,4 @@
-// DRAFT, not compiled. Named pipe, current user only, one JSON-RPC request per connection.
+// Named pipe, current user only, one JSON-RPC request per connection.
 using System;
 using System.IO;
 using System.IO.Pipes;

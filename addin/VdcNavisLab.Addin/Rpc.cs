@@ -1,4 +1,4 @@
-// DRAFT, not compiled. JSON-RPC 2.0 envelope and method dispatch. Wire format: docs/PROTOCOL.md.
+// JSON-RPC 2.0 envelope and method dispatch. Wire format: docs/PROTOCOL.md.
 using System;
 using System.Collections.Generic;
 using System.Web.Script.Serialization;

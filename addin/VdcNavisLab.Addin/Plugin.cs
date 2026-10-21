@@ -1,4 +1,4 @@
-// DRAFT, not compiled. Entry point: loads with Navisworks, starts the pipe server, stops it on exit.
+// Entry point: loads with Navisworks, starts the pipe server, stops it on exit.
 using System;
 using System.Threading;
 using Autodesk.Navisworks.Api.Plugins;

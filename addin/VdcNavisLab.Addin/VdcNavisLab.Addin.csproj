@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- DRAFT: not compiled yet. See ../README.md. -->
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <AssemblyName>VdcNavisLab.Addin</AssemblyName>
@@ -7,8 +6,8 @@
     <LangVersion>9.0</LangVersion>
     <Nullable>disable</Nullable>
     <PlatformTarget>x64</PlatformTarget>
-    <!-- Override on the command line: dotnet build -p:NavisworksDir="C:\Program Files\Autodesk\Navisworks Manage 2025" -->
-    <NavisworksDir Condition="'$(NavisworksDir)' == ''">C:\Program Files\Autodesk\Navisworks Manage 2025</NavisworksDir>
+    <!-- Default: assemblies copied to addin\refs\2026 (git-ignored). Override: dotnet build -p:NavisworksDir="C:\Program Files\Autodesk\Navisworks Manage 2026" -->
+    <NavisworksDir Condition="'$(NavisworksDir)' == ''">$(MSBuildThisFileDirectory)..\refs\2026</NavisworksDir>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <Version>0.1.1</Version>
   </PropertyGroup>

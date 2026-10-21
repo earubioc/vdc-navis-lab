@@ -1,4 +1,4 @@
-// DRAFT, not compiled. Navisworks API calls, all executed on the UI thread through UiThread.Run.
+// Navisworks API calls, all executed on the UI thread through UiThread.Run.
 // Every API detail marked VERIFY has to be checked against the installed Autodesk.Navisworks.* assemblies.
 using System;
 using System.Collections.Generic;
