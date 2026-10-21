@@ -461,6 +461,48 @@ namespace VdcNavisLab.Addin
             catch (Exception ex) { job.Finish("failed", null, ex.GetType().Name); }
         }
 
+        // ------------------------------------------------------------ clash.run
+        /// <summary>Unknown test names fail synchronously, like the simulator; running itself is a job,
+        /// one test per UI-thread slice so Navisworks stays responsive between tests (same reasoning as
+        /// clash.export's chunking) and a single slow test does not block the rest from reporting progress.</summary>
+        public object StartClashRun(Dictionary<string, object> p)
+        {
+            var requested = new HashSet<string>(((p.ContainsKey("tests") ? p["tests"] as System.Collections.ArrayList : null) ?? new System.Collections.ArrayList())
+                .Cast<object>().Select(x => Convert.ToString(x)));
+            var allNames = UiThread.Run<List<string>>(() => Tests(Doc()).Select(t => t.DisplayName).ToList(), 30000);
+            var unknown = requested.Where(n => !allNames.Contains(n)).ToList();
+            if (unknown.Count > 0)
+                throw new RpcException("not_found", "unknown tests: " + string.Join(", ", unknown));
+            var toRun = requested.Count > 0 ? requested.ToList() : allNames;
+
+            var job = _jobs.Create("clash.run");
+            System.Threading.ThreadPool.QueueUserWorkItem(_ => RunClashTests(job, toRun));
+            return new Dictionary<string, object> { { "job_id", job.Id } };
+        }
+
+        private void RunClashTests(Jobs.Job job, List<string> toRun)
+        {
+            try
+            {
+                for (int i = 0; i < toRun.Count; i++)
+                {
+                    if (job.Cancelled) { job.Finish("cancelled", null, ""); return; }
+                    var name = toRun[i];
+                    UiThread.Run<object>(() =>
+                    {
+                        var d = Doc();
+                        var t = Tests(d).FirstOrDefault(x => x.DisplayName == name);
+                        if (t != null) d.GetClash().TestsData.TestsRunTest(t);  // VERIFY: recomputes this test's results
+                        return null;
+                    }, 300000);
+                    job.SetProgress(i + 1, toRun.Count);
+                }
+                job.Finish("completed", new Dictionary<string, object> { { "ran", toRun } }, "");
+            }
+            catch (RpcException ex) { job.Finish("failed", null, ex.Message); }
+            catch (Exception ex) { job.Finish("failed", null, ex.GetType().Name); }
+        }
+
         // ------------------------------------------------------------ writes
         // Idempotency: a dedupe_key that was already applied replays its result instead of acting twice
         // (the MCP client retries a timed-out call). Kept in memory only; cleared when Navisworks reloads the add-in.

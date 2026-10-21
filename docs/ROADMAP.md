@@ -3,13 +3,12 @@
 ## Next (needed to call it usable)
 
 1. **Field-test ingestion** with real Clash Detective XML and CSV exports from different Navisworks versions and languages.
-2. **Calibrate the profile** on real projects. The first real model (654 clashes) produced 52 critical and 60 high of 113 issues, and each of the ten top issues reported penetration equal to 100% of the smaller element's dimension (pipes and conduits crossing floors/walls). `score.sleeve` now dampens and caps clean through-crossings of a floor/wall by a small MEP run, keeping a beam or column at full severity; not yet confirmed against a real model (needs Navisworks open).
 
-Extraction now runs one test per UI-thread slice instead of the whole export in one block, so Navisworks processes its own message queue between tests; not yet confirmed against a real model. The add-in also reports `skipped`, the count of results it dropped because an element no longer exists in the model (710 listed, 654 exported in the first real model); `nw_analyze`'s coverage warns about it and `complete` turns false, instead of staying silent about it.
+Calibrated and confirmed against the real model (2026-10-21): the first real model (654 clashes) produced 52 critical and 60 high of 113 issues, and each of the ten top issues reported penetration equal to 100% of the smaller element's dimension (pipes and conduits crossing floors/walls); `score.sleeve` dampens and caps clean through-crossings of a floor/wall by a small MEP run, keeping a beam or column at full severity. With it the same model gives 35 critical, 60 high, 18 medium. Extraction also runs one test per UI-thread slice instead of the whole export in one block, confirmed responsive between tests; `skipped` (results dropped because an element no longer exists in the model) is counted and reported, confirmed at 56 on the first real model (710 listed, 654 exported) -- `nw_analyze`'s coverage warns about it and `complete` turns false, instead of staying silent. `clash.run` (`DocumentClashTests.TestsRunTest`, one test per UI-thread slice) is implemented and confirmed the same way, running `MEC-HYS` on the real model.
 
 ## Add-in methods not yet implemented
 
-`model.census`, `elements.query`, `clash.run`. The server already speaks them and the simulator implements them.
+`model.census`, `elements.query`. The server already speaks them and the simulator implements them.
 
 `clash.apply` and `doc.save` are implemented and verified against a real Navisworks document (status, grouping, save_as), re-reading it to confirm the change. Results and tests come back read-only from the API: both methods go through `DocumentClashTests` (`TestsEditResultStatus`, `TestsInsertCopy`, `TestsMove`) instead of setting properties directly, which threw `NotSupportedException` on the first real attempt.
 
