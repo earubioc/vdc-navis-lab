@@ -23,10 +23,18 @@ for ($i = 0; $i -lt 90; $i++) {
 }
 if (-not $open) { Write-Host "Navisworks esta abierto pero sin modelo. Abre tu .nwd/.nwf y vuelve a ejecutar este script."; return }
 Write-Host "Modelo abierto. Probando..."
-foreach ($step in @(@("nw_status"), @("nw_status"), @("nw_document"), @("nw_analyze"))) {
+$py = Join-Path $root ".venv\Scripts\python.exe"
+$ins = Join-Path $root "insumos"
+New-Item -ItemType Directory -Force $ins | Out-Null
+Write-Host ""
+Write-Host "=== Volcando una muestra real de tus datos a insumos\muestra_real.json ==="
+& $py -c "import json,sys; from vdc_navis_lab.bridge.client import Bridge; r,_,_=Bridge().call('doc.sample',{'per_test':2},timeout=120); open(sys.argv[1],'w',encoding='utf-8').write(json.dumps(r,ensure_ascii=False,indent=1)); print('muestras:', len(r['samples']))" (Join-Path $ins "muestra_real.json")
+foreach ($step in @(@("nw_status"), @("nw_analyze"))) {
     Write-Host ""
     Write-Host "=== vdc-navis-lab-cli call $($step -join ' ') ==="
-    & $cli call @step
+    $txt = (& $cli call @step) -join "`n"
+    Write-Host $txt
+    if ($step[0] -eq "nw_analyze") { Set-Content -Path (Join-Path $ins "analisis_real.json") -Value $txt -Encoding UTF8 }
 }
 Write-Host ""
 Write-Host "=== Log del add-in ==="
