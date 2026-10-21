@@ -27,7 +27,7 @@ Transport: Windows named pipe `\\.\pipe\vdc-navis-lab.<pid>` (ACL: current user 
 | `doc.save` | `if_fingerprint`, `path?` | `saved`, `verified`, `path` |
 | `job.status` / `job.result` / `job.cancel` / `job.list` | `job_id` | job state, result, or list |
 
-`hello.methods` is authoritative: a method that is not listed answers `unsupported`, and the server degrades with a clear message. The v0.1 add-in implements `hello`, `doc.info`, `clash.tests`, `clash.export`, `clash.apply`, `doc.save`, `doc.sample` and the `job.*` family; `model.census`, `elements.query` and `clash.run` remain unimplemented.
+`hello.methods` is authoritative: a method that is not listed answers `unsupported`, and the server degrades with a clear message. The v0.1 add-in implements `hello`, `doc.info`, `clash.tests`, `clash.export`, `clash.apply`, `doc.save`, `doc.sample` and the `job.*` family, verified end to end against a real document; `model.census`, `elements.query` and `clash.run` remain unimplemented.
 
 Long operations return a `job_id` immediately. States: `running`, `completed`, `failed`, `cancelled`.
 

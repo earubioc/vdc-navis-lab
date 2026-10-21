@@ -471,6 +471,9 @@ namespace VdcNavisLab.Addin
                 if (fp != Fingerprint(d))
                     throw new RpcException("stale_document", "the open document is not the one the plan was made for",
                         "run nw_status and re-analyze before applying");
+                // Results and tests come back read-only (direct property/collection mutation throws
+                // NotSupportedException: "Object is Read-Only"). DocumentClashTests is the sanctioned editor.
+                var edit = d.GetClash().TestsData;
 
                 var key = p.ContainsKey("dedupe_key") ? Convert.ToString(p["dedupe_key"]) : "";
                 lock (_appliedGate)
@@ -483,39 +486,31 @@ namespace VdcNavisLab.Addin
                     }
                 }
 
-                // Index every result by guid, which test it belongs to, which group (if any) currently holds it,
-                // and a closure that moves it into a different group -- this never has to name the exact
-                // collection type behind `.Children`, only that it has Add/Remove, which Results() already relies on.
+                // Index every result by guid and by its test's guid, reusing Results() -- already proven against
+                // real Navisworks by clash.export and doc.sample -- instead of re-walking Children by hand.
+                // Membership and identity below compare Guid values, never object references: a COM-backed
+                // wrapper object is not guaranteed to be the same instance on a second property access.
                 var byGuid = new Dictionary<string, ClashResult>();
-                var ownerTest = new Dictionary<string, ClashTest>();
-                var ownerGroup = new Dictionary<string, ClashResultGroup>();  // null: directly under the test
-                var moveTo = new Dictionary<string, Action<ClashResultGroup>>();
+                var ownerTestGuid = new Dictionary<string, Guid>();
+                var testByGuid = new Dictionary<Guid, ClashTest>();
+                int testCount = 0, resultCount = 0;
                 foreach (var t in Tests(d))
-                    foreach (SavedItem child in t.Children)
+                {
+                    testCount++;
+                    testByGuid[t.Guid] = t;
+                    foreach (var r in Results(t))
                     {
-                        var r = child as ClashResult;
-                        if (r != null)
-                        {
-                            var g = r.Guid.ToString();
-                            byGuid[g] = r; ownerTest[g] = t; ownerGroup[g] = null;
-                            moveTo[g] = target => { t.Children.Remove(r); target.Children.Add(r); };  // VERIFY: Add/Remove on Children
-                            continue;
-                        }
-                        var grp = child as ClashResultGroup;
-                        if (grp == null) continue;
-                        foreach (SavedItem inner in grp.Children)
-                        {
-                            var rr = inner as ClashResult;
-                            if (rr == null) continue;
-                            var g = rr.Guid.ToString();
-                            byGuid[g] = rr; ownerTest[g] = t; ownerGroup[g] = grp;
-                            moveTo[g] = target => { grp.Children.Remove(rr); target.Children.Add(rr); };
-                        }
+                        resultCount++;
+                        var g = r.Guid.ToString();
+                        byGuid[g] = r;
+                        ownerTestGuid[g] = t.Guid;
                     }
+                }
+                Log.Write("clash.apply: indexed " + resultCount + " results across " + testCount + " tests (byGuid=" + byGuid.Count + ")");
 
                 var missing = new List<string>();
                 int groupsAdded = 0, groupsReused = 0, statusesSet = 0, verifiedStatuses = 0;
-                var groupChecks = new List<KeyValuePair<ClashResultGroup, List<string>>>();
+                var groupChecks = new List<KeyValuePair<Guid, List<string>>>();  // the group's own guid, and the guids it should hold
 
                 var groupsArg = p.ContainsKey("groups") ? p["groups"] as System.Collections.ArrayList : null;
                 if (groupsArg != null)
@@ -526,23 +521,38 @@ namespace VdcNavisLab.Addin
                         var guids = Strings(gd["guids"]);
                         var known = guids.Where(byGuid.ContainsKey).ToList();
                         missing.AddRange(guids.Except(known));
-                        if (known.Count == 0) continue;
-                        var test = ownerTest[known[0]];
+                        if (known.Count == 0)
+                        {
+                            Log.Write("clash.apply group '" + name + "': none of " + guids.Count + " guids are in the index");
+                            continue;
+                        }
+                        var testGuid = ownerTestGuid[known[0]];
                         // A group lives under one test; members already in a different test are left alone and reported missing.
-                        var sameTest = known.Where(g => ownerTest[g] == test).ToList();
+                        var sameTest = known.Where(g => ownerTestGuid[g] == testGuid).ToList();
                         missing.AddRange(known.Except(sameTest));
                         try
                         {
+                            var test = testByGuid[testGuid];
                             var group = FindGroup(test, name);
-                            if (group == null) { group = new ClashResultGroup { DisplayName = name }; test.Children.Add(group); groupsAdded++; }  // VERIFY: constructor and DisplayName setter, Add on Children
+                            if (group == null)
+                            {
+                                // TestsInsertCopy inserts a COPY of the template; the live item has to be found
+                                // again under the test afterwards (VERIFY: exact insertion position and lookup).
+                                edit.TestsInsertCopy(test, test.Children.Count, new ClashResultGroup { DisplayName = name });
+                                group = FindGroup(test, name);
+                                if (group == null) throw new InvalidOperationException("inserted group not found by name afterwards");
+                                groupsAdded++;
+                            }
                             else groupsReused++;
                             foreach (var g in sameTest)
                             {
-                                if (ownerGroup[g] == group) continue;  // already a member
-                                moveTo[g](group);
-                                ownerGroup[g] = group;
+                                var r = byGuid[g];
+                                if (r.Parent != null && r.Parent.Guid == group.Guid) continue;  // already a member
+                                var oldParent = r.Parent;
+                                var oldIndex = oldParent.Children.IndexOf(r);  // VERIFY: IndexOf matches TestsMove's expectations
+                                edit.TestsMove(oldParent, oldIndex, group, group.Children.Count);
                             }
-                            groupChecks.Add(new KeyValuePair<ClashResultGroup, List<string>>(group, sameTest));
+                            groupChecks.Add(new KeyValuePair<Guid, List<string>>(group.Guid, sameTest));
                         }
                         catch (Exception ex)
                         {
@@ -565,7 +575,7 @@ namespace VdcNavisLab.Addin
                             if (!byGuid.TryGetValue(g, out r)) { missing.Add(g); continue; }
                             try
                             {
-                                r.Status = want.Value;  // VERIFY: ClashResult.Status setter
+                                edit.TestsEditResultStatus(r, want.Value, new Assignee());  // VERIFY: Assignee() means "no one"
                                 statusesSet++;
                                 if (r.Status == want.Value) verifiedStatuses++;
                             }
@@ -577,7 +587,7 @@ namespace VdcNavisLab.Addin
                         }
                     }
 
-                int verifiedGroups = groupChecks.Count(kv => kv.Value.All(g => ownerGroup[g] == kv.Key));
+                int verifiedGroups = groupChecks.Count(kv => kv.Value.All(g => byGuid[g].Parent != null && byGuid[g].Parent.Guid == kv.Key));
                 var result = new Dictionary<string, object>
                 {
                     { "applied", new Dictionary<string, object> { { "groups_added", groupsAdded }, { "groups_reused", groupsReused }, { "statuses_set", statusesSet } } },
@@ -598,11 +608,11 @@ namespace VdcNavisLab.Addin
                 if (fp != Fingerprint(d))
                     throw new RpcException("stale_document", "the open document is not the one the save was requested for");
                 var path = p.ContainsKey("path") ? Convert.ToString(p["path"]) : "";
-                try
-                {
-                    if (path.Length > 0) d.SaveFile(path);  // VERIFY: Document.SaveFile(string) for save_as
-                    else d.SaveFile();                        // VERIFY: Document.SaveFile() for save in place
-                }
+                // Document.SaveFile has no parameterless overload: saving in place means passing its own file name back.
+                var target = path.Length > 0 ? path : d.FileName;
+                if (string.IsNullOrEmpty(target))
+                    throw new RpcException("invalid_params", "the document has no file name yet; pass path to save it as a new file");
+                try { d.SaveFile(target); }
                 catch (Exception ex) { throw new RpcException("internal", "save failed: " + ex.GetType().Name); }
                 var verified = path.Length == 0
                     || string.Equals(System.IO.Path.GetFullPath(d.FileName ?? ""), System.IO.Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase);

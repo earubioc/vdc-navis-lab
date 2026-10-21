@@ -1,6 +1,6 @@
 # Navisworks add-in
 
-**Status: reads verified on Navisworks Manage 2026 (net48); writes implemented, not yet run against a real document.** Connection, test listing and clash extraction work on a real federated NWD built from Revit exports. `clash.apply` (status, grouping) and `doc.save` are written but still await a first real-world run. Not yet verified: Navisworks 2025 (its folder on the test machine had no API DLLs).
+**Status: reads and writes verified on Navisworks Manage 2026 (net48).** Connection, test listing and clash extraction work on a real federated NWD built from Revit exports. `clash.apply` (status, grouping) and `doc.save` (save_as) ran against a real open document and were verified by re-reading it: results come back read-only from the API, so both go through `DocumentClashTests` (`TestsEditResultStatus`, `TestsInsertCopy`, `TestsMove`) instead of setting properties directly. Not yet verified: Navisworks 2025 (its folder on the test machine had no API DLLs).
 
 ## What it does
 
@@ -8,7 +8,7 @@ An `EventWatcherPlugin` loads with Navisworks, captures the UI thread, and opens
 
 Implemented: `hello`, `doc.info`, `clash.tests`, `clash.export`, `clash.apply`, `doc.save`, `job.status`, `job.result`, `job.cancel`, `job.list`. Everything else answers `unsupported` and `hello.methods` says so. Wire format: [../docs/PROTOCOL.md](../docs/PROTOCOL.md).
 
-Known limits of 0.1: extraction runs on the UI thread in one block (Navisworks is unresponsive meanwhile); `model.census`, `elements.query` and `clash.run` are not implemented; clash grouping moves a result between `ClashResultGroup` nodes with API calls marked `VERIFY` in `Handlers.cs` and has not run against real Navisworks yet.
+Known limits of 0.1: extraction runs on the UI thread in one block (Navisworks is unresponsive meanwhile); `model.census`, `elements.query` and `clash.run` are not implemented.
 
 ## Build and install (one command)
 

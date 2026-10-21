@@ -11,7 +11,7 @@
 
 `model.census`, `elements.query`, `clash.run`. The server already speaks them and the simulator implements them.
 
-`clash.apply` and `doc.save` are implemented (status, grouping, save) but have not run against a real Navisworks document yet; several Navisworks API calls inside them are marked `VERIFY` in `Handlers.cs` and need a first real test.
+`clash.apply` and `doc.save` are implemented and verified against a real Navisworks document (status, grouping, save_as), re-reading it to confirm the change. Results and tests come back read-only from the API: both methods go through `DocumentClashTests` (`TestsEditResultStatus`, `TestsInsertCopy`, `TestsMove`) instead of setting properties directly, which threw `NotSupportedException` on the first real attempt.
 
 ## Capabilities under consideration
 
