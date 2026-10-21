@@ -66,6 +66,8 @@ navis-mcp-cli demo
 
 In a few seconds it goes through the whole flow against a fake Navisworks: status, analysis, change plan, execution and verification. **You should see** five numbered steps and, at the end, "Done.". It needs nothing else and does not touch your data. For Spanish: `navis-mcp-cli demo --lang es`.
 
+**This already proves everything works.** Connecting Claude Desktop (section 5) is the next step and is optional.
+
 Other commands, in the same terminal:
 
 | Command | What it does |
@@ -75,16 +77,11 @@ Other commands, in the same terminal:
 | `navis-mcp-cli sample examples\tower.json` | Creates a sample file (a 5-level tower) |
 | `navis-mcp-cli analyze examples\tower.json --lang en` | Analyzes a file and prints the report |
 
-## 5. Why `navis-mcp` and `navis-mcp-cli simulate` look frozen
+## 5. Connecting Claude Desktop, step by step
 
-They are not. They are programs that **wait**:
+**What you run and what you do not.** You only type `desktop-config` (once) and `simulate` (each time you want to try the fake Navisworks). **Never type `navis-mcp`** in a terminal: it is the server and Claude Desktop starts it by itself. If you type it by mistake it prints a note and exits; no harm done.
 
-- `navis-mcp` is the server. It is not operated by hand: the assistant (Claude Desktop or Claude Code) starts it and talks to it behind the scenes. If you type it in a terminal, it prints a note and exits.
-- `navis-mcp-cli simulate` is the fake Navisworks. It waits until you press `Ctrl+C`. You only need it if you want an assistant to use it, and it **needs its own open terminal** while you use it.
-
-## 6. Connecting Claude Desktop, step by step
-
-### 6.1 Register navis-mcp in Claude Desktop (once)
+### 5.1 Register navis-mcp in Claude Desktop (once)
 
 1. Open a prepared terminal (section 0).
 2. Type:
@@ -96,13 +93,13 @@ They are not. They are programs that **wait**:
 4. Close Claude Desktop **completely**: click the `^` arrow next to the Windows clock, right-click the Claude icon, Quit. Closing only the window is not enough.
 5. Open Claude Desktop again.
 
-### 6.2 Using it with the fake Navisworks (every time)
+### 5.2 Using it with the fake Navisworks (every time)
 
 1. Open a prepared terminal (section 0) and type:
    ```powershell
    navis-mcp-cli simulate
    ```
-   **You should see** `Navisworks simulator listening on tcp://127.0.0.1:...`. **Leave that terminal open**, typing nothing else in it.
+   **You should see** `Navisworks simulator listening on tcp://127.0.0.1:...` and nothing else. That is normal: the program is waiting for Claude to ask, it is not stuck. **Leave that terminal open**, typing nothing else in it.
 2. In Claude Desktop open a new chat. Ask: "Check the Navisworks status and analyze the worst issues".
 3. The first time Claude will ask permission to use the tool: accept. **You should see** 35 issues, one critical.
 4. When done, go back to the simulator terminal and press `Ctrl+C`.
@@ -130,7 +127,7 @@ In a prepared terminal (section 0):
 claude mcp add navis-mcp -- D:\IA_WORK\MCP_NAVIS\.venv\Scripts\navis-mcp.exe
 ```
 
-## 7. What to ask the assistant
+## 6. What to ask the assistant
 
 - "Check the Navisworks status."
 - "Analyze the file `D:\...\clash.xml` and give me the five worst issues."
@@ -141,24 +138,24 @@ claude mcp add navis-mcp -- D:\IA_WORK\MCP_NAVIS\.venv\Scripts\navis-mcp.exe
 
 To analyze your own clashes without a live Navisworks: in Navisworks, Clash Detective, Report tab, XML format, and give the assistant the file path. CSV files and navis-mcp JSON files work too. Real exports vary between versions; if one fails, keep it and report it, that is useful information to improve the reader.
 
-## 8. Safety: what to know
+## 7. Safety: what to know
 
 - `NAVIS_MCP_READ_ONLY=1` blocks every write to Navisworks. `desktop-config` leaves it on; to allow writes, run the command again with `--allow-writes`.
 - Reports are saved only under `%USERPROFILE%\.navis_mcp\exports`, unless you set `NAVIS_MCP_OUTPUT_ROOTS`.
 - Changing anything in Navisworks is always two steps: a plan (which modifies nothing) and its execution by `plan_id`.
 
-## 9. When something fails
+## 8. When something fails
 
 | Symptom | What to do |
 |---|---|
 | `navis-mcp-cli` is not recognized as a command | The terminal has no environment: repeat section 0 |
 | `invalid choice: '...'` when typing a manual command | Your copy is outdated: section 3 |
-| `desktop-config` says the file is not valid JSON | Step 3 of section 6.1 |
-| Claude Desktop does not show the tools | Quit it completely (step 4 of 6.1) and open it again |
+| `desktop-config` says the file is not valid JSON | Step 3 of section 5.1 |
+| Claude Desktop does not show the tools | Quit it completely (step 4 of 5.1) and open it again |
 | "no Navisworks instance" | Expected without Navisworks: use a file, or keep `simulate` open in another terminal |
 | An XML is not read | Try CSV, or report the case |
 | Results say "never run" | That test was not run in Navisworks: no clashes does not mean clean |
 
-## 10. What it does not do yet
+## 9. What it does not do yet
 
 Read or modify a real open Navisworks, create viewpoints, color the model or produce PDF. See [docs/ROADMAP.md](docs/ROADMAP.md).
