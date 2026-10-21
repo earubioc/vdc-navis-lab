@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import datetime
 import json
 import os
+import shutil
 import sys
 import tempfile
 import time
@@ -129,6 +131,51 @@ def _cmd_demo(args: argparse.Namespace) -> int:
         scratch.cleanup()
 
 
+def _desktop_config_path() -> Path:
+    if sys.platform == "win32":
+        return Path(os.environ.get("APPDATA", str(Path.home()))) / "Claude" / "claude_desktop_config.json"
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
+    return Path.home() / ".config" / "Claude" / "claude_desktop_config.json"
+
+
+def _server_command() -> str:
+    exe = "navis-mcp.exe" if sys.platform == "win32" else "navis-mcp"
+    beside = Path(sys.executable).parent / exe  # the venv this command runs from
+    return str(beside) if beside.exists() else (shutil.which("navis-mcp") or str(beside))
+
+
+def _cmd_desktop_config(args: argparse.Namespace) -> int:
+    """Print the Claude Desktop entry, or merge it into the config file without touching anything else."""
+    entry = {"command": _server_command(), "env": {"NAVIS_MCP_READ_ONLY": "0" if args.allow_writes else "1"}}
+    path = Path(args.config) if args.config else _desktop_config_path()
+    if not args.write:
+        print(f"Config file: {path}")
+        print("Add this INSIDE the existing \"mcpServers\" object (comma after the previous entry), or run again with --write:\n")
+        print(json.dumps({"navis-mcp": entry}, indent=2)[2:-2])
+        return 0
+    data: dict = {}
+    if path.exists():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8-sig") or "{}")
+        except json.JSONDecodeError as exc:
+            print(f"error: {path} is not valid JSON (line {exc.lineno}, column {exc.colno}: {exc.msg}). Nothing was written; "
+                  "fix or restore the file first.", file=sys.stderr)
+            return 1
+        if not isinstance(data, dict) or not isinstance(data.get("mcpServers", {}), dict):
+            print(f"error: {path} does not have the expected shape. Nothing was written.", file=sys.stderr)
+            return 1
+        backup = path.with_name(path.name + ".bak-" + datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
+        shutil.copy2(path, backup)
+        print(f"backup: {backup}")
+    else:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    data.setdefault("mcpServers", {})["navis-mcp"] = entry
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    print(f"navis-mcp added to {path}. Quit Claude Desktop completely and open it again.")
+    return 0
+
+
 def _cmd_check(args: argparse.Namespace) -> int:
     try:
         p = Profile.load(args.path)
@@ -166,6 +213,11 @@ def main(argv: list[str] | None = None) -> int:
     ca.add_argument("tool")
     ca.add_argument("args", nargs="?", default="")
     ca.set_defaults(fn=_cmd_call)
+    dc = sub.add_parser("desktop-config", help="print or safely merge the Claude Desktop entry for this install")
+    dc.add_argument("--write", action="store_true", help="merge into the config file (a backup is made first)")
+    dc.add_argument("--allow-writes", action="store_true", help="do not set NAVIS_MCP_READ_ONLY=1")
+    dc.add_argument("--config", default=None, help="config file path (default: the Claude Desktop location)")
+    dc.set_defaults(fn=_cmd_desktop_config)
     c = sub.add_parser("check-profile", help="validate a profile .toml")
     c.add_argument("path", nargs="?", default=None)
     c.set_defaults(fn=_cmd_check)

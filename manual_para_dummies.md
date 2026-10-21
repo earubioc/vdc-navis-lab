@@ -55,7 +55,15 @@ No lo están. Son programas que **esperan**:
 
 ### Claude Desktop
 
-Abre `%APPDATA%\Claude\claude_desktop_config.json` y agrega (ajusta la ruta si tu carpeta es otra):
+La forma segura, con el entorno `.venv` activo:
+
+```powershell
+navis-mcp-cli desktop-config --write
+```
+
+Hace una copia de respaldo del archivo, agrega `navis-mcp` sin tocar tus otros servidores y se niega a escribir si el archivo ya está dañado. Después cierra Claude Desktop por completo (también en la bandeja del sistema) y ábrelo otra vez. Sin `--write` solo muestra la entrada que habría que agregar.
+
+A mano: abre `%APPDATA%\Claude\claude_desktop_config.json`. Si el archivo ya tiene `"mcpServers"`, **no pegues el bloque completo**: agrega solo la entrada `"navis-mcp": {...}` dentro de ese objeto, con una coma después de la entrada anterior. Pegar un bloque nuevo después de la última llave `}` deja el archivo inválido y Claude Desktop no arranca ("Unexpected non-whitespace character after JSON"). El bloque completo, solo para un archivo vacío (ajusta la ruta si tu carpeta es otra):
 
 ```json
 {
