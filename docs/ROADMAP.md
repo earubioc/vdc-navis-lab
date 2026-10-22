@@ -4,13 +4,13 @@
 
 1. **Field-test ingestion** with real Clash Detective XML and CSV exports from different Navisworks versions and languages.
 
-Calibrated and confirmed against the real model (2026-10-21): the first real model (654 clashes) produced 52 critical and 60 high of 113 issues, and each of the ten top issues reported penetration equal to 100% of the smaller element's dimension (pipes and conduits crossing floors/walls); `score.sleeve` dampens and caps clean through-crossings of a floor/wall by a small MEP run, keeping a beam or column at full severity. With it the same model gives 35 critical, 60 high, 18 medium. Extraction also runs one test per UI-thread slice instead of the whole export in one block, confirmed responsive between tests; `skipped` (results dropped because an element no longer exists in the model) is counted and reported, confirmed at 56 on the first real model (710 listed, 654 exported) -- `nw_analyze`'s coverage warns about it and `complete` turns false, instead of staying silent. `clash.run` (`DocumentClashTests.TestsRunTest`, one test per UI-thread slice) is implemented and confirmed the same way, running `MEC-HYS` on the real model.
+Every method in `docs/PROTOCOL.md` is now implemented and confirmed against a real Navisworks document (2026-10-21):
 
-## Add-in methods not yet implemented
+- **Reads:** `hello`, `doc.info`, `clash.tests`, `clash.export` (chunked, one test per UI-thread slice), `doc.sample`, `model.census`, `elements.query` (one `Model` per UI-thread slice; a federated NWD opened as one document reports as a single `Model` in `Document.Models`, not one per nested `.nwc` -- an honest finding, not a bug).
+- **Writes:** `clash.apply` (status via `TestsEditResultStatus`, grouping via `TestsInsertCopy`/`TestsMove`) and `doc.save` (`save_as`), both through `DocumentClashTests` because results and tests come back read-only from the API -- setting properties directly threw `NotSupportedException` on the first real attempt. `clash.run` (`TestsRunTest`, one test per UI-thread slice).
+- **Calibration and honesty:** `score.sleeve` dampens and caps clean through-crossings of a floor/wall by a small MEP run (critical 52→35, medium 1→18 on the first real model), and `skipped` (results dropped because an element no longer exists in the model) is counted and reported (56 on that same model, matching the 710-vs-654 gap first noticed).
 
-`model.census`, `elements.query`. The server already speaks them and the simulator implements them.
-
-`clash.apply` and `doc.save` are implemented and verified against a real Navisworks document (status, grouping, save_as), re-reading it to confirm the change. Results and tests come back read-only from the API: both methods go through `DocumentClashTests` (`TestsEditResultStatus`, `TestsInsertCopy`, `TestsMove`) instead of setting properties directly, which threw `NotSupportedException` on the first real attempt.
+Not yet tried: a plan larger than one issue, `doc.save` without `path` (saving over the open file, not just `save_as`), and whether a long `clash.export` or `model.census` actually keeps Navisworks responsive to clicks (the real model tested so far finishes in well under a second).
 
 ## Capabilities under consideration
 

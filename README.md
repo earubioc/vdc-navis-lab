@@ -4,7 +4,7 @@ Clash coordination for Autodesk Navisworks Manage, exposed as an [MCP](https://m
 
 Navisworks reports thousands of raw clashes. The hard part of coordination is deciding which ones matter, which discipline has to move, and which fifty of them are the same mistake repeated on every floor. `vdc-navis-lab` does that analysis in a deterministic engine and gives the assistant a small set of tools to work with the result, instead of handing it a pile of raw rows.
 
-> **Status: v0.2, early.** The analysis engine, file ingestion, exports, the MCP server and a Navisworks simulator are implemented and tested (94 tests). The Navisworks add-in is built and verified against a real Navisworks Manage 2026: it reads the Clash Detective tests, analyses a real federated model, and writes back (`clash.apply`, `doc.save`), verified by re-reading the document. Tested on one real model, one installation; several capabilities (`model.census`, `clash.run`, viewpoints, Navisworks 2025) are still missing. See [What is verified](#what-is-verified).
+> **Status: v0.2, early.** The analysis engine, file ingestion, exports, the MCP server and a Navisworks simulator are implemented and tested (94 tests). The Navisworks add-in is built and verified against a real Navisworks Manage 2026: every method in the protocol works against a real document, including writes (`clash.apply`, `doc.save`), re-running tests (`clash.run`) and a model census (`model.census`, `elements.query`). Tested on one real model, one installation; viewpoints, images, PDF and Navisworks 2025 are still missing. See [What is verified](#what-is-verified).
 
 ## What it does
 
@@ -78,7 +78,7 @@ The add-in listens on a Windows named pipe restricted to the current user. File 
 | MCP server over stdio, 14 tools, write flow, read-only mode | Tested end to end against the simulator |
 | Clash Detective XML ingestion | Tested on a synthetic file in the common layout; real exports vary and need field testing |
 | Windows named pipe client | Written, not run on Windows |
-| Navisworks add-in (C#) | Verified on Navisworks Manage 2026 (net48): connection, test listing, extraction and analysis of a real 654-clash model; `clash.apply` (status, grouping) and `doc.save` (save_as) ran against the real open document and were verified by re-reading it |
+| Navisworks add-in (C#) | Verified on Navisworks Manage 2026 (net48): connection, test listing, extraction and analysis of a real 654-clash model; `clash.apply` (status, grouping) and `doc.save` (save_as) verified by re-reading the document; `clash.run` re-ran a test; `model.census`/`elements.query` returned 3798 real elements, 749 of them grouped by level |
 | Scoring weights and bands | Reasonable defaults, not calibrated on real projects |
 
 ## Documentation

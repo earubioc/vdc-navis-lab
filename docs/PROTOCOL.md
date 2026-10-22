@@ -27,7 +27,7 @@ Transport: Windows named pipe `\\.\pipe\vdc-navis-lab.<pid>` (ACL: current user 
 | `doc.save` | `if_fingerprint`, `path?` | `saved`, `verified`, `path` |
 | `job.status` / `job.result` / `job.cancel` / `job.list` | `job_id` | job state, result, or list |
 
-`hello.methods` is authoritative: a method that is not listed answers `unsupported`, and the server degrades with a clear message. The v0.2 add-in implements `hello`, `doc.info`, `clash.tests`, `clash.export`, `clash.apply`, `doc.save`, `clash.run`, `doc.sample` and the `job.*` family, verified end to end against a real document; `model.census` and `elements.query` remain unimplemented.
+`hello.methods` is authoritative: a method that is not listed answers `unsupported`, and the server degrades with a clear message. The v0.2 add-in implements every method in this document, verified end to end against a real document.
 
 Long operations return a `job_id` immediately. States: `running`, `completed`, `failed`, `cancelled`. `job.status`'s `progress` is `{kind:"indeterminate"}` or, once a job knows its size, `{kind:"determinate", done, total}`; `clash.export` reports one done per test, so Navisworks stays responsive between tests instead of a single block for the whole export.
 

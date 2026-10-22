@@ -503,6 +503,143 @@ namespace VdcNavisLab.Addin
             catch (Exception ex) { job.Finish("failed", null, ex.GetType().Name); }
         }
 
+        // ------------------------------------------------------------ model.census / elements.query
+        private static List<string> ModelNames(Document d) { return d.Models.Select(m => System.IO.Path.GetFileName(m.FileName ?? "")).ToList(); }
+
+        /// <summary>One representative per assembly (the leaf's parent, same identity as Describe()'s host_id),
+        /// deduped by the native per-instance hash so a multi-material assembly counts once, not once per solid.</summary>
+        private static IEnumerable<ModelItem> Instances(ModelItem root)
+        {
+            var seen = new HashSet<int>();
+            foreach (var leaf in root.DescendantsAndSelf)
+            {
+                if (leaf.Children.Any()) continue;
+                var instance = leaf.Parent ?? leaf;
+                if (seen.Add(instance.InstanceHashCode)) yield return instance;
+            }
+        }
+
+        public object ModelCensus(Dictionary<string, object> p)
+        {
+            var names = UiThread.Run<List<string>>(() => ModelNames(Doc()), 30000);
+            var models = new List<object>();
+            foreach (var name in names)
+            {
+                var slice = UiThread.Run<Dictionary<string, object>>(() =>
+                {
+                    var d = Doc();
+                    var m = d.Models.FirstOrDefault(x => System.IO.Path.GetFileName(x.FileName ?? "") == name);
+                    if (m == null) return null;  // removed between the listing and this slice
+                    int count = 0;
+                    var cats = new Dictionary<string, int>();
+                    foreach (var instance in Instances(m.RootItem))
+                    {
+                        count++;
+                        var cat = Convert.ToString(Describe(d, instance)["category"]);
+                        if (cat.Length == 0) cat = "(sin categoría)";
+                        cats[cat] = cats.TryGetValue(cat, out var n) ? n + 1 : 1;
+                    }
+                    var top = cats.OrderByDescending(kv => kv.Value).Take(12).ToDictionary(kv => kv.Key, kv => (object)kv.Value);
+                    return new Dictionary<string, object> { { "name", name }, { "elements", count }, { "categories", top } };
+                }, 300000);  // one model per slice: a federated NWD rarely has more than a handful
+                if (slice != null) models.Add(slice);
+            }
+            return new Dictionary<string, object> { { "units", "m" }, { "models", models } };
+        }
+
+        /// <summary>category/model/level/family/name/system read straight off Describe()'s result, with props as
+        /// the fallback -- everything else (a custom property) is props-only. Matches the simulator's semantics.</summary>
+        private static readonly HashSet<string> DirectFields = new HashSet<string> { "category", "model", "level", "family", "name", "system" };
+
+        private static string ValueOf(Dictionary<string, object> info, string field)
+        {
+            object v;
+            if (DirectFields.Contains(field) && info.TryGetValue(field, out v) && v != null && Convert.ToString(v).Length > 0)
+                return Convert.ToString(v);
+            var props = info.ContainsKey("props") ? info["props"] as Dictionary<string, object> : null;
+            return props != null && props.TryGetValue(field, out v) ? Convert.ToString(v) : "";
+        }
+
+        private static bool Matches(Dictionary<string, object> info, List<Dictionary<string, object>> criteria)
+        {
+            foreach (var c in criteria)
+            {
+                var field = Convert.ToString(c["field"]);
+                var op = c.ContainsKey("op") ? Convert.ToString(c["op"]) : "eq";
+                var v = ValueOf(info, field).ToLowerInvariant();
+                if (op == "contains")
+                {
+                    if (!v.Contains(Convert.ToString(c["value"]).ToLowerInvariant())) return false;
+                }
+                else if (op == "in")
+                {
+                    var arr = c["value"] as System.Collections.ArrayList;
+                    var opts = arr != null ? arr.Cast<object>().Select(x => Convert.ToString(x).ToLowerInvariant()).ToList() : new List<string>();
+                    if (!opts.Contains(v)) return false;
+                }
+                else  // eq
+                {
+                    if (v != Convert.ToString(c["value"]).ToLowerInvariant()) return false;
+                }
+            }
+            return true;
+        }
+
+        public object ElementsQuery(Dictionary<string, object> p)
+        {
+            var criteriaArg = p.ContainsKey("criteria") ? p["criteria"] as System.Collections.ArrayList : null;
+            var criteria = new List<Dictionary<string, object>>();
+            if (criteriaArg != null) foreach (var c in criteriaArg) criteria.Add((Dictionary<string, object>)c);
+            var groupBy = p.ContainsKey("group_by") ? Convert.ToString(p["group_by"]) : "";
+            int limit = p.ContainsKey("limit") ? Math.Max(1, Math.Min(Convert.ToInt32(p["limit"]), 500)) : 20;
+
+            var names = UiThread.Run<List<string>>(() => ModelNames(Doc()), 30000);
+            int count = 0;
+            var groups = new Dictionary<string, int>();
+            var sample = new List<object>();
+
+            foreach (var name in names)
+            {
+                var slice = UiThread.Run<Dictionary<string, object>>(() =>
+                {
+                    var d = Doc();
+                    var m = d.Models.FirstOrDefault(x => System.IO.Path.GetFileName(x.FileName ?? "") == name);
+                    if (m == null) return null;
+                    int sliceCount = 0;
+                    var sliceGroups = new Dictionary<string, int>();
+                    var sliceSample = new List<object>();
+                    foreach (var instance in Instances(m.RootItem))
+                    {
+                        var info = Describe(d, instance);
+                        if (!Matches(info, criteria)) continue;
+                        sliceCount++;
+                        if (groupBy.Length > 0)
+                        {
+                            var key = ValueOf(info, groupBy);
+                            sliceGroups[key] = sliceGroups.TryGetValue(key, out var n) ? n + 1 : 1;
+                        }
+                        if (sliceSample.Count < limit)
+                            sliceSample.Add(new Dictionary<string, object> {
+                                { "id", info["id"] }, { "name", info["name"] }, { "category", info["category"] },
+                                { "model", info["model"] }, { "level", info["level"] } });
+                    }
+                    return new Dictionary<string, object> { { "count", sliceCount }, { "groups", sliceGroups }, { "sample", sliceSample } };
+                }, 300000);
+                if (slice == null) continue;
+                count += (int)slice["count"];
+                foreach (var kv in (Dictionary<string, int>)slice["groups"])
+                    groups[kv.Key] = groups.TryGetValue(kv.Key, out var n) ? n + kv.Value : kv.Value;
+                if (sample.Count < limit)
+                    sample.AddRange(((List<object>)slice["sample"]).Take(limit - sample.Count));
+            }
+
+            var result = new Dictionary<string, object> { { "count", count }, { "sample", sample } };
+            if (groupBy.Length > 0)
+                result["groups"] = groups.OrderByDescending(kv => kv.Value).Take(limit)
+                    .Select(kv => (object)new Dictionary<string, object> { { "key", kv.Key }, { "count", kv.Value } }).ToList();
+            return result;
+        }
+
         // ------------------------------------------------------------ writes
         // Idempotency: a dedupe_key that was already applied replays its result instead of acting twice
         // (the MCP client retries a timed-out call). Kept in memory only; cleared when Navisworks reloads the add-in.

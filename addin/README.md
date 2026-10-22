@@ -6,9 +6,9 @@
 
 An `EventWatcherPlugin` loads with Navisworks, captures the UI thread, and opens the named pipe `vdc-navis-lab.<pid>`, accessible to the current user only. Requests are handled on a worker thread and any Navisworks API call is marshalled to the UI thread, because the API is single-threaded.
 
-Implemented: `hello`, `doc.info`, `clash.tests`, `clash.export`, `clash.apply`, `doc.save`, `clash.run`, `job.status`, `job.result`, `job.cancel`, `job.list`. Everything else answers `unsupported` and `hello.methods` says so. Wire format: [../docs/PROTOCOL.md](../docs/PROTOCOL.md).
+Implemented: every method in [../docs/PROTOCOL.md](../docs/PROTOCOL.md) (`hello`, `doc.info`, `clash.tests`, `clash.export`, `clash.apply`, `doc.save`, `clash.run`, `model.census`, `elements.query`, `doc.sample`, the `job.*` family). Anything else answers `unsupported` and `hello.methods` says so.
 
-Extraction runs one test per UI-thread slice, confirmed against the real model (D-036): Navisworks processes its own message queue between tests instead of freezing for the whole export. `clash.run` runs one test at a time the same way, confirmed against the real model (D-038). Known limits of 0.1: `model.census` and `elements.query` are not implemented.
+Extraction and `clash.run` run one test per UI-thread slice, confirmed against the real model (D-036, D-038): Navisworks processes its own message queue between tests instead of freezing for the whole operation. `model.census` and `elements.query` run one `Model` per slice the same way, confirmed against the real model (D-039): a census element is the leaf's parent (one per assembly, not one per material solid), deduped by `InstanceHashCode`.
 
 ## Build and install (one command)
 
