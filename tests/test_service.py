@@ -162,6 +162,21 @@ def test_report_files_and_inline(app, tmp_path):
     assert app.report("plan", "", False, 5, None)["packages"]
 
 
+def test_report_image_needs_a_live_issue(app):
+    from pathlib import Path
+    live(app)
+    iid = app.issues("critical", "", "", "", "", "rank", 10, 0, None)["items"][0]["id"]
+    out = app.report("image", "clash.png", False, 25, None, iid)
+    assert out["issue"] == iid and out["path"].endswith("clash.png")
+    assert Path(out["path"]).exists()
+    with pytest.raises(ToolFault) as exc:
+        app.report("image", "clash.png", False, 25, None, "")
+    assert exc.value.code == "invalid_params"
+    with pytest.raises(ToolFault) as exc:
+        app.report("image", "clash2.png", False, 25, None, "NW-NOPE")
+    assert exc.value.code == "not_found"
+
+
 def test_snapshots_save_and_compare(app):
     live(app)
     assert app.snapshot("save", "v1", "")["issues"] > 0

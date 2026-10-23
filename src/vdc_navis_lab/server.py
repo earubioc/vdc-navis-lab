@@ -146,11 +146,14 @@ def nw_issue(id: str, lang: str = "") -> dict[str, Any]:
 
 @mcp.tool(annotations=_add("Produce reports and exports"))
 @guarded
-def nw_report(kind: str = "summary", path: str = "", overwrite: bool = False, limit: int = 25, lang: str = "") -> dict[str, Any]:
+def nw_report(kind: str = "summary", path: str = "", overwrite: bool = False, limit: int = 25, lang: str = "",
+              issue: str = "") -> dict[str, Any]:
     """kind: summary | matrix | hotspots | plan (work packages) return inline; markdown returns inline unless path is
-    given; csv | bcf (BCF 2.1) | json (re-readable export) write a file. Files go only under the allowed output
-    folders (VDC_NAVIS_LAB_OUTPUT_ROOTS); a bare name lands in the default folder; overwrite defaults to false."""
-    return APP.report(kind, path, overwrite, limit, lang or None)
+    given; csv | bcf (BCF 2.1) | json (re-readable export) write a file; image (needs issue=<id> and a live
+    Navisworks document, not a file analysis) writes a PNG framed on that issue's representative clash. Files go
+    only under the allowed output folders (VDC_NAVIS_LAB_OUTPUT_ROOTS); a bare name lands in the default folder;
+    overwrite defaults to false."""
+    return APP.report(kind, path, overwrite, limit, lang or None, issue)
 
 
 @mcp.tool(annotations=_mutating("Write groups and statuses back to Navisworks"))

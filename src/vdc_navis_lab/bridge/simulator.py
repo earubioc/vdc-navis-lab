@@ -7,6 +7,7 @@ any machine; it is not a model of Navisworks' behaviour beyond the contract in d
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import os
@@ -25,7 +26,12 @@ from .protocol import (API_VERSION, BUSY, INVALID_PARAMS, NOT_FOUND, STALE_DOCUM
 from .transport import registry_dir
 
 METHODS = ["hello", "doc.info", "model.census", "elements.query", "clash.tests", "clash.run", "clash.export",
-           "clash.apply", "doc.save", "job.status", "job.result", "job.cancel", "job.list"]
+           "clash.apply", "clash.image", "doc.save", "job.status", "job.result", "job.cancel", "job.list"]
+
+# A 1x1 transparent PNG: the simulator cannot render, so this stands in for whatever real image
+# Navisworks would have produced, just to exercise the file-writing path end to end.
+_PLACEHOLDER_PNG = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+A8AAQUAAYayDIYAAAAASUVORK5CYII=")
 
 
 class Fault(Exception):
@@ -251,6 +257,17 @@ class Simulator:
             raise Fault(STALE_DOCUMENT, "the open document is not the one the save was requested for")
         self.saves += 1
         return {"saved": True, "verified": True, "path": p.get("path") or self.title}
+
+    def m_clash_image(self, p: dict) -> dict:
+        clash_id = str(p.get("clash_id") or "")
+        path = str(p.get("path") or "")
+        if not path:
+            raise Fault(INVALID_PARAMS, "path is required")
+        if not any(c.id == clash_id for c in self.clashset.clashes):
+            raise Fault(NOT_FOUND, f"unknown clash {clash_id!r}")
+        with open(path, "wb") as f:
+            f.write(_PLACEHOLDER_PNG)
+        return {"saved": True, "path": path}
 
     def m_job_status(self, p: dict) -> dict:
         job = self._get(p)

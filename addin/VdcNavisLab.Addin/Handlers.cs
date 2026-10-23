@@ -2,6 +2,7 @@
 // Every API detail marked VERIFY has to be checked against the installed Autodesk.Navisworks.* assemblies.
 using System;
 using System.Collections.Generic;
+using System.Drawing.Imaging;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -501,6 +502,35 @@ namespace VdcNavisLab.Addin
             }
             catch (RpcException ex) { job.Finish("failed", null, ex.Message); }
             catch (Exception ex) { job.Finish("failed", null, ex.GetType().Name); }
+        }
+
+        // ------------------------------------------------------------ clash.image
+        /// <summary>Does not modify the document (a rendering query), so no fingerprint/plan is needed, unlike
+        /// clash.apply/doc.save. `path` arrives already resolved and validated by the server's output-folder
+        /// policy, the same way doc.save's save_as path does; this writes the PNG straight there.</summary>
+        public object ClashImage(Dictionary<string, object> p)
+        {
+            var clashId = p.ContainsKey("clash_id") ? Convert.ToString(p["clash_id"]) : "";
+            var path = p.ContainsKey("path") ? Convert.ToString(p["path"]) : "";
+            if (clashId.Length == 0) throw new RpcException("invalid_params", "clash_id is required");
+            if (path.Length == 0) throw new RpcException("invalid_params", "path is required");
+            return UiThread.Run<object>(() =>
+            {
+                var d = Doc();
+                ClashResult found = null;
+                foreach (var t in Tests(d))
+                {
+                    found = Results(t).FirstOrDefault(r => r.Guid.ToString() == clashId);
+                    if (found != null) break;
+                }
+                if (found == null) throw new RpcException("not_found", "unknown clash " + clashId);
+                // VERIFY: TestsImageForResult's signature and ownership of the returned Bitmap (disposed here).
+                using (var bmp = d.GetClash().TestsData.TestsImageForResult(found, ImageGenerationStyle.Scene, 1280, 960))
+                {
+                    bmp.Save(path, ImageFormat.Png);  // VERIFY: Bitmap.Save(string, ImageFormat)
+                }
+                return new Dictionary<string, object> { { "saved", true }, { "path", path } };
+            }, 120000);
         }
 
         // ------------------------------------------------------------ model.census / elements.query

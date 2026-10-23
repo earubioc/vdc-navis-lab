@@ -359,10 +359,13 @@ class App:
         return views.detail(issue, r, self.profile, self._lang(lang))
 
     # ------------------------------------------------------------ nw_report
-    def report(self, kind: str, path: str, overwrite: bool, limit: int, lang: str | None) -> dict[str, Any]:
+    def report(self, kind: str, path: str, overwrite: bool, limit: int, lang: str | None,
+               issue: str = "") -> dict[str, Any]:
         r = dataclasses.replace(self._require_result(), lang=self._lang(lang))
         lang = r.lang
         limit = max(1, min(int(limit), 500))
+        if kind == "image":
+            return self._issue_image(r, issue, path, overwrite)
         if kind == "summary":
             return views.summary(r, self.profile, min(limit, 100), lang)
         if kind == "matrix":
@@ -375,7 +378,7 @@ class App:
             return {"markdown": exports.to_markdown(r, self.profile, min(limit, 50))}
         ext = {"markdown": "md", "csv": "csv", "bcf": "bcf", "json": "json"}.get(kind)
         if ext is None:
-            raise ToolFault(INVALID_PARAMS, "kind must be summary, matrix, hotspots, plan, markdown, csv, bcf or json")
+            raise ToolFault(INVALID_PARAMS, "kind must be summary, matrix, hotspots, plan, markdown, csv, bcf, json or image")
         target = _output(path, f"vdc-navis-lab-{r.analysis_id}.{ext}", overwrite)
         if kind == "markdown":
             data = exports.to_markdown(r, self.profile, min(limit, 500)).encode("utf-8")
@@ -387,6 +390,25 @@ class App:
             data = json.dumps(r.clashset.to_dict(), ensure_ascii=False).encode("utf-8")
         target.write_bytes(data)
         return {"path": str(target), "bytes": len(data), "kind": kind, "issues": len(r.issues)}
+
+    def _issue_image(self, r: AnalysisResult, issue: str, path: str, overwrite: bool) -> dict[str, Any]:
+        """A PNG framed on one issue's representative clash. Needs the live document the analysis came
+        from: it is a rendering query, not data read from the cached analysis, so it never writes to
+        Navisworks and does not need a plan (D-006 is about document mutation, not file output)."""
+        if not issue:
+            raise ToolFault(INVALID_PARAMS, "issue is required for kind='image'")
+        iss = r.issue(issue)
+        if iss is None:
+            raise ToolFault(NOT_FOUND, f"unknown issue {issue!r}")
+        if r.source not in ("navisworks", "simulator"):
+            raise ToolFault(INVALID_PARAMS, "kind='image' needs a live Navisworks analysis, not a file")
+        ep, info, note = self.bridge.resolve()
+        target = _output(path, f"vdc-navis-lab-{iss.id}.png", overwrite)
+        res = self.bridge.call_at(ep, "clash.image", {"clash_id": iss.rep.id, "path": str(target)})
+        out = {"path": res.get("path", str(target)), "issue": iss.id, "clash_id": iss.rep.id}
+        if note:
+            out["note"] = note
+        return out
 
     # ------------------------------------------------------------ nw_apply
     def apply(self, ops: list[dict[str, Any]] | None, plan_id: str, dry_run: bool) -> dict[str, Any]:

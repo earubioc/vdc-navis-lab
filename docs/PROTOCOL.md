@@ -25,9 +25,10 @@ Transport: Windows named pipe `\\.\pipe\vdc-navis-lab.<pid>` (ACL: current user 
 | `clash.export` | `tests[]`, `limit` | `{job_id}`; the result is a `vdc_navis_lab.clashset/1` document |
 | `clash.apply` | `if_fingerprint`, `dedupe_key`, `groups[]`, `statuses[]` | `applied`, `verified`, `missing` |
 | `doc.save` | `if_fingerprint`, `path?` | `saved`, `verified`, `path` |
+| `clash.image` | `clash_id`, `path` | `saved`, `path` |
 | `job.status` / `job.result` / `job.cancel` / `job.list` | `job_id` | job state, result, or list |
 
-`hello.methods` is authoritative: a method that is not listed answers `unsupported`, and the server degrades with a clear message. The v0.2 add-in implements every method in this document, verified end to end against a real document.
+`hello.methods` is authoritative: a method that is not listed answers `unsupported`, and the server degrades with a clear message. The v0.2 add-in implements every method in this document, verified end to end against a real document. `clash.image` renders a PNG framed on that clash and writes it to `path` directly (the server resolves and validates `path` under the allowed output folders first, the same way `doc.save`'s path is handled); it never modifies the document, so unlike `clash.apply` it carries no `if_fingerprint` and needs no plan.
 
 Long operations return a `job_id` immediately. States: `running`, `completed`, `failed`, `cancelled`. `job.status`'s `progress` is `{kind:"indeterminate"}` or, once a job knows its size, `{kind:"determinate", done, total}`; `clash.export` reports one done per test, so Navisworks stays responsive between tests instead of a single block for the whole export.
 

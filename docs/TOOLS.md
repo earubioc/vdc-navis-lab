@@ -34,7 +34,7 @@ All tools return JSON. Failures come back as `{"error": code, "detail": ..., "hi
 
 ## Output
 
-**`nw_report(kind, path, overwrite, limit, lang)`** `summary`, `matrix`, `hotspots`, `plan` come back inline. `markdown` is inline unless `path` is given. `csv`, `bcf` (BCF 2.1) and `json` write a file under an allowed output folder.
+**`nw_report(kind, path, overwrite, limit, lang, issue)`** `summary`, `matrix`, `hotspots`, `plan` come back inline. `markdown` is inline unless `path` is given. `csv`, `bcf` (BCF 2.1) and `json` write a file under an allowed output folder. `image` (needs `issue=<id>` and a live Navisworks document, not a file analysis) writes a PNG framed on that issue's representative clash.
 
 **`nw_snapshot(action, name, against)`** `save`, `list`, `compare`. Compares by element-pair sets; disappeared issues are `absent`, not `resolved`.
 

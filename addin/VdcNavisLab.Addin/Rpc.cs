@@ -59,6 +59,7 @@ namespace VdcNavisLab.Addin
                 { "clash.run", p => _h.StartClashRun(p) },
                 { "model.census", p => _h.ModelCensus(p) },
                 { "elements.query", p => _h.ElementsQuery(p) },
+                { "clash.image", p => _h.ClashImage(p) },
                 { "job.status", p => _h.JobStatus(p) },
                 { "job.result", p => _h.JobResult(p) },
                 { "job.cancel", p => _h.JobCancel(p) },

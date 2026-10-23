@@ -3,18 +3,17 @@
 ## Next (needed to call it usable)
 
 1. **Field-test ingestion** with real Clash Detective XML and CSV exports from different Navisworks versions and languages.
+2. **Confirm `clash.image` against a real model.** Implemented (`DocumentClashTests.TestsImageForResult`, a `Bitmap` saved as PNG, exposed as `nw_report(kind="image", issue=<id>)`), compiles cleanly, not yet run against real Navisworks.
 
-Every method in `docs/PROTOCOL.md` is now implemented and confirmed against a real Navisworks document (2026-10-21):
+Every other method in `docs/PROTOCOL.md` is implemented and confirmed against a real Navisworks document (2026-10-21):
 
 - **Reads:** `hello`, `doc.info`, `clash.tests`, `clash.export` (chunked, one test per UI-thread slice), `doc.sample`, `model.census`, `elements.query` (one `Model` per UI-thread slice; a federated NWD opened as one document reports as a single `Model` in `Document.Models`, not one per nested `.nwc` -- an honest finding, not a bug).
-- **Writes:** `clash.apply` (status via `TestsEditResultStatus`, grouping via `TestsInsertCopy`/`TestsMove`) and `doc.save` (`save_as`), both through `DocumentClashTests` because results and tests come back read-only from the API -- setting properties directly threw `NotSupportedException` on the first real attempt. `clash.run` (`TestsRunTest`, one test per UI-thread slice).
+- **Writes:** `clash.apply` (status via `TestsEditResultStatus`, grouping via `TestsInsertCopy`/`TestsMove`) and `doc.save` (both `save_as` and `save` over the open file), through `DocumentClashTests` because results and tests come back read-only from the API -- setting properties directly threw `NotSupportedException` on the first real attempt. `clash.run` (`TestsRunTest`, one test per UI-thread slice). `clash.apply` also confirmed at 10x scale (10 issues, 66 clashes in one plan).
 - **Calibration and honesty:** `score.sleeve` dampens and caps clean through-crossings of a floor/wall by a small MEP run (critical 52→35, medium 1→18 on the first real model), and `skipped` (results dropped because an element no longer exists in the model) is counted and reported (56 on that same model, matching the 710-vs-654 gap first noticed).
-
-Not yet tried: a plan larger than one issue, `doc.save` without `path` (saving over the open file, not just `save_as`), and whether a long `clash.export` or `model.census` actually keeps Navisworks responsive to clicks (the real model tested so far finishes in well under a second).
 
 ## Capabilities under consideration
 
-- Viewpoint per issue, camera framed on the clash point, with an image.
+- Save a Navisworks viewpoint per issue (`DocumentClashTests.TestsViewpointForResult` plus `Document.SavedViewpoints.AddCopy`), so a person can jump straight to the clash in Navisworks. This is a document write, so per the project's rule it would go through `nw_apply` as a new op, not a one-shot call like `clash.image`.
 - Search sets from a query, to reuse a selection in Navisworks.
 - Color the model by priority, with a guaranteed reset.
 - Rule-based clash test creation from the discipline matrix.
