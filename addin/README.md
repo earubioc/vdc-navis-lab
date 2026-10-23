@@ -8,7 +8,7 @@ An `EventWatcherPlugin` loads with Navisworks, captures the UI thread, and opens
 
 Implemented: every method in [../docs/PROTOCOL.md](../docs/PROTOCOL.md) (`hello`, `doc.info`, `clash.tests`, `clash.export`, `clash.apply`, `doc.save`, `clash.run`, `model.census`, `elements.query`, `clash.image`, `doc.sample`, the `job.*` family). Anything else answers `unsupported` and `hello.methods` says so.
 
-Extraction and `clash.run` run one test per UI-thread slice, confirmed against the real model (D-036, D-038): Navisworks processes its own message queue between tests instead of freezing for the whole operation. `model.census` and `elements.query` run one `Model` per slice the same way, confirmed against the real model (D-039): a census element is the leaf's parent (one per assembly, not one per material solid), deduped by `InstanceHashCode`. `clash.image` uses `DocumentClashTests.TestsImageForResult` (a `Bitmap`, saved as PNG) and does not modify the document, so it carries no `if_fingerprint`; compiles cleanly, not yet confirmed against a real model.
+Extraction and `clash.run` run one test per UI-thread slice, confirmed against the real model (D-036, D-038): Navisworks processes its own message queue between tests instead of freezing for the whole operation. `model.census` and `elements.query` run one `Model` per slice the same way, confirmed against the real model (D-039): a census element is the leaf's parent (one per assembly, not one per material solid), deduped by `InstanceHashCode`. `clash.image` uses `DocumentClashTests.TestsImageForResult` (a `Bitmap`, saved as PNG) and does not modify the document, so it carries no `if_fingerprint`; confirmed against the real model (D-042/D-043).
 
 ## Build and install (one command)
 
