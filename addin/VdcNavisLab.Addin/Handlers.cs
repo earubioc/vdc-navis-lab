@@ -846,36 +846,63 @@ namespace VdcNavisLab.Addin
                 var viewpointsArg = p.ContainsKey("viewpoints") ? p["viewpoints"] as System.Collections.ArrayList : null;
                 int viewpointsAdded = 0, viewpointsReused = 0, verifiedViewpoints = 0;
                 var savedViewpoints = d.SavedViewpoints;
-                if (viewpointsArg != null)
-                    foreach (var vo in viewpointsArg)
+                if (viewpointsArg != null && viewpointsArg.Count > 0)
+                {
+                    var currentViewpoint = d.CurrentViewpoint;
+                    var originalVp = currentViewpoint.CreateCopy();  // restored once the whole batch is done
+                    try
                     {
-                        var vd = (Dictionary<string, object>)vo;
-                        var name = Convert.ToString(vd["name"]);
-                        var guid = Convert.ToString(vd["guid"]);
-                        ClashResult r;
-                        if (!byGuid.TryGetValue(guid, out r)) { missing.Add(guid); continue; }
-                        try
+                        foreach (var vo in viewpointsArg)
                         {
-                            var existing = FindViewpoint(savedViewpoints, name);
-                            if (existing == null)
+                            var vd = (Dictionary<string, object>)vo;
+                            var name = Convert.ToString(vd["name"]);
+                            var guid = Convert.ToString(vd["guid"]);
+                            ClashResult r;
+                            if (!byGuid.TryGetValue(guid, out r)) { missing.Add(guid); continue; }
+                            try
                             {
-                                // TestsViewpointForResult captures the current framing of the clash; SavedViewpoint
-                                // wraps it so it can live under Document.SavedViewpoints (its own editor, like
-                                // DocumentClashTests above -- AddCopy inserts a COPY, re-find it to verify).
-                                var vp = edit.TestsViewpointForResult(r);
-                                var sv = new SavedViewpoint(vp) { DisplayName = name };
-                                savedViewpoints.AddCopy(sv);
-                                viewpointsAdded++;
+                                var existing = FindViewpoint(savedViewpoints, name);
+                                if (existing == null)
+                                {
+                                    // A bare TestsViewpointForResult only carries the camera: navigating to it later
+                                    // showed plain, unhighlighted geometry (VERIFY: confirmed visually against the
+                                    // real model -- not useful on its own). Framing on ViewBounds and highlighting
+                                    // both clashing items in red, then baking camera + overrides into a SavedViewpoint
+                                    // via CaptureRuntimeOverrides, matches what clash.image already shows.
+                                    var vp = edit.TestsViewpointForResult(r);
+                                    vp.ZoomBox(r.ViewBounds);
+                                    currentViewpoint.CopyFrom(vp);
+                                    var items = new List<ModelItem>();
+                                    if (r.Item1 != null) items.Add(r.Item1);
+                                    if (r.Item2 != null) items.Add(r.Item2);
+                                    if (items.Count > 0) d.Models.OverrideTemporaryColor(items, Color.Red);
+                                    try
+                                    {
+                                        var sv = savedViewpoints.CaptureRuntimeOverrides();
+                                        sv.DisplayName = name;
+                                        savedViewpoints.AddCopy(sv);
+                                        viewpointsAdded++;
+                                    }
+                                    finally
+                                    {
+                                        d.Models.ResetAllTemporaryMaterials();
+                                    }
+                                }
+                                else viewpointsReused++;
+                                if (FindViewpoint(savedViewpoints, name) != null) verifiedViewpoints++;
                             }
-                            else viewpointsReused++;
-                            if (FindViewpoint(savedViewpoints, name) != null) verifiedViewpoints++;
-                        }
-                        catch (Exception ex)
-                        {
-                            Log.Write("clash.apply viewpoint '" + name + "' failed: " + ex.GetType().Name + ": " + ex.Message);
-                            missing.Add(guid);
+                            catch (Exception ex)
+                            {
+                                Log.Write("clash.apply viewpoint '" + name + "' failed: " + ex.GetType().Name + ": " + ex.Message);
+                                missing.Add(guid);
+                            }
                         }
                     }
+                    finally
+                    {
+                        currentViewpoint.CopyFrom(originalVp);
+                    }
+                }
 
                 int verifiedGroups = groupChecks.Count(kv => kv.Value.All(g => byGuid[g].Parent != null && byGuid[g].Parent.Guid == kv.Key));
                 var result = new Dictionary<string, object>

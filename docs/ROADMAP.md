@@ -3,7 +3,7 @@
 ## Next (needed to call it usable)
 
 1. **Field-test ingestion** with real Clash Detective XML and CSV exports from different Navisworks versions and languages.
-2. **Confirm saved viewpoints against a real model.** Implemented (`nw_apply(ops=[{"op":"viewpoint", "issues":...}])`, one `SavedViewpoint` per issue under `Document.SavedViewpoints`), compiles cleanly, not yet run against real Navisworks.
+2. **Confirm saved viewpoints against a real model.** Implemented (`nw_apply(ops=[{"op":"viewpoint", "issues":...}])`, one `SavedViewpoint` per issue, framed on the clash and with both clashing items highlighted in red), compiles cleanly, not yet run against real Navisworks.
 
 Every other method in `docs/PROTOCOL.md` is implemented and confirmed against a real Navisworks document (2026-10-21 to 2026-10-23):
 
