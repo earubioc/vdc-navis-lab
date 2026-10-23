@@ -57,6 +57,7 @@ class Plan:
     created: float
     groups: list[dict[str, Any]]
     statuses: list[dict[str, Any]]
+    viewpoints: list[dict[str, Any]]
     preview: dict[str, Any]
     executed: bool = False
 
@@ -461,12 +462,13 @@ class App:
 
         groups: list[dict[str, Any]] = []
         statuses: list[dict[str, Any]] = []
+        viewpoints: list[dict[str, Any]] = []
         preview_ops = []
         issues_seen: set[str] = set()
         clashes_total = 0
         for op in ops:
             kind = op.get("op") if isinstance(op, dict) else None
-            members = self._select(op.get("issues"), r) if kind in ("group", "status") else None
+            members = self._select(op.get("issues"), r) if kind in ("group", "status", "viewpoint") else None
             if kind == "group":
                 names = []
                 for i in members:
@@ -489,14 +491,22 @@ class App:
                 if st in ("approved", "resolved") and crit:
                     entry["warning"] = f"{crit} critical issue(s) would be closed"
                 preview_ops.append(entry)
+            elif kind == "viewpoint":
+                names = []
+                for i in members:
+                    name = _group_name(i, self.profile, r.lang)
+                    viewpoints.append({"guid": i.rep.id, "name": name})
+                    names.append(name)
+                    issues_seen.add(i.id)
+                preview_ops.append({"op": "viewpoint", "issues": len(members), "sample": names[:4]})
             else:
-                raise ToolFault(INVALID_PARAMS, "each op needs op='group' or op='status'")
+                raise ToolFault(INVALID_PARAMS, "each op needs op='group', op='status' or op='viewpoint'")
         if len(issues_seen) > MAX_PLAN_ISSUES or clashes_total > MAX_PLAN_CLASHES:
             raise ToolFault("plan_too_large", f"limit is {MAX_PLAN_ISSUES} issues and {MAX_PLAN_CLASHES} clashes per plan",
                             "split the work into several plans")
         plan = Plan(id=f"P-{uuid.uuid4().hex[:8]}", analysis_id=r.analysis_id, instance_id=self.analysis_instance,
                     fingerprint=str(doc.get("fingerprint")), revision=self.seen_revision, created=time.time(),
-                    groups=groups, statuses=statuses,
+                    groups=groups, statuses=statuses, viewpoints=viewpoints,
                     preview={"ops": preview_ops, "issues": len(issues_seen), "clashes": clashes_total})
         self.plans[plan.id] = plan
         return {"plan_id": plan.id, "dry_run": True, "document": doc.get("title"), "expires_in_s": PLAN_TTL,
@@ -522,16 +532,20 @@ class App:
             raise ToolFault(STALE_DOCUMENT, "the document changed since the plan was made", "plan again")
         res = self.bridge.call_at(ep, "clash.apply", {
             "if_fingerprint": plan.fingerprint, "dedupe_key": plan.id,
-            "groups": plan.groups, "statuses": plan.statuses})
+            "groups": plan.groups, "statuses": plan.statuses, "viewpoints": plan.viewpoints})
         plan.executed = True
         verified, applied = res.get("verified", {}), res.get("applied", {})
         want_groups, want_status = len(plan.groups), sum(len(s["guids"]) for s in plan.statuses)
-        ok = verified.get("groups", 0) == want_groups and verified.get("statuses", 0) == want_status and not res.get("missing")
-        state = "completed" if ok else ("failed" if not (verified.get("groups") or verified.get("statuses")) else "partial")
+        want_viewpoints = len(plan.viewpoints)
+        ok = (verified.get("groups", 0) == want_groups and verified.get("statuses", 0) == want_status
+              and verified.get("viewpoints", 0) == want_viewpoints and not res.get("missing"))
+        state = "completed" if ok else (
+            "failed" if not (verified.get("groups") or verified.get("statuses") or verified.get("viewpoints")) else "partial")
         live = self.bridge.call_at(ep, "hello")
         self.seen_revision = str((live.get("doc") or {}).get("revision", ""))  # our own change is not staleness
-        out = {"state": state, "requested": {"groups": want_groups, "statuses": want_status}, "applied": applied,
-               "verified": verified, "missing": res.get("missing", [])[:10]}
+        out = {"state": state,
+               "requested": {"groups": want_groups, "statuses": want_status, "viewpoints": want_viewpoints},
+               "applied": applied, "verified": verified, "missing": res.get("missing", [])[:10]}
         if plan.statuses:
             out["hint"] = "statuses changed in the document: run nw_analyze again to refresh the ranking"
         return out

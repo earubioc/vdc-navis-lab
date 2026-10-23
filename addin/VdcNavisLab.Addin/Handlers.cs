@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Autodesk.Navisworks.Api;
 using Autodesk.Navisworks.Api.Clash;
+using Autodesk.Navisworks.Api.DocumentParts;
 
 namespace VdcNavisLab.Addin
 {
@@ -707,6 +708,16 @@ namespace VdcNavisLab.Addin
             return null;
         }
 
+        private static SavedViewpoint FindViewpoint(DocumentSavedViewpoints saved, string name)
+        {
+            foreach (SavedItem child in saved.Value)
+            {
+                var v = child as SavedViewpoint;
+                if (v != null && v.DisplayName == name) return v;
+            }
+            return null;
+        }
+
         public object ClashApply(Dictionary<string, object> p)
         {
             return UiThread.Run<object>(() =>
@@ -832,11 +843,45 @@ namespace VdcNavisLab.Addin
                         }
                     }
 
+                var viewpointsArg = p.ContainsKey("viewpoints") ? p["viewpoints"] as System.Collections.ArrayList : null;
+                int viewpointsAdded = 0, viewpointsReused = 0, verifiedViewpoints = 0;
+                var savedViewpoints = d.SavedViewpoints;
+                if (viewpointsArg != null)
+                    foreach (var vo in viewpointsArg)
+                    {
+                        var vd = (Dictionary<string, object>)vo;
+                        var name = Convert.ToString(vd["name"]);
+                        var guid = Convert.ToString(vd["guid"]);
+                        ClashResult r;
+                        if (!byGuid.TryGetValue(guid, out r)) { missing.Add(guid); continue; }
+                        try
+                        {
+                            var existing = FindViewpoint(savedViewpoints, name);
+                            if (existing == null)
+                            {
+                                // TestsViewpointForResult captures the current framing of the clash; SavedViewpoint
+                                // wraps it so it can live under Document.SavedViewpoints (its own editor, like
+                                // DocumentClashTests above -- AddCopy inserts a COPY, re-find it to verify).
+                                var vp = edit.TestsViewpointForResult(r);
+                                var sv = new SavedViewpoint(vp) { DisplayName = name };
+                                savedViewpoints.AddCopy(sv);
+                                viewpointsAdded++;
+                            }
+                            else viewpointsReused++;
+                            if (FindViewpoint(savedViewpoints, name) != null) verifiedViewpoints++;
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Write("clash.apply viewpoint '" + name + "' failed: " + ex.GetType().Name + ": " + ex.Message);
+                            missing.Add(guid);
+                        }
+                    }
+
                 int verifiedGroups = groupChecks.Count(kv => kv.Value.All(g => byGuid[g].Parent != null && byGuid[g].Parent.Guid == kv.Key));
                 var result = new Dictionary<string, object>
                 {
-                    { "applied", new Dictionary<string, object> { { "groups_added", groupsAdded }, { "groups_reused", groupsReused }, { "statuses_set", statusesSet } } },
-                    { "verified", new Dictionary<string, object> { { "groups", verifiedGroups }, { "statuses", verifiedStatuses } } },
+                    { "applied", new Dictionary<string, object> { { "groups_added", groupsAdded }, { "groups_reused", groupsReused }, { "statuses_set", statusesSet }, { "viewpoints_added", viewpointsAdded }, { "viewpoints_reused", viewpointsReused } } },
+                    { "verified", new Dictionary<string, object> { { "groups", verifiedGroups }, { "statuses", verifiedStatuses }, { "viewpoints", verifiedViewpoints } } },
                     { "missing", missing.Distinct().OrderBy(x => x, StringComparer.Ordinal).ToList() }
                 };
                 if (key.Length > 0) lock (_appliedGate) { _applied[key] = result; }

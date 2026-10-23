@@ -50,6 +50,7 @@ class Simulator:
         self.fingerprint = hashlib.sha1(f"{self.title}|{sorted(self.clashset.models)}".encode()).hexdigest()[:16]
         self.groups: dict[str, set[str]] = {}
         self.status: dict[str, str] = {c.id: c.status for c in self.clashset.clashes}
+        self.viewpoints: dict[str, str] = {}
         self.jobs: dict[str, dict[str, Any]] = {}
         self.applied: dict[str, dict] = {}
         self.saves = 0
@@ -240,14 +241,26 @@ class Simulator:
                     status_set += 1
                 else:
                     missing.append(guid)
+        viewpoints_added = 0
+        for v in p.get("viewpoints") or []:
+            guid = v["guid"]
+            if guid in known:
+                self.viewpoints[guid] = v["name"]
+                viewpoints_added += 1
+            else:
+                missing.append(guid)
         wanted_groups = {g["name"]: {x for x in g["guids"] if x in known} for g in p.get("groups") or []}
         verified_groups = sum(1 for n, ids in wanted_groups.items() if ids <= self.groups.get(n, set()))
         verified_status = sum(1 for s in p.get("statuses") or [] for guid in s["guids"]
                               if guid in known and self.status[guid] == s["status"])
-        if created or status_set:
+        verified_viewpoints = sum(1 for v in p.get("viewpoints") or []
+                                  if v["guid"] in known and self.viewpoints.get(v["guid"]) == v["name"])
+        if created or status_set or viewpoints_added:
             self.revision += 1
-        result = {"applied": {"groups_added": created, "groups_reused": reused, "statuses_set": status_set},
-                  "verified": {"groups": verified_groups, "statuses": verified_status}, "missing": sorted(set(missing))}
+        result = {"applied": {"groups_added": created, "groups_reused": reused, "statuses_set": status_set,
+                              "viewpoints_added": viewpoints_added},
+                  "verified": {"groups": verified_groups, "statuses": verified_status, "viewpoints": verified_viewpoints},
+                  "missing": sorted(set(missing))}
         if key:
             self.applied[key] = result
         return result

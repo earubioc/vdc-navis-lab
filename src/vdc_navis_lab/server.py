@@ -159,10 +159,12 @@ def nw_report(kind: str = "summary", path: str = "", overwrite: bool = False, li
 @mcp.tool(annotations=_mutating("Write groups and statuses back to Navisworks"))
 @guarded
 def nw_apply(ops: list[dict[str, Any]] | None = None, plan_id: str = "", dry_run: bool = True) -> dict[str, Any]:
-    """Two steps. (1) ops=[{"op":"group","issues":"top:20"}, {"op":"status","issues":{"priority":"low"},"status":"reviewed"}]
-    previews and returns plan_id; nothing changes. issues is a list of ids, 'top:N', or a filter
-    {priority, discipline, level, limit}. (2) plan_id=... executes it against the same document and reports what was
-    verified by re-reading. Refused if the document changed since the analysis."""
+    """Two steps. (1) ops=[{"op":"group","issues":"top:20"}, {"op":"status","issues":{"priority":"low"},"status":"reviewed"},
+    {"op":"viewpoint","issues":"top:5"}] previews and returns plan_id; nothing changes. issues is a list of ids, 'top:N', or
+    a filter {priority, discipline, level, limit}. 'viewpoint' saves a Navisworks viewpoint per issue (framed on its
+    representative clash), so a person can jump straight to it from the Saved Viewpoints panel. (2) plan_id=... executes it
+    against the same document and reports what was verified by re-reading. Refused if the document changed since the
+    analysis."""
     return APP.apply(ops, plan_id, dry_run)
 
 

@@ -3,6 +3,7 @@
 ## Next (needed to call it usable)
 
 1. **Field-test ingestion** with real Clash Detective XML and CSV exports from different Navisworks versions and languages.
+2. **Confirm saved viewpoints against a real model.** Implemented (`nw_apply(ops=[{"op":"viewpoint", "issues":...}])`, one `SavedViewpoint` per issue under `Document.SavedViewpoints`), compiles cleanly, not yet run against real Navisworks.
 
 Every other method in `docs/PROTOCOL.md` is implemented and confirmed against a real Navisworks document (2026-10-21 to 2026-10-23):
 
@@ -13,7 +14,6 @@ Every other method in `docs/PROTOCOL.md` is implemented and confirmed against a 
 
 ## Capabilities under consideration
 
-- Save a Navisworks viewpoint per issue (`DocumentClashTests.TestsViewpointForResult` plus `Document.SavedViewpoints.AddCopy`), so a person can jump straight to the clash in Navisworks. This is a document write, so per the project's rule it would go through `nw_apply` as a new op, not a one-shot call like `clash.image`.
 - Search sets from a query, to reuse a selection in Navisworks.
 - Color the model by priority, with a guaranteed reset.
 - Rule-based clash test creation from the discipline matrix.

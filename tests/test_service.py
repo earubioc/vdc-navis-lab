@@ -55,6 +55,16 @@ def test_apply_two_step_flow_verifies_by_rereading(app, sim):
         app.apply(None, plan["plan_id"], False)
 
 
+def test_apply_viewpoint_op_saves_one_per_issue(app, sim):
+    live(app)
+    plan = app.apply([{"op": "viewpoint", "issues": "top:3"}], "", True)
+    assert plan["dry_run"] is True and plan["issues"] == 3 and not sim.viewpoints, "dry run changes nothing"
+    done = app.apply(None, plan["plan_id"], False)
+    assert done["state"] == "completed" and done["verified"]["viewpoints"] == 3
+    assert done["requested"]["viewpoints"] == 3 and done["applied"]["viewpoints_added"] == 3
+    assert len(sim.viewpoints) == 3
+
+
 def test_execution_never_takes_raw_ops(app):
     live(app)
     with pytest.raises(ToolFault, match="plan_id"):
