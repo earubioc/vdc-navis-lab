@@ -28,7 +28,7 @@ Transport: Windows named pipe `\\.\pipe\vdc-navis-lab.<pid>` (ACL: current user 
 | `clash.image` | `clash_id`, `path` | `saved`, `path` |
 | `job.status` / `job.result` / `job.cancel` / `job.list` | `job_id` | job state, result, or list |
 
-`hello.methods` is authoritative: a method that is not listed answers `unsupported`, and the server degrades with a clear message. The v0.2 add-in implements every method in this document, verified end to end against a real document, including `clash.image`. `clash.image` renders a PNG framed on that clash and writes it to `path` directly (the server resolves and validates `path` under the allowed output folders first, the same way `doc.save`'s path is handled); it never modifies the document, so unlike `clash.apply` it carries no `if_fingerprint` and needs no plan. `clash.apply`'s `viewpoints[]` is `[{guid, name}]`: it does modify the document (one `SavedViewpoint` per entry, under `Document.SavedViewpoints`), so it goes through the same plan as `groups`/`statuses`, counted in `applied.viewpoints_added`/`viewpoints_reused` and `verified.viewpoints`. Each saved viewpoint is framed on the clash and has both clashing items highlighted in red, not just a bare camera: a first attempt without the highlight was not useful when navigated to.
+`hello.methods` is authoritative: a method that is not listed answers `unsupported`, and the server degrades with a clear message. The v0.2 add-in implements every method in this document, verified end to end against a real document, including `clash.image`. `clash.image` renders a PNG framed on that clash and writes it to `path` directly (the server resolves and validates `path` under the allowed output folders first, the same way `doc.save`'s path is handled); it never modifies the document, so unlike `clash.apply` it carries no `if_fingerprint` and needs no plan. `clash.apply`'s `viewpoints[]` is `[{guid, name}]`: it does modify the document (one `SavedViewpoint` per entry, under `Document.SavedViewpoints`), so it goes through the same plan as `groups`/`statuses`, counted in `applied.viewpoints_added`/`viewpoints_reused` and `verified.viewpoints`. Each saved viewpoint has an oblique camera computed from the clash centre (the result's `ViewBounds` is empty and put the camera at the origin), the whole model ghosted and both clashing items in red; it is created with `AddCopy` and then refreshed with `ReplaceFromCurrentView`, because `CaptureRuntimeOverrides` returns a default camera (D-048).
 
 Long operations return a `job_id` immediately. States: `running`, `completed`, `failed`, `cancelled`. `job.status`'s `progress` is `{kind:"indeterminate"}` or, once a job knows its size, `{kind:"determinate", done, total}`; `clash.export` reports one done per test, so Navisworks stays responsive between tests instead of a single block for the whole export.
 
@@ -39,12 +39,13 @@ Long operations return a `job_id` immediately. States: `running`, `completed`, `
 ## `vdc_navis_lab.clashset/1`
 
 ```
-{ schema, source, document{title,fingerprint,revision}, models[], truncated, skipped,
+{ schema, source, document{title,fingerprint,revision}, models[], truncated, skipped, skipped_open?,
   tests[{name,kind,status,tolerance,count}],
   clashes[{id,test,name,status,kind,distance,point[3],level,
            a{id,name,category,family,model,level,system?,props,bbox[[x,y,z],[x,y,z]],obb?{c,u,h}}, b{...}}] }
          obb (optional, metres): oriented box from the real triangles, only for beams, columns, conduits and pipes
-         and only when it matches Navisworks' own box: c centre, u three unit axes (first = longest), h half extents.
+         and only when the triangles fit inside Navisworks' own (looser) box: c centre, u three unit axes (first =
+         longest), h half extents. When it cannot be computed the element carries props.obb_status with the reason.
 ```
 
-Units are metres. `distance` is negative for penetration. `kind` is `hard`, `clearance` or `duplicate`. Status values: `new`, `active`, `reviewed`, `approved`, `resolved`. `skipped` counts results the add-in dropped because one of their elements no longer exists in the model; it is never silent (`nw_analyze`'s coverage reports it). The same shape is what `nw_report(kind="json")` writes and `nw_analyze(path=...)` reads.
+Units are metres. `distance` is negative for penetration. `kind` is `hard`, `clearance` or `duplicate`. Status values: `new`, `active`, `reviewed`, `approved`, `resolved`. `skipped` counts results the add-in dropped because one of their elements no longer exists in the model; `skipped_open` is how many of those were still new or active (the rest were already reviewed, approved or resolved and do not affect the analysis). Neither is silent: `nw_analyze`'s coverage reports them. The same shape is what `nw_report(kind="json")` writes and `nw_analyze(path=...)` reads.

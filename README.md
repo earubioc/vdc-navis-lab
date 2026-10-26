@@ -4,7 +4,7 @@ Clash coordination for Autodesk Navisworks Manage, exposed as an [MCP](https://m
 
 Navisworks reports thousands of raw clashes. The hard part of coordination is deciding which ones matter, which discipline has to move, and which fifty of them are the same mistake repeated on every floor. `vdc-navis-lab` does that analysis in a deterministic engine and gives the assistant a small set of tools to work with the result, instead of handing it a pile of raw rows.
 
-> **Status: v0.2, early.** The analysis engine, file ingestion, exports, the MCP server and a Navisworks simulator are implemented and tested (96 tests). The Navisworks add-in is built and verified against a real Navisworks Manage 2026: every method in the protocol works against a real document, including writes (`clash.apply`, `doc.save`), re-running tests (`clash.run`), a model census (`model.census`, `elements.query`) and an image per clash (`clash.image`). Saving a viewpoint per issue is implemented but not yet confirmed against a real model; tested on one real model, one installation; PDF reports and Navisworks 2025 are still missing. See [What is verified](#what-is-verified).
+> **Status: v0.3, early.** The analysis engine, file ingestion, exports, the MCP server and a Navisworks simulator are implemented and tested (105 tests). The Navisworks add-in is built and verified against a real Navisworks Manage 2026: every method in the protocol works against a real document, including writes (`clash.apply`, `doc.save`), re-running tests (`clash.run`), a model census (`model.census`, `elements.query`) and an image per clash (`clash.image`). Saved viewpoints (camera on the clash, ghosted model, clashing items in red) and the beam-passage rule (from oriented boxes of the real geometry) are confirmed against a real model. Tested on one real model, one installation; the beam-passage thresholds are a starting point to agree with a structural designer; PDF reports and Navisworks 2025 are still missing. See [What is verified](#what-is-verified).
 
 ## What it does
 
@@ -77,9 +77,10 @@ The add-in listens on a Windows named pipe restricted to the current user. File 
 | Analysis engine, profile, exports (CSV, Markdown, BCF 2.1 against the official XSD), snapshots | Tested on synthetic data |
 | MCP server over stdio, 14 tools, write flow, read-only mode | Tested end to end against the simulator |
 | Clash Detective XML ingestion | Tested on a synthetic file in the common layout; real exports vary and need field testing |
-| Windows named pipe client | Written, not run on Windows |
+| Windows named pipe client | Verified on Windows against a real Navisworks Manage 2026 (Claude Desktop through the connector) |
 | Navisworks add-in (C#) | Verified on Navisworks Manage 2026 (net48): connection, test listing, extraction and analysis of a real 654-clash model; `clash.apply` (status, grouping) and `doc.save` (save_as) verified by re-reading the document; `clash.run` re-ran a test; `model.census`/`elements.query` returned 3798 real elements, 749 of them grouped by level; `clash.image` wrote a 1.13 MB PNG matching the native Clash Detective render |
-| Scoring weights and bands | Reasonable defaults, not calibrated on real projects |
+| Saved viewpoints, sleeve and embedded-conduit rules, beam passage from oriented boxes | Confirmed on one real model: on it, critical 35 to 15 and electrical x structure critical 15 to 2; thresholds are defaults, not a code |
+| Scoring weights and bands | Reasonable defaults, calibrated only on the sleeve, conduit and beam-passage components of one real model |
 
 ## Documentation
 
