@@ -131,7 +131,7 @@ class Scorer:
                     code = "sleeve_missing" if self.sleeves_modeled == 0 else "sleeve_candidate"
                     reasons.append((code, {"host": host.category, "depth_mm": deep.depth * 1000}))
 
-        passage_floor: str | None = None
+        passage_level: str | None = None
         judged = []
         for c in hard:
             pair = _passage.applicable(p, c.a, c.b)
@@ -142,9 +142,10 @@ class Scorer:
         if judged:
             bad = [r for r in judged if not r.ok]
             if bad:
-                worst = max(bad, key=lambda r: (r.kind in ("longitudinal", "diagonal"), len(r.failures)))
-                severe = worst.kind in ("longitudinal", "diagonal") or worst.kind == "vertical"
-                passage_floor = "critical" if severe else "high"
+                bp = p.section("score", "beam_pass")
+                critical_kinds = {str(k) for k in bp.get("critical_kinds", ["longitudinal"])}
+                worst = max(bad, key=lambda r: (r.kind in critical_kinds, len(r.failures)))
+                passage_level = "critical" if worst.kind in critical_kinds else str(bp.get("fail_level", "high"))
                 for code in worst.failures:
                     reasons.append((f"beam_pass_{code}", {"angle": worst.angle_deg, "along": worst.along * 100,
                                                           "across": worst.across * 100, "ratio": worst.diameter_ratio * 100}))
@@ -196,9 +197,13 @@ class Scorer:
                 if PRIORITIES.index(floor) < PRIORITIES.index(priority):
                     priority = floor
                     reasons.append(("gate", {"pair": f"{a}-{b}", "depth_mm": max_depth * 1000, "floor": floor}))
-        if passage_floor and PRIORITIES.index(passage_floor) < PRIORITIES.index(priority):
-            priority = passage_floor
-            reasons.append(("beam_pass_floor", {"floor": passage_floor}))
+        if passage_level:
+            # A beam passage that does not comply is judged by its own rule, in both directions: the score saturates
+            # for any small run inside a big member, so it cannot tell a conduit near a support from one along the beam.
+            if priority != passage_level:
+                reasons.append(("beam_pass_level", {"level": passage_level}))
+            priority = passage_level
+            sleeve_cap = None
         if sleeve_cap and PRIORITIES.index(priority) < PRIORITIES.index(sleeve_cap):
             priority = sleeve_cap  # a sleeve candidate: no depth gate pushes it past this on its own
 

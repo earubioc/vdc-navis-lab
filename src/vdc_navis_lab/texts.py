@@ -27,7 +27,7 @@ REASONS = {
         "beam_pass_span": "el pase queda al {along:.0f} % del vano, fuera del tercio medio",
         "beam_pass_zone": "el pase queda al {across:.0f} % de la sección, fuera del tercio medio",
         "beam_pass_size": "el diámetro es el {ratio:.0f} % de la dimensión de la viga, más de lo permitido para un pase",
-        "beam_pass_floor": "pase por viga que no cumple: no baja de {floor}",
+        "beam_pass_level": "pase por viga que no cumple: se clasifica como {level}",
         "embedded_small": "elemento de {size_mm:.0f} mm embebido en {host} de {host_mm:.0f} mm: embebido normal (no pasa de un tercio del espesor)",
     },
     "en": {
@@ -47,7 +47,7 @@ REASONS = {
         "beam_pass_span": "the passage sits at {along:.0f}% of the span, outside the middle third",
         "beam_pass_zone": "the passage sits at {across:.0f}% of the section, outside the middle third",
         "beam_pass_size": "the diameter is {ratio:.0f}% of the beam dimension, more than a passage allows",
-        "beam_pass_floor": "beam passage that does not comply: never below {floor}",
+        "beam_pass_level": "beam passage that does not comply: classified as {level}",
         "embedded_small": "{size_mm:.0f} mm run embedded in a {host_mm:.0f} mm {host}: ordinary embedding (within a third of the thickness)",
     },
 }

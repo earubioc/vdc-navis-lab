@@ -141,7 +141,7 @@ small_cap = "low"
 
 # A small run crossing a concrete beam. The MCP never approves a passage (that is structure's call): it measures the
 # geometry and either marks the clash as "meets it, needs structural approval" (capped at ok_cap) or says what fails
-# (never below high; critical when the run lies along the beam or at an angle). All thresholds are a starting point to
+# (fail_level, and critical for the kinds listed in critical_kinds). All thresholds are a starting point to
 # confirm with the structural designer; they need the oriented boxes the add-in extracts (otherwise nothing changes).
 [score.beam_pass]
 host_categories = ["structural framing", "armazón estructural", "armazon estructural", "vigas"]
@@ -152,6 +152,8 @@ transversal_min_angle_deg = 70
 longitudinal_max_angle_deg = 25
 min_run_length_ratio = 2.0          # runs shorter than this many diameters are fittings or stubs: not judged
 ok_cap = "medium"
+fail_level = "high"                 # priority of a passage that does not comply (a transversal one outside the middle third, too thick, vertical...)
+critical_kinds = ["longitudinal"]   # kinds that are critical when they fail: a run inside the beam along its axis is not a passage
 
 [score.criticality]          # 0..1, keyed by sorted pair. Missing pairs use `default`.
 default = 0.5

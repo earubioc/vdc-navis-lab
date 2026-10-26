@@ -297,11 +297,26 @@ def test_beam_passage_drives_priority(profile):
     c = clash(beam, near, depth=0.033)
     c.point = (2.5, 0, 0)
     v = s.score([c])
-    assert v.priority in ("high", "critical") and any(code == "beam_pass_span" for code, _ in v.reasons)
+    assert v.priority == "high" and any(code == "beam_pass_span" for code, _ in v.reasons)
+    beam, diag = _beam_and_run((1, 1, 0))
+    assert s.score([clash(beam, diag, depth=0.033)]).priority == "high", "a diagonal crossing is not critical by itself"
     # without oriented boxes nothing changes
     beam.obb = None
     base = s.score([clash(beam, near, depth=0.033)])
     assert not any(code.startswith("beam_pass") for code, _ in base.reasons)
+
+
+def test_failing_beam_passage_is_not_hidden_by_a_thin_conduit_in_a_slab_in_the_same_issue(profile):
+    s = Scorer(profile, [])
+    floor = Element(id="f", discipline="STR", category="Floors", bbox=((0, 0, 0), (2.0, 2.0, 0.10)))
+    conduit = Element(id="c", discipline="ELE", category="Conduits", bbox=((0, 0, 0), (0.033, 0.033, 0.5)))
+    beam, along = _beam_and_run((1, 0.05, 0))
+    deeper_in_slab = clash(floor, conduit, depth=0.09)
+    in_beam = clash(beam, along, depth=0.033)
+    v = s.score([deeper_in_slab, in_beam])
+    assert v.priority == "critical", "the longitudinal run inside the beam must win over the slab embedding"
+    only_slab = s.score([deeper_in_slab])
+    assert only_slab.priority == "low"
 
 
 def test_oriented_box_round_trips_through_the_clashset():
