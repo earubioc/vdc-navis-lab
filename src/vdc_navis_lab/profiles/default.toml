@@ -134,6 +134,8 @@ damping = 0.45
 gate_floor_cap = "medium"    # no depth gate pushes a sleeve candidate past this on its own
 # A conduit no thicker than a third of the floor/wall it passes is ordinary embedding, not a conflict.
 small_crossing_categories = ["conduits", "conduit fittings", "tubos", "uniones de tubo"]
+# How modeled sleeves/openings are recognised in the model (name contains any of these, case-insensitive).
+element_name_patterns = ["manguito", "pasamuro", "pasamuros", "camisa", "sleeve", "wall opening", "floor opening", "abertura", "hueco", "penetration"]
 small_ratio = 0.34
 small_cap = "low"
 

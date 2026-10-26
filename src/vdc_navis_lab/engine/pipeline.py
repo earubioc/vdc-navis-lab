@@ -93,6 +93,7 @@ class Coverage:
     truncated: bool = False
     skipped: int = 0  # results dropped because an element no longer exists in the model
     skipped_open: int | None = None  # of those, the ones still open; None when the source did not say
+    sleeves_modeled: int | None = None  # modeled sleeve/opening elements found; None when it was not checked
 
     @property
     def complete(self) -> bool:
@@ -157,6 +158,7 @@ def _congestion(groups: list[list[Clash]], radius: float, saturation: float) -> 
 def _coverage(cs: ClashSet, profile: Profile, flt: Screened, unclassified: dict[str, int],
               seen_pairs: set[tuple[str, str]]) -> Coverage:
     cov = Coverage(truncated=cs.truncated, skipped=cs.skipped, skipped_open=cs.skipped_open,
+                   sleeves_modeled=cs.sleeves_modeled,
                    unclassified=dict(sorted(unclassified.items(), key=lambda kv: -kv[1])[:8]))
     cov.tests_count = len(cs.tests)
     for t in cs.tests:
@@ -187,6 +189,7 @@ def analyze(cs: ClashSet, profile: Profile, lang: str | None = None) -> Analysis
     sat = profile.num("score", "params", "crowd_saturation", default=5)
     crowd = _congestion(groups, radius, sat)
     scorer = Scorer(profile, cs.tests)
+    scorer.sleeves_modeled = cs.sleeves_modeled
 
     issues: list[Issue] = []
     used: set[str] = set()

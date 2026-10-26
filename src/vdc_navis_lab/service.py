@@ -321,8 +321,25 @@ class App:
             raise ToolFault("bad_export", f"the add-in returned an export this server cannot read ({type(exc).__name__})") from None
         live = self.bridge.call_at(ep, "hello")
         cs.document = {**cs.document, **{k: v for k, v in (live.get("doc") or {}).items() if k in ("title", "fingerprint")}}
+        cs.sleeves_modeled = self._count_sleeves(ep)
         self._set_result(analyze(cs, self.profile, lang), live["instance_id"], str((live.get("doc") or {}).get("revision", "")))
         return views.summary(self.result, self.profile, top, lang)
+
+    def _count_sleeves(self, ep: Any) -> int | None:
+        """Elements in the open model that look like modeled sleeves or openings (by name). None when it could not
+        be checked, so a failure never claims 'there are none'."""
+        patterns = [str(x) for x in self.profile.section("score", "sleeve").get("element_name_patterns", [])]
+        if not patterns:
+            return None
+        total = 0
+        try:
+            for pat in patterns:
+                res = self.bridge.call_at(ep, "elements.query", {
+                    "criteria": [{"field": "name", "op": "contains", "value": pat}], "group_by": "", "limit": 1})
+                total += int(res.get("count", 0))
+        except Exception:
+            return None
+        return total
 
     # ------------------------------------------------------------ nw_issues / nw_issue
     def issues(self, priority: str, discipline: str, level: str, cause: str, responsible: str, sort: str,

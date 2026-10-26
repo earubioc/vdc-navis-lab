@@ -159,6 +159,7 @@ class ClashSet:
     truncated: bool = False
     skipped: int = 0  # results dropped by the extractor because an element no longer exists in the model
     skipped_open: int | None = None  # of those, how many were still open (new/active); None = not reported
+    sleeves_modeled: int | None = None  # elements that look like modeled sleeves/openings; None = not checked (not serialized)
 
     def to_dict(self) -> dict[str, Any]:
         return {

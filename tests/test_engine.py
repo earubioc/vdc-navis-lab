@@ -210,6 +210,25 @@ def test_thin_conduit_in_a_slab_is_low_and_a_thick_one_is_not(profile):
     assert not any(code == "embedded_small" for code, _ in in_beam.reasons)
 
 
+def test_sleeve_reason_says_none_are_modelled_only_when_the_model_was_checked(profile):
+    floor = Element(id="f", discipline="STR", category="Floors", bbox=((0, 0, 0), (2.0, 2.0, 0.10)))
+    pipe = Element(id="p", discipline="PLB", category="Pipes", bbox=((0, 0, 0), (0.05, 0.05, 0.05)))
+    s = Scorer(profile, [])
+    assert any(c == "sleeve_candidate" for c, _ in s.score([clash(floor, pipe, depth=0.09)]).reasons)  # not checked
+    s.sleeves_modeled = 3
+    assert any(c == "sleeve_candidate" for c, _ in s.score([clash(floor, pipe, depth=0.09)]).reasons)
+    s.sleeves_modeled = 0
+    assert any(c == "sleeve_missing" for c, _ in s.score([clash(floor, pipe, depth=0.09)]).reasons)
+
+
+def test_actions_depend_on_who_moves_and_on_the_situation(tower, profile):
+    from vdc_navis_lab import views
+    r = analyze(tower, profile)
+    texts_seen = {views.action_text(i, profile, "es") for i in r.issues}
+    assert len(texts_seen) >= 2, "actions should not all read the same"
+    assert all("—" not in t for t in texts_seen)
+
+
 def test_skipped_results_that_were_already_closed_do_not_break_completeness(tower, profile):
     tower.skipped, tower.skipped_open = 4, 0
     r = analyze(tower, profile)

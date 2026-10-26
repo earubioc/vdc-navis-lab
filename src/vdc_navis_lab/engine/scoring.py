@@ -61,6 +61,7 @@ class Scorer:
         # A conduit (or similar small run) that passes a floor or wall is normal practice when it is thin
         # compared with the host (the usual embedding rule is: outside dimension no more than a third of the
         # host thickness). Those drop to `small_cap`, not just to the sleeve cap.
+        self.sleeves_modeled: int | None = None  # set by the pipeline when it checked the model for sleeves
         self.small_crossings = {str(c).lower() for c in sleeve.get("small_crossing_categories", [])}
         self.small_ratio = float(sleeve.get("small_ratio", 1 / 3))
         self.small_cap = sleeve.get("small_cap") or None
@@ -126,7 +127,8 @@ class Scorer:
                     reasons.append(("embedded_small", {"host": host.category, "size_mm": cross.min_dim * 1000,
                                                        "host_mm": host.min_dim * 1000}))
                 else:
-                    reasons.append(("sleeve_candidate", {"host": host.category, "depth_mm": deep.depth * 1000}))
+                    code = "sleeve_missing" if self.sleeves_modeled == 0 else "sleeve_candidate"
+                    reasons.append((code, {"host": host.category, "depth_mm": deep.depth * 1000}))
 
         crit = p.criticality(a, b)
         comps["criticality"] = crit

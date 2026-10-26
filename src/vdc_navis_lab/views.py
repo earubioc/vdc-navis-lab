@@ -26,7 +26,19 @@ def reasons_text(issue: Issue, profile: Profile, lang: str, limit: int = 4) -> l
 
 def action_text(issue: Issue, profile: Profile, lang: str) -> str:
     mover, anchor = profile.label(issue.responsible, lang), profile.label(issue.anchor, lang)
-    code = "clearance" if all(c.kind == "clearance" for c in issue.clashes) else "move"
+    codes = {c for c, _ in issue.reasons}
+    if all(c.kind == "clearance" for c in issue.clashes):
+        code = "clearance"
+    elif "embedded_small" in codes:
+        code = "embedded"
+    elif "sleeve_missing" in codes:
+        code = "sleeve_missing"
+    elif "sleeve_candidate" in codes:
+        code = "sleeve_check"
+    else:
+        code = f"move_{issue.responsible}"
+        if code not in texts.ACTIONS.get(lang, texts.ACTIONS["en"]):
+            code = "move"
     return texts.render(texts.ACTIONS, lang, code, {"mover": mover, "anchor": anchor})
 
 
@@ -102,12 +114,17 @@ def coverage_view(result: AnalysisResult, lang: str) -> dict[str, Any]:
                              "todos estaban ya cerrados (revisados, aprobados o resueltos), no afectan el análisis"
                              if es else f"{cov.skipped} result(s) skipped because their element no longer exists in the model; "
                              "all were already closed (reviewed, approved or resolved), so the analysis is unaffected"))
+    if cov.sleeves_modeled == 0:
+        warnings.append(("no hay manguitos ni aberturas modeladas (se buscaron por nombre y categoría): los pasos por losas y muros "
+                         "se tratan como pendientes de manguito"
+                         if es else "no sleeves or openings are modelled (searched by name and category): passages through floors "
+                         "and walls are treated as still needing a sleeve"))
     if cov.unclassified:
         top = ", ".join(f"{k} ({v})" for k, v in list(cov.unclassified.items())[:4])
         warnings.append((f"elementos sin disciplina por categoría: {top}; ajustar perfil o asignar archivos"
                          if es else f"elements with no discipline: {top}; adjust the profile or assign files"))
     return {"complete": cov.complete, "tests": f"{cov.tests_ran}/{cov.tests_count}", "never_run": cov.never_run,
-            "pairs_without_results": cov.pairs_without_results, "skipped": cov.skipped, "skipped_open": cov.skipped_open, "warnings": warnings}
+            "pairs_without_results": cov.pairs_without_results, "skipped": cov.skipped, "skipped_open": cov.skipped_open, "sleeves_modeled": cov.sleeves_modeled, "warnings": warnings}
 
 
 def summary(result: AnalysisResult, profile: Profile, top: int = 10, lang: str | None = None) -> dict[str, Any]:
