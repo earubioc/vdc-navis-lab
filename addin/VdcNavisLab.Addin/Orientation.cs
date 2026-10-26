@@ -35,19 +35,24 @@ namespace VdcNavisLab.Addin
     {
         private static int _reported;
 
+        /// <summary>Why the last Compute returned null (for diagnostics in the export, not for users).</summary>
+        public static string LastStatus = "";
+
         /// <summary>Oriented box in document units, or null: centre, three unit axes (the first is the longest)
         /// and half extents along them.</summary>
         public static double[][] Compute(ModelItem item, BoundingBox3D worldBox)
         {
             try
             {
+                LastStatus = "";
                 var pts = WorldPoints(item, worldBox);
-                if (pts == null || pts.Count < 9) return null;
+                if (pts == null || pts.Count < 9) { if (LastStatus.Length == 0) LastStatus = "no points"; return null; }
                 return Fit(pts);
             }
             catch (Exception ex)
             {
-                if (_reported++ < 5) Log.Write("orientation failed: " + ex.GetType().Name + ": " + ex.Message);
+                LastStatus = "exception " + ex.GetType().Name + ": " + ex.Message;
+                if (_reported++ < 5) Log.Write("orientation failed: " + LastStatus);
                 return null;
             }
         }
@@ -68,9 +73,10 @@ namespace VdcNavisLab.Addin
                 for (int i = 0; i < 16; i++) mat[i] = Convert.ToDouble(m.GetValue(lo + i));
                 perFragment.Add(new KeyValuePair<List<double>, double[]>(cb.Local, mat));
             }
-            if (perFragment.Count == 0) return null;
+            if (perFragment.Count == 0) { LastStatus = "no fragments"; return null; }
             // Two layouts exist in the wild (translation in the last row, or in the last column): keep the one whose
-            // result matches the box Navisworks reports for this very item.
+            // result fits the box Navisworks reports for this very item, and fits it best.
+            List<double> best = null; double bestFit = 0; string why = "";
             foreach (var rowMajor in new[] { true, false })
             {
                 var pts = new List<double>();
@@ -94,24 +100,39 @@ namespace VdcNavisLab.Addin
                         }
                     }
                 }
-                if (Matches(pts, box)) return pts;
+                string note;
+                double fit = Fit(pts, box, out note);
+                why += (rowMajor ? "row:" : "col:") + note + " ";
+                if (fit > bestFit) { bestFit = fit; best = pts; }
             }
-            return null;
+            if (best == null) LastStatus = "box mismatch " + why.Trim();
+            return best;
         }
 
-        private static bool Matches(List<double> pts, BoundingBox3D box)
+        /// <summary>0 when the points do not fit the item's box; otherwise how much of it they fill (0..1).
+        /// Navisworks' item box is the transformed local box, so for a rotated element it is looser than the exact
+        /// extent of the triangles: the triangles must lie inside it, not equal it.</summary>
+        private static double Fit(List<double> pts, BoundingBox3D box, out string note)
         {
             double[] lo = { double.MaxValue, double.MaxValue, double.MaxValue }, hi = { double.MinValue, double.MinValue, double.MinValue };
             for (int i = 0; i + 2 < pts.Count; i += 3)
                 for (int k = 0; k < 3; k++) { lo[k] = Math.Min(lo[k], pts[i + k]); hi[k] = Math.Max(hi[k], pts[i + k]); }
             double[] bl = { box.Min.X, box.Min.Y, box.Min.Z }, bh = { box.Max.X, box.Max.Y, box.Max.Z };
+            double fill = 1;
+            note = "";
             for (int k = 0; k < 3; k++)
             {
                 double size = Math.Max(bh[k] - bl[k], 1e-6);
                 double tol = 0.02 * size + 1e-4;
-                if (Math.Abs(lo[k] - bl[k]) > tol || Math.Abs(hi[k] - bh[k]) > tol) return false;
+                if (lo[k] < bl[k] - tol || hi[k] > bh[k] + tol)
+                {
+                    note = "outside axis " + k + " pts=[" + Math.Round(lo[k], 2) + "," + Math.Round(hi[k], 2) + "] box=[" + Math.Round(bl[k], 2) + "," + Math.Round(bh[k], 2) + "]";
+                    return 0;
+                }
+                fill *= Math.Max(0.01, Math.Min(1.0, (hi[k] - lo[k]) / size));
             }
-            return true;
+            note = "ok fill=" + Math.Round(fill, 3);
+            return fill;
         }
 
         // ---- fitting: longest principal axis by PCA, then the minimum-area rectangle in the cross-section plane.

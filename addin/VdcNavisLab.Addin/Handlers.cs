@@ -251,12 +251,15 @@ namespace VdcNavisLab.Addin
             { "Structural Framing", "Structural Columns", "Conduits", "Pipes" };
         private static readonly Dictionary<string, Dictionary<string, object>> OrientedCache = new Dictionary<string, Dictionary<string, object>>();
 
+        private static readonly Dictionary<string, string> OrientedStatus = new Dictionary<string, string>();
+
         private static Dictionary<string, object> OrientedBox(Document d, ModelItem item, BoundingBox3D bb, string key)
         {
             Dictionary<string, object> cached;
             if (OrientedCache.TryGetValue(key, out cached)) return cached;
             Dictionary<string, object> result = null;
             var r = Orientation.Compute(item, bb);
+            if (r == null) OrientedStatus[key] = Orientation.LastStatus;
             if (r != null)
             {
                 double f = UnitFactor(d);
@@ -333,6 +336,11 @@ namespace VdcNavisLab.Addin
             {
                 var ob = OrientedBox(d, item, bb, modelFile + ":" + ident);
                 if (ob != null) o["obb"] = ob;
+                else
+                {
+                    string st; OrientedStatus.TryGetValue(modelFile + ":" + ident, out st);
+                    ((Dictionary<string, object>)o["props"])["obb_status"] = st ?? "none";
+                }
             }
             if (type.Length > 0) ((Dictionary<string, object>)o["props"])["Type"] = type;
             var system = FirstProp(item, new[] { "Element", "System Name" }, new[] { "Element", "System Type" });
@@ -451,6 +459,7 @@ namespace VdcNavisLab.Addin
                 int skipped = 0;
                 int skippedOpen = 0;
                 OrientedCache.Clear();
+                OrientedStatus.Clear();
 
                 for (int i = 0; i < testNames.Count; i++)
                 {
