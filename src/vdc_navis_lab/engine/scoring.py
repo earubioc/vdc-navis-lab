@@ -58,6 +58,12 @@ class Scorer:
         self.sleeve_depth_tolerance = float(sleeve.get("depth_tolerance", 1.5))
         self.sleeve_damping = float(sleeve.get("damping", 1.0))
         self.sleeve_cap = sleeve.get("gate_floor_cap") or None
+        # A conduit (or similar small run) that passes a floor or wall is normal practice when it is thin
+        # compared with the host (the usual embedding rule is: outside dimension no more than a third of the
+        # host thickness). Those drop to `small_cap`, not just to the sleeve cap.
+        self.small_crossings = {str(c).lower() for c in sleeve.get("small_crossing_categories", [])}
+        self.small_ratio = float(sleeve.get("small_ratio", 1 / 3))
+        self.small_cap = sleeve.get("small_cap") or None
 
     def priority_of(self, score: float) -> str:
         if score >= self.bands["critical"]:
@@ -68,7 +74,7 @@ class Scorer:
             return "medium"
         return "low"
 
-    def _sleeve_host(self, a: Element, b: Element, depth: float) -> Element | None:
+    def _sleeve_host(self, a: Element, b: Element, depth: float) -> tuple[Element, Element] | None:
         """The host element, if this crossing looks like a clean through-penetration of a floor or wall
         by a small MEP run, rather than a true conflict. Proven by geometry, not just category: the depth
         has to be consistent with simply passing through the host's own thickness."""
@@ -80,7 +86,7 @@ class Scorer:
             if not host.min_dim:
                 continue  # cannot prove it, so the clash keeps its full severity
             if depth <= host.min_dim * self.sleeve_depth_tolerance:
-                return host
+                return host, cross
         return None
 
     def score(self, group: list[Clash], crowding: float = 0.0, crowd: int = 0) -> Verdict:
@@ -109,11 +115,18 @@ class Scorer:
                 comps["penetration"] = _clamp(deep.depth / self.ref_depth)
                 reasons.append(("depth_abs", {"depth_mm": deep.depth * 1000}))
 
-            host = self._sleeve_host(deep.a, deep.b, deep.depth)
-            if host is not None:
+            found = self._sleeve_host(deep.a, deep.b, deep.depth)
+            if found is not None:
+                host, cross = found
                 comps["penetration"] *= self.sleeve_damping
-                reasons.append(("sleeve_candidate", {"host": host.category, "depth_mm": deep.depth * 1000}))
                 sleeve_cap = self.sleeve_cap
+                if (self.small_cap and cross.category.lower() in self.small_crossings and cross.min_dim
+                        and cross.min_dim <= host.min_dim * self.small_ratio):
+                    sleeve_cap = self.small_cap
+                    reasons.append(("embedded_small", {"host": host.category, "size_mm": cross.min_dim * 1000,
+                                                       "host_mm": host.min_dim * 1000}))
+                else:
+                    reasons.append(("sleeve_candidate", {"host": host.category, "depth_mm": deep.depth * 1000}))
 
         crit = p.criticality(a, b)
         comps["criticality"] = crit

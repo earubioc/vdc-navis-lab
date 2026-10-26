@@ -192,6 +192,35 @@ def test_sleeve_candidate_is_dampened_and_capped_but_a_beam_is_not(profile):
     assert not any(code == "sleeve_candidate" for code, _ in too_deep.reasons)
 
 
+def test_thin_conduit_in_a_slab_is_low_and_a_thick_one_is_not(profile):
+    s = Scorer(profile, [])
+    floor = Element(id="f", discipline="STR", category="Floors", bbox=((0, 0, 0), (2.0, 2.0, 0.10)))
+    conduit = Element(id="c", discipline="ELE", category="Conduits", bbox=((0, 0, 0), (0.033, 0.033, 0.5)))
+    thin = s.score([clash(floor, conduit, depth=0.09)])
+    assert thin.priority == "low"
+    assert any(code == "embedded_small" for code, _ in thin.reasons)
+
+    fat = Element(id="c2", discipline="ELE", category="Conduits", bbox=((0, 0, 0), (0.08, 0.08, 0.5)))
+    thick = s.score([clash(floor, fat, depth=0.09)])  # 80 mm in a 100 mm slab: not an ordinary embedding
+    assert not any(code == "embedded_small" for code, _ in thick.reasons)
+    assert thick.priority in ("medium", "low") and any(code == "sleeve_candidate" for code, _ in thick.reasons)
+
+    beam = Element(id="be", discipline="STR", category="Structural Framing", bbox=((0, 0, 0), (0.3, 0.3, 0.3)))
+    in_beam = s.score([clash(beam, conduit, depth=0.033)])  # beams are never covered by this rule
+    assert not any(code == "embedded_small" for code, _ in in_beam.reasons)
+
+
+def test_skipped_results_that_were_already_closed_do_not_break_completeness(tower, profile):
+    tower.skipped, tower.skipped_open = 4, 0
+    r = analyze(tower, profile)
+    assert r.coverage.skipped == 4 and r.coverage.skipped_open == 0
+    cov = coverage_view(r, "es")
+    assert any("ya cerrados" in w for w in cov["warnings"])
+    tower.skipped_open = 2
+    r2 = analyze(tower, profile)
+    assert any("seguían abiertos" in w for w in coverage_view(r2, "es")["warnings"])
+
+
 # ---------------------------------------------------------------- level
 @pytest.mark.parametrize("raw,clean", [('Level "2th FLOOR", #9946', "2th FLOOR"), ("Level 1", "Level 1"),
                                         ("Level L2", "L2"), ("", "")])

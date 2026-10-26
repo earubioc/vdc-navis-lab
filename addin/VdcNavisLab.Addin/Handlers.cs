@@ -234,6 +234,13 @@ namespace VdcNavisLab.Addin
             return -1;
         }
 
+        private static bool IsLinkNode(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return false;
+            return name.IndexOf(" : location ", StringComparison.OrdinalIgnoreCase) >= 0
+                || System.Text.RegularExpressions.Regex.IsMatch(name, @"\.(rvt|ifc|dwg|nwc|nwd)\s*:\s*\d+", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        }
+
         private static string At(List<string> path, int index, int leaf)
         {
             return index >= 0 && index < leaf ? path[index] : "";
@@ -247,6 +254,9 @@ namespace VdcNavisLab.Addin
             var path = PathOf(item);
             int fi = SourceIndex(d, path);
             int leaf = path.Count - 1;  // the last node is the solid (named after its material in Revit exports)
+            // A nested Revit link adds a node ("file.rvt : 15 : location ...") before the level; skip it so the
+            // level/category/family positions stay the same as for a directly loaded model.
+            while (fi >= 0 && fi + 1 < leaf && IsLinkNode(path[fi + 1])) fi++;
             var modelFile = FirstProp(item, new[] { "Elemento", "Archivo de origen" }, new[] { "Element", "Source File" });
             if (modelFile.Length == 0) modelFile = ModelName(d, item, path);
             var bbox = new object[] {
@@ -410,6 +420,7 @@ namespace VdcNavisLab.Addin
                 var clashes = new List<object>();
                 bool truncated = false;
                 int skipped = 0;
+                int skippedOpen = 0;
 
                 for (int i = 0; i < testNames.Count; i++)
                 {
@@ -426,12 +437,19 @@ namespace VdcNavisLab.Addin
                         var results = Results(t).ToList();
                         var sliceClashes = new List<object>();
                         int sliceSkipped = 0;
+                        int sliceSkippedOpen = 0;
                         bool sliceTruncated = false;
                         if (!skipDescribe)
                             foreach (var r in results)
                             {
                                 if (remaining >= 0 && sliceClashes.Count >= remaining) { sliceTruncated = true; break; }
-                                if (r.Item1 == null || r.Item2 == null) { sliceSkipped++; continue; }
+                                if (r.Item1 == null || r.Item2 == null)
+                                {
+                                    sliceSkipped++;
+                                    var st = ResultStatus(r);
+                                    if (st == "new" || st == "active") sliceSkippedOpen++;
+                                    continue;
+                                }
                                 var a = Describe(d, r.Item1); var b = Describe(d, r.Item2);
                                 sliceClashes.Add(new Dictionary<string, object> {
                                     { "id", r.Guid.ToString() }, { "test", t.DisplayName }, { "name", r.DisplayName },
@@ -443,7 +461,7 @@ namespace VdcNavisLab.Addin
                             { "test", new Dictionary<string, object> {
                                 { "name", t.DisplayName }, { "kind", Kind(t) }, { "status", TestStatus(t) },
                                 { "tolerance", Metres(d, t.Tolerance) }, { "count", results.Count } } },
-                            { "clashes", sliceClashes }, { "skipped", sliceSkipped }, { "truncated", sliceTruncated } };
+                            { "clashes", sliceClashes }, { "skipped", sliceSkipped }, { "skipped_open", sliceSkippedOpen }, { "truncated", sliceTruncated } };
                     }, 60000);
 
                     job.SetProgress(i + 1, testNames.Count);
@@ -451,12 +469,13 @@ namespace VdcNavisLab.Addin
                     tests.Add(slice["test"]);
                     clashes.AddRange((List<object>)slice["clashes"]);
                     skipped += (int)slice["skipped"];
+                    skippedOpen += (int)slice["skipped_open"];
                     if ((bool)slice["truncated"]) truncated = true;
                 }
 
                 job.Finish("completed", new Dictionary<string, object> {
                     { "schema", "vdc_navis_lab.clashset/1" }, { "source", "navisworks" }, { "document", document },
-                    { "models", models }, { "truncated", truncated }, { "skipped", skipped },
+                    { "models", models }, { "truncated", truncated }, { "skipped", skipped }, { "skipped_open", skippedOpen },
                     { "tests", tests }, { "clashes", clashes } }, "");
             }
             catch (RpcException ex) { job.Finish("failed", null, ex.Message); }

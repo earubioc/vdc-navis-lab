@@ -20,6 +20,7 @@ REASONS = {
         "clearance": "viola la holgura exigida (a {dist_mm:.0f} mm de {tol_mm:.0f} mm)",
         "gate": "regla de piso: {pair} con {depth_mm:.0f} mm de penetración no baja de {floor}",
         "sleeve_candidate": "cruce recto de {depth_mm:.0f} mm contra {host}: candidato a paso con manguito, verificar si existe",
+        "embedded_small": "elemento de {size_mm:.0f} mm embebido en {host} de {host_mm:.0f} mm: embebido normal (no pasa de un tercio del espesor)",
     },
     "en": {
         "depth_rel": "penetrates {depth_mm:.0f} mm, {pct:.0f}% of the element's smallest dimension",
@@ -31,6 +32,7 @@ REASONS = {
         "clearance": "violates required clearance ({dist_mm:.0f} mm of {tol_mm:.0f} mm)",
         "gate": "floor rule: {pair} at {depth_mm:.0f} mm penetration is never below {floor}",
         "sleeve_candidate": "clean {depth_mm:.0f} mm crossing of {host}: sleeve candidate, verify one exists",
+        "embedded_small": "{size_mm:.0f} mm run embedded in a {host_mm:.0f} mm {host}: ordinary embedding (within a third of the thickness)",
     },
 }
 

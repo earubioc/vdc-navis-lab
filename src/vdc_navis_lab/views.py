@@ -89,14 +89,25 @@ def coverage_view(result: AnalysisResult, lang: str) -> dict[str, Any]:
     if cov.truncated:
         warnings.append("la exportación fue truncada; el análisis es parcial" if es else "export was truncated; analysis is partial")
     if cov.skipped:
-        warnings.append((f"{cov.skipped} resultado(s) omitido(s): su(s) elemento(s) ya no existen en el modelo (no se analizaron)"
-                         if es else f"{cov.skipped} result(s) skipped: their element(s) no longer exist in the model (not analysed)"))
+        if cov.skipped_open is None:
+            warnings.append((f"{cov.skipped} resultado(s) omitido(s): su(s) elemento(s) ya no existen en el modelo (no se analizaron)"
+                             if es else f"{cov.skipped} result(s) skipped: their element(s) no longer exist in the model (not analysed)"))
+        elif cov.skipped_open:
+            warnings.append((f"{cov.skipped} resultado(s) omitido(s) porque su elemento ya no existe en el modelo; "
+                             f"{cov.skipped_open} seguían abiertos (nuevos o activos) y no se analizaron"
+                             if es else f"{cov.skipped} result(s) skipped because their element no longer exists in the model; "
+                             f"{cov.skipped_open} were still open (new or active) and were not analysed"))
+        else:
+            warnings.append((f"{cov.skipped} resultado(s) omitido(s) porque su elemento ya no existe en el modelo; "
+                             "todos estaban ya cerrados (revisados, aprobados o resueltos), no afectan el análisis"
+                             if es else f"{cov.skipped} result(s) skipped because their element no longer exists in the model; "
+                             "all were already closed (reviewed, approved or resolved), so the analysis is unaffected"))
     if cov.unclassified:
         top = ", ".join(f"{k} ({v})" for k, v in list(cov.unclassified.items())[:4])
         warnings.append((f"elementos sin disciplina por categoría: {top}; ajustar perfil o asignar archivos"
                          if es else f"elements with no discipline: {top}; adjust the profile or assign files"))
     return {"complete": cov.complete, "tests": f"{cov.tests_ran}/{cov.tests_count}", "never_run": cov.never_run,
-            "pairs_without_results": cov.pairs_without_results, "skipped": cov.skipped, "warnings": warnings}
+            "pairs_without_results": cov.pairs_without_results, "skipped": cov.skipped, "skipped_open": cov.skipped_open, "warnings": warnings}
 
 
 def summary(result: AnalysisResult, profile: Profile, top: int = 10, lang: str | None = None) -> dict[str, Any]:

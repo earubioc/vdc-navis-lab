@@ -132,6 +132,10 @@ crossing_categories = ["pipes", "pipe fittings", "flex pipes", "conduits", "cond
 depth_tolerance = 1.5
 damping = 0.45
 gate_floor_cap = "medium"    # no depth gate pushes a sleeve candidate past this on its own
+# A conduit no thicker than a third of the floor/wall it passes is ordinary embedding, not a conflict.
+small_crossing_categories = ["conduits", "conduit fittings", "tubos", "uniones de tubo"]
+small_ratio = 0.34
+small_cap = "low"
 
 [score.criticality]          # 0..1, keyed by sorted pair. Missing pairs use `default`.
 default = 0.5

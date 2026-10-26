@@ -158,11 +158,13 @@ class ClashSet:
     source: str = ""
     truncated: bool = False
     skipped: int = 0  # results dropped by the extractor because an element no longer exists in the model
+    skipped_open: int | None = None  # of those, how many were still open (new/active); None = not reported
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "schema": SCHEMA, "source": self.source, "document": self.document,
             "models": self.models, "truncated": self.truncated, "skipped": self.skipped,
+            "skipped_open": self.skipped_open,
             "tests": [t.to_dict() for t in self.tests],
             "clashes": [c.to_dict() for c in self.clashes],
         }
@@ -179,6 +181,7 @@ class ClashSet:
             source=str(raw.get("source", "")),
             truncated=bool(raw.get("truncated", False)),
             skipped=int(raw.get("skipped", 0) or 0),
+            skipped_open=(int(raw["skipped_open"]) if raw.get("skipped_open") is not None else None),
         )
 
 
