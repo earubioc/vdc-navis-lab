@@ -708,6 +708,15 @@ namespace VdcNavisLab.Addin
             return null;
         }
 
+        // True when the box sits around the point (within the box grown by one model unit): rejects boxes that are
+        // empty or parked at the origin.
+        private static bool NearBox(BoundingBox3D b, Point3D p)
+        {
+            const double pad = 1.0;
+            return p.X >= b.Min.X - pad && p.X <= b.Max.X + pad && p.Y >= b.Min.Y - pad && p.Y <= b.Max.Y + pad
+                && p.Z >= b.Min.Z - pad && p.Z <= b.Max.Z + pad;
+        }
+
         private static SavedViewpoint FindViewpoint(DocumentSavedViewpoints saved, string name)
         {
             foreach (SavedItem child in saved.Value)
@@ -864,18 +873,45 @@ namespace VdcNavisLab.Addin
                                 var existing = FindViewpoint(savedViewpoints, name);
                                 if (existing == null)
                                 {
-                                    // A bare TestsViewpointForResult only carries the camera: navigating to it later
-                                    // showed plain, unhighlighted geometry (VERIFY: confirmed visually against the
-                                    // real model -- not useful on its own). Framing on ViewBounds and highlighting
-                                    // both clashing items in red, then baking camera + overrides into a SavedViewpoint
-                                    // via CaptureRuntimeOverrides, matches what clash.image already shows.
-                                    var vp = edit.TestsViewpointForResult(r);
-                                    vp.ZoomBox(r.ViewBounds);
+                                    // Real-model findings: a bare TestsViewpointForResult carries only a top-down camera (grey roof),
+                                    // and ZoomBox(r.ViewBounds) put the camera at the world origin (ViewBounds is empty for these
+                                    // results), so the saved view was blank. The camera is now built from the clash centre,
+                                    // obliquely, and the rest of the model is ghosted so floors do not hide the clash.
+                                    var vp = currentViewpoint.CreateCopy();
+                                    var centre = r.Center;
+                                    double f = UnitFactor(d);
+                                    double ext = 0.3 / f;  // clash extent fallback, 0.3 m
+                                    try
+                                    {
+                                        var cb = r.BoundingBox;
+                                        if (cb != null && !cb.IsEmpty && NearBox(cb, centre))
+                                        {
+                                            var sz = cb.Size;
+                                            ext = Math.Max(ext, Math.Sqrt(sz.X * sz.X + sz.Y * sz.Y + sz.Z * sz.Z));
+                                        }
+                                    }
+                                    catch (Exception) { }
+                                    double dist = Math.Max(2.5 / f, 4 * ext);
+                                    double nx = 1, ny = -1, nz = 0.8, nl = Math.Sqrt(nx * nx + ny * ny + nz * nz);
+                                    vp.Projection = ViewpointProjection.Perspective;
+                                    vp.Position = new Point3D(centre.X + dist * nx / nl, centre.Y + dist * ny / nl, centre.Z + dist * nz / nl);
+                                    vp.PointAt(centre);
+                                    vp.AlignUp(new Vector3D(0, 0, 1));
                                     currentViewpoint.CopyFrom(vp);
+                                    Log.Write("viewpoint '" + name + "': centre=" + centre.X + "," + centre.Y + "," + centre.Z + " dist=" + dist + " ext=" + ext);
+                                    try
+                                    {
+                                        d.Models.OverrideTemporaryTransparency(d.Models.CreateCollectionFromRootItems(), 0.85);
+                                    }
+                                    catch (Exception ex) { Log.Write("viewpoint ghosting failed: " + ex.GetType().Name + ": " + ex.Message); }
                                     var items = new List<ModelItem>();
                                     if (r.Item1 != null) items.Add(r.Item1);
                                     if (r.Item2 != null) items.Add(r.Item2);
-                                    if (items.Count > 0) d.Models.OverrideTemporaryColor(items, Color.Red);
+                                    if (items.Count > 0)
+                                    {
+                                        d.Models.OverrideTemporaryColor(items, Color.Red);
+                                        try { d.Models.OverrideTemporaryTransparency(items, 0.0); } catch (Exception) { }
+                                    }
                                     try
                                     {
                                         var sv = savedViewpoints.CaptureRuntimeOverrides();
