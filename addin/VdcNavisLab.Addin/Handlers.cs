@@ -891,8 +891,8 @@ namespace VdcNavisLab.Addin
                                         }
                                     }
                                     catch (Exception) { }
-                                    double dist = Math.Max(2.5 / f, 4 * ext);
-                                    double nx = 1, ny = -1, nz = 0.8, nl = Math.Sqrt(nx * nx + ny * ny + nz * nz);
+                                    double dist = Math.Max(3.0 / f, 2 * ext);
+                                    double nx = 1, ny = -1, nz = 0.3, nl = Math.Sqrt(nx * nx + ny * ny + nz * nz);
                                     vp.Projection = ViewpointProjection.Perspective;
                                     vp.Position = new Point3D(centre.X + dist * nx / nl, centre.Y + dist * ny / nl, centre.Z + dist * nz / nl);
                                     vp.PointAt(centre);
@@ -915,22 +915,17 @@ namespace VdcNavisLab.Addin
                                     try
                                     {
                                         var sv = savedViewpoints.CaptureRuntimeOverrides();
-                                        // The captured item carried the overrides but a default camera (position 0,0,0.3
-                                        // looking down), which showed a blank view: put the camera in explicitly.
-                                        try { var svp = sv.Viewpoint; svp.Projection = vp.Projection; svp.Rotation = vp.Rotation; svp.Position = vp.Position; }
-                                        catch (Exception cex)
-                                        {
-                                            Log.Write("viewpoint camera copy failed: " + cex.GetType().Name + ": " + cex.Message + "; keeping camera only");
-                                            sv = new SavedViewpoint(vp);
-                                        }
-                                        var got = sv.Viewpoint.Position;
-                                        if (Math.Abs(got.X - vp.Position.X) + Math.Abs(got.Y - vp.Position.Y) + Math.Abs(got.Z - vp.Position.Z) > 1e-6 * (1 + Math.Abs(vp.Position.X)))
-                                        {
-                                            Log.Write("viewpoint camera did not stick (" + got.X + "," + got.Y + "," + got.Z + "); keeping camera only");
-                                            sv = new SavedViewpoint(vp);
-                                        }
+                                        // CaptureRuntimeOverrides carries the overrides but a default camera (position 0,0,0.3
+                                        // looking down: a blank view), and the camera cannot be set on the captured copy.
+                                        // So: add it, then refresh the live item from the current view (the "Update" command).
                                         sv.DisplayName = name;
                                         savedViewpoints.AddCopy(sv);
+                                        var live = FindViewpoint(savedViewpoints, name);
+                                        if (live == null) throw new InvalidOperationException("added viewpoint not found by name");
+                                        savedViewpoints.ReplaceFromCurrentView(live);
+                                        live = FindViewpoint(savedViewpoints, name) ?? live;
+                                        var lp = live.Viewpoint.Position;
+                                        Log.Write("viewpoint '" + name + "' saved camera=" + lp.X + "," + lp.Y + "," + lp.Z + " overrides=" + live.ContainsAppearanceOverrides);
                                         viewpointsAdded++;
                                     }
                                     finally
