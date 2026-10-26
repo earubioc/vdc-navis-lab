@@ -42,7 +42,9 @@ Long operations return a `job_id` immediately. States: `running`, `completed`, `
 { schema, source, document{title,fingerprint,revision}, models[], truncated, skipped,
   tests[{name,kind,status,tolerance,count}],
   clashes[{id,test,name,status,kind,distance,point[3],level,
-           a{id,name,category,family,model,level,system?,props,bbox[[x,y,z],[x,y,z]]}, b{...}}] }
+           a{id,name,category,family,model,level,system?,props,bbox[[x,y,z],[x,y,z]],obb?{c,u,h}}, b{...}}] }
+         obb (optional, metres): oriented box from the real triangles, only for beams, columns, conduits and pipes
+         and only when it matches Navisworks' own box: c centre, u three unit axes (first = longest), h half extents.
 ```
 
 Units are metres. `distance` is negative for penetration. `kind` is `hard`, `clearance` or `duplicate`. Status values: `new`, `active`, `reviewed`, `approved`, `resolved`. `skipped` counts results the add-in dropped because one of their elements no longer exists in the model; it is never silent (`nw_analyze`'s coverage reports it). The same shape is what `nw_report(kind="json")` writes and `nw_analyze(path=...)` reads.

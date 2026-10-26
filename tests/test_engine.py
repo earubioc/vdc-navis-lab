@@ -229,6 +229,90 @@ def test_actions_depend_on_who_moves_and_on_the_situation(tower, profile):
     assert all("—" not in t for t in texts_seen)
 
 
+def _obb(centre, axis, half, up=(0, 0, 1)):
+    """Oriented box: first axis is the longest; the other two are completed from the world's vertical."""
+    import math
+    ax = tuple(axis)
+    n = math.sqrt(sum(a * a for a in ax))
+    ax = tuple(a / n for a in ax)
+    cross = (ax[1] * up[2] - ax[2] * up[1], ax[2] * up[0] - ax[0] * up[2], ax[0] * up[1] - ax[1] * up[0])
+    cn = math.sqrt(sum(a * a for a in cross))
+    if cn < 1e-9:
+        cross, cn = (1.0, 0.0, 0.0), 1.0
+    u1 = tuple(a / cn for a in cross)
+    u2 = (ax[1] * u1[2] - ax[2] * u1[1], ax[2] * u1[0] - ax[0] * u1[2], ax[0] * u1[1] - ax[1] * u1[0])
+    return {"c": list(centre), "u": [list(ax), list(u1), list(u2)], "h": list(half)}
+
+
+def _beam_and_run(run_axis, run_centre=(0, 0, 0), run_len=2.0, dia=0.033, beam_depth=1.1):
+    # beam along X, 6 m span, 0.30 wide, centred at the origin; section axes: u1 = Y (width), u2 = Z (depth)
+    beam = Element(id="b", discipline="STR", category="Structural Framing", bbox=((-3, -0.15, -beam_depth / 2), (3, 0.15, beam_depth / 2)))
+    beam.obb = {"c": [0, 0, 0], "u": [[1, 0, 0], [0, 1, 0], [0, 0, 1]], "h": [3.0, 0.15, beam_depth / 2]}
+    run = Element(id="r", discipline="ELE", category="Conduits", bbox=((-0.05, -0.05, -0.05), (0.05, 0.05, 0.05)))
+    run.obb = _obb(run_centre, run_axis, (run_len / 2, dia / 2, dia / 2))
+    return beam, run
+
+
+def test_beam_passage_geometry(profile):
+    from vdc_navis_lab.engine.passage import assess
+    # transversal, mid span, mid depth, thin: meets the geometry
+    beam, run = _beam_and_run((0, 1, 0))
+    r = assess(profile, beam, run, (0, 0, 0))
+    assert r.ok and r.kind == "transversal"
+    # same crossing but near a support
+    r = assess(profile, beam, run, (2.5, 0, 0))
+    assert "span" in r.failures
+    # off the middle third of the depth
+    r = assess(profile, beam, run, (0, 0, 0.45))
+    assert "zone" in r.failures
+    # too big for the depth (a 50 cm duct through a 1.1 m beam)
+    beam, big = _beam_and_run((0, 1, 0), dia=0.5)
+    assert "size" in assess(profile, beam, big, (0, 0, 0)).failures
+    # running along the beam
+    beam, along = _beam_and_run((1, 0.05, 0))
+    r = assess(profile, beam, along, (0, 0, 0))
+    assert r.kind == "longitudinal" and r.failures == ["longitudinal"]
+    # at 45 degrees
+    beam, diag = _beam_and_run((1, 1, 0))
+    r = assess(profile, beam, diag, (0, 0, 0))
+    assert r.kind == "diagonal" and not r.ok
+    # vertical run through the beam is judged on the width (0.30 m): 33 mm is fine, centred
+    beam, vert = _beam_and_run((0, 0, 1))
+    r = assess(profile, beam, vert, (0, 0, 0))
+    assert r.kind == "vertical" and r.ok
+    # a stub is not judged
+    beam, stub = _beam_and_run((0, 1, 0), run_len=0.05)
+    assert assess(profile, beam, stub, (0, 0, 0)) is None
+
+
+def test_beam_passage_drives_priority(profile):
+    s = Scorer(profile, [])
+    beam, ok = _beam_and_run((0, 1, 0))
+    v = s.score([clash(beam, ok, depth=0.033)])
+    assert v.priority == "medium" and any(c == "beam_pass_ok" for c, _ in v.reasons)
+    beam, along = _beam_and_run((1, 0.05, 0))
+    v = s.score([clash(beam, along, depth=0.033)])
+    assert v.priority == "critical" and any(c == "beam_pass_longitudinal" for c, _ in v.reasons)
+    beam, near = _beam_and_run((0, 1, 0))
+    c = clash(beam, near, depth=0.033)
+    c.point = (2.5, 0, 0)
+    v = s.score([c])
+    assert v.priority in ("high", "critical") and any(code == "beam_pass_span" for code, _ in v.reasons)
+    # without oriented boxes nothing changes
+    beam.obb = None
+    base = s.score([clash(beam, near, depth=0.033)])
+    assert not any(code.startswith("beam_pass") for code, _ in base.reasons)
+
+
+def test_oriented_box_round_trips_through_the_clashset():
+    from vdc_navis_lab.model import Element as E
+    e = E(id="x", category="Conduits")
+    e.obb = {"c": [1.0, 2.0, 3.0], "u": [[1, 0, 0], [0, 1, 0], [0, 0, 1]], "h": [1.0, 0.02, 0.02]}
+    back = E.from_dict(e.to_dict())
+    assert back.obb == e.obb
+    assert E.from_dict({"id": "y", "obb": {"c": [1, 2]}}).obb is None, "a malformed box is dropped, not trusted"
+
+
 def test_skipped_results_that_were_already_closed_do_not_break_completeness(tower, profile):
     tower.skipped, tower.skipped_open = 4, 0
     r = analyze(tower, profile)

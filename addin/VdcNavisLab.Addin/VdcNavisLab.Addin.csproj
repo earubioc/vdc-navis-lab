@@ -9,11 +9,13 @@
     <!-- Default: assemblies copied to addin\refs\2026 (git-ignored). Override: dotnet build -p:NavisworksDir="C:\Program Files\Autodesk\Navisworks Manage 2026" -->
     <NavisworksDir Condition="'$(NavisworksDir)' == ''">$(MSBuildThisFileDirectory)..\refs\2026</NavisworksDir>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
-    <Version>0.2.8</Version>
+    <Version>0.3.0</Version>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Autodesk.Navisworks.Api"><HintPath>$(NavisworksDir)\Autodesk.Navisworks.Api.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Autodesk.Navisworks.Clash"><HintPath>$(NavisworksDir)\Autodesk.Navisworks.Clash.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Autodesk.Navisworks.ComApi"><HintPath>$(NavisworksDir)\Autodesk.Navisworks.ComApi.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Autodesk.Navisworks.Interop.ComApi"><HintPath>$(NavisworksDir)\Autodesk.Navisworks.Interop.ComApi.dll</HintPath><Private>false</Private><EmbedInteropTypes>false</EmbedInteropTypes></Reference>
     <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />

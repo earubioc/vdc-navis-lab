@@ -13,6 +13,7 @@ from fnmatch import fnmatch
 
 from ..model import CLEARANCE, HARD, Clash, Element, TestInfo
 from ..profile import PRIORITIES, Profile
+from . import passage as _passage
 
 
 @dataclass(slots=True)
@@ -130,6 +131,30 @@ class Scorer:
                     code = "sleeve_missing" if self.sleeves_modeled == 0 else "sleeve_candidate"
                     reasons.append((code, {"host": host.category, "depth_mm": deep.depth * 1000}))
 
+        passage_floor: str | None = None
+        judged = []
+        for c in hard:
+            pair = _passage.applicable(p, c.a, c.b)
+            if pair:
+                res = _passage.assess(p, pair[0], pair[1], c.point)
+                if res is not None:
+                    judged.append(res)
+        if judged:
+            bad = [r for r in judged if not r.ok]
+            if bad:
+                worst = max(bad, key=lambda r: (r.kind in ("longitudinal", "diagonal"), len(r.failures)))
+                severe = worst.kind in ("longitudinal", "diagonal") or worst.kind == "vertical"
+                passage_floor = "critical" if severe else "high"
+                for code in worst.failures:
+                    reasons.append((f"beam_pass_{code}", {"angle": worst.angle_deg, "along": worst.along * 100,
+                                                          "across": worst.across * 100, "ratio": worst.diameter_ratio * 100}))
+            else:
+                r0 = judged[0]
+                comps["penetration"] = comps.get("penetration", 0.0) * self.sleeve_damping
+                reasons.append(("beam_pass_ok", {"kind": r0.kind, "angle": r0.angle_deg, "along": r0.along * 100,
+                                                 "across": r0.across * 100, "ratio": r0.diameter_ratio * 100}))
+                sleeve_cap = p.section("score", "beam_pass").get("ok_cap") or "medium"
+
         crit = p.criticality(a, b)
         comps["criticality"] = crit
         reasons.append(("pair", {"a": a, "b": b, "crit": crit}))
@@ -171,6 +196,9 @@ class Scorer:
                 if PRIORITIES.index(floor) < PRIORITIES.index(priority):
                     priority = floor
                     reasons.append(("gate", {"pair": f"{a}-{b}", "depth_mm": max_depth * 1000, "floor": floor}))
+        if passage_floor and PRIORITIES.index(passage_floor) < PRIORITIES.index(priority):
+            priority = passage_floor
+            reasons.append(("beam_pass_floor", {"floor": passage_floor}))
         if sleeve_cap and PRIORITIES.index(priority) < PRIORITIES.index(sleeve_cap):
             priority = sleeve_cap  # a sleeve candidate: no depth gate pushes it past this on its own
 

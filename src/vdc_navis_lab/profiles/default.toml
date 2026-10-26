@@ -139,6 +139,20 @@ element_name_patterns = ["manguito", "pasamuro", "pasamuros", "camisa", "sleeve"
 small_ratio = 0.34
 small_cap = "low"
 
+# A small run crossing a concrete beam. The MCP never approves a passage (that is structure's call): it measures the
+# geometry and either marks the clash as "meets it, needs structural approval" (capped at ok_cap) or says what fails
+# (never below high; critical when the run lies along the beam or at an angle). All thresholds are a starting point to
+# confirm with the structural designer; they need the oriented boxes the add-in extracts (otherwise nothing changes).
+[score.beam_pass]
+host_categories = ["structural framing", "armazón estructural", "armazon estructural", "vigas"]
+crossing_categories = ["conduits", "pipes", "tubos", "tuberías", "tuberias"]
+middle_zone = [0.3333, 0.6667]     # allowed position, as a fraction, along the span and across the depth (width if vertical)
+max_diameter_ratio = 0.3334         # run diameter / beam depth (width for a vertical run)
+transversal_min_angle_deg = 70
+longitudinal_max_angle_deg = 25
+min_run_length_ratio = 2.0          # runs shorter than this many diameters are fittings or stubs: not judged
+ok_cap = "medium"
+
 [score.criticality]          # 0..1, keyed by sorted pair. Missing pairs use `default`.
 default = 0.5
 "STR-HVAC" = 0.90

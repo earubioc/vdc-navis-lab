@@ -246,6 +246,30 @@ namespace VdcNavisLab.Addin
             return index >= 0 && index < leaf ? path[index] : "";
         }
 
+        // Beams, columns and straight runs get an oriented box (see Orientation.cs); everything else does not need one.
+        private static readonly HashSet<string> OrientedCategories = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { "Structural Framing", "Structural Columns", "Conduits", "Pipes" };
+        private static readonly Dictionary<string, Dictionary<string, object>> OrientedCache = new Dictionary<string, Dictionary<string, object>>();
+
+        private static Dictionary<string, object> OrientedBox(Document d, ModelItem item, BoundingBox3D bb, string key)
+        {
+            Dictionary<string, object> cached;
+            if (OrientedCache.TryGetValue(key, out cached)) return cached;
+            Dictionary<string, object> result = null;
+            var r = Orientation.Compute(item, bb);
+            if (r != null)
+            {
+                double f = UnitFactor(d);
+                Func<double[], object> v = a => new object[] { Math.Round(a[0], 4), Math.Round(a[1], 4), Math.Round(a[2], 4) };
+                result = new Dictionary<string, object> {
+                    { "c", v(new[] { r[0][0] * f, r[0][1] * f, r[0][2] * f }) },
+                    { "u", new object[] { v(r[1]), v(r[2]), v(r[3]) } },
+                    { "h", v(new[] { r[4][0] * f, r[4][1] * f, r[4][2] * f }) } };
+            }
+            OrientedCache[key] = result;
+            return result;
+        }
+
         private static Dictionary<string, object> Describe(Document d, ModelItem item)
         {
             var bb = item.BoundingBox();
@@ -305,6 +329,11 @@ namespace VdcNavisLab.Addin
                 { "bbox", bbox }
             };
             if (host.Length > 0) o["host_id"] = host;
+            if (OrientedCategories.Contains(category))
+            {
+                var ob = OrientedBox(d, item, bb, modelFile + ":" + ident);
+                if (ob != null) o["obb"] = ob;
+            }
             if (type.Length > 0) ((Dictionary<string, object>)o["props"])["Type"] = type;
             var system = FirstProp(item, new[] { "Element", "System Name" }, new[] { "Element", "System Type" });
             if (system.Length > 0) o["system"] = system;
@@ -421,6 +450,7 @@ namespace VdcNavisLab.Addin
                 bool truncated = false;
                 int skipped = 0;
                 int skippedOpen = 0;
+                OrientedCache.Clear();
 
                 for (int i = 0; i < testNames.Count; i++)
                 {

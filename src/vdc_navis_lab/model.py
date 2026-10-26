@@ -34,6 +34,9 @@ class Element:
     props: dict[str, str] = field(default_factory=dict)
     bbox: BBox | None = None
     discipline: str = ""
+    # Oriented box from the real geometry: {"c": centre, "u": [axis0 (longest), axis1, axis2], "h": half extents}.
+    # Only present for beams, columns and straight runs, and only when the add-in could verify it.
+    obb: dict[str, Any] | None = None
 
     @property
     def key(self) -> str:
@@ -61,6 +64,8 @@ class Element:
             out["props"] = self.props
         if self.bbox:
             out["bbox"] = [list(self.bbox[0]), list(self.bbox[1])]
+        if self.obb:
+            out["obb"] = self.obb
         return out
 
     @classmethod
@@ -78,6 +83,7 @@ class Element:
             system=str(raw.get("system", "") or ""),
             props={str(k): str(v) for k, v in (raw.get("props") or {}).items()},
             bbox=(_pt(bbox[0]), _pt(bbox[1])) if bbox else None,
+            obb=_obb(raw.get("obb")),
         )
 
 
@@ -184,6 +190,18 @@ class ClashSet:
             skipped=int(raw.get("skipped", 0) or 0),
             skipped_open=(int(raw["skipped_open"]) if raw.get("skipped_open") is not None else None),
         )
+
+
+def _obb(raw: Any) -> dict[str, Any] | None:
+    try:
+        if not raw:
+            return None
+        c, u, h = raw["c"], raw["u"], raw["h"]
+        if len(c) != 3 or len(u) != 3 or len(h) != 3 or any(len(a) != 3 for a in u):
+            return None
+        return {"c": [float(x) for x in c], "u": [[float(x) for x in a] for a in u], "h": [float(x) for x in h]}
+    except (KeyError, TypeError, ValueError):
+        return None
 
 
 def _pt(raw: Any) -> Point:
