@@ -26,7 +26,7 @@ from .protocol import (API_VERSION, BUSY, INVALID_PARAMS, NOT_FOUND, STALE_DOCUM
 from .transport import registry_dir
 
 METHODS = ["hello", "doc.info", "model.census", "elements.query", "clash.tests", "clash.run", "clash.export",
-           "clash.apply", "clash.image", "doc.save", "job.status", "job.result", "job.cancel", "job.list"]
+           "clash.apply", "clash.image", "view.select", "view.color", "view.reset", "doc.save", "job.status", "job.result", "job.cancel", "job.list"]
 
 # A 1x1 transparent PNG: the simulator cannot render, so this stands in for whatever real image
 # Navisworks would have produced, just to exercise the file-writing path end to end.
@@ -51,6 +51,9 @@ class Simulator:
         self.groups: dict[str, set[str]] = {}
         self.status: dict[str, str] = {c.id: c.status for c in self.clashset.clashes}
         self.viewpoints: dict[str, str] = {}
+        self.selection: list[str] = []
+        self.colours: dict[str, str] = {}
+        self.ghosted = False
         self.jobs: dict[str, dict[str, Any]] = {}
         self.applied: dict[str, dict] = {}
         self.saves = 0
@@ -281,6 +284,48 @@ class Simulator:
         with open(path, "wb") as f:
             f.write(_PLACEHOLDER_PNG)
         return {"saved": True, "path": path}
+
+    def _known_for_view(self, p: dict) -> set[str]:
+        if p.get("if_fingerprint") != self.fingerprint:
+            raise Fault(STALE_DOCUMENT, "the open document is not the one the analysis was made for",
+                        "run nw_status and re-analyze")
+        return {c.id for c in self.clashset.clashes}
+
+    def m_view_select(self, p: dict) -> dict:
+        known = self._known_for_view(p)
+        guids = [str(g) for g in p.get("guids") or []]
+        if not guids:
+            raise Fault(INVALID_PARAMS, "guids is required")
+        found = [g for g in guids if g in known]
+        if not found:
+            raise Fault(NOT_FOUND, "none of the clashes exist in the open document")
+        self.selection = found
+        self.colours, self.ghosted = {}, bool(p.get("ghost"))
+        return {"selected": len(found) * 2, "clashes": len(found), "verified": True, "framed": bool(p.get("focus")),
+                "ghosted": self.ghosted, "missing": [g for g in guids if g not in known][:20]}
+
+    def m_view_color(self, p: dict) -> dict:
+        known = self._known_for_view(p)
+        groups = p.get("groups") or []
+        if not groups:
+            raise Fault(INVALID_PARAMS, "groups is required")
+        self.colours, self.ghosted = {}, bool(p.get("ghost"))
+        missing: list[str] = []
+        for g in groups:
+            for guid in g["guids"]:
+                if guid in known:
+                    self.colours[guid] = g["color"]
+                else:
+                    missing.append(guid)
+        return {"groups": len(groups), "coloured_items": len(self.colours) * 2, "ghosted": self.ghosted,
+                "missing": sorted(set(missing))[:20]}
+
+    def m_view_reset(self, p: dict) -> dict:
+        self.colours, self.ghosted = {}, False
+        cleared = bool(p.get("clear_selection"))
+        if cleared:
+            self.selection = []
+        return {"reset": True, "selection_cleared": cleared}
 
     def m_job_status(self, p: dict) -> dict:
         job = self._get(p)

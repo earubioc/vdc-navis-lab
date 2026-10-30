@@ -394,9 +394,9 @@ class App:
             return {"packages": work_packages(r, self.profile)[:limit]}
         if kind == "markdown" and not path:
             return {"markdown": exports.to_markdown(r, self.profile, min(limit, 50))}
-        ext = {"markdown": "md", "csv": "csv", "bcf": "bcf", "json": "json"}.get(kind)
+        ext = {"markdown": "md", "csv": "csv", "bcf": "bcf", "json": "json", "pdf": "pdf"}.get(kind)
         if ext is None:
-            raise ToolFault(INVALID_PARAMS, "kind must be summary, matrix, hotspots, plan, markdown, csv, bcf, json or image")
+            raise ToolFault(INVALID_PARAMS, "kind must be summary, matrix, hotspots, plan, markdown, csv, bcf, json, pdf or image")
         target = _output(path, f"vdc-navis-lab-{r.analysis_id}.{ext}", overwrite)
         if kind == "markdown":
             data = exports.to_markdown(r, self.profile, min(limit, 500)).encode("utf-8")
@@ -404,6 +404,8 @@ class App:
             data = exports.to_csv(r, self.profile)
         elif kind == "bcf":
             data = exports.to_bcf(r, self.profile, limit)
+        elif kind == "pdf":
+            data = exports.to_pdf(r, self.profile, limit if limit != 25 else 40)
         else:
             data = json.dumps(r.clashset.to_dict(), ensure_ascii=False).encode("utf-8")
         target.write_bytes(data)
@@ -428,6 +430,60 @@ class App:
             out["note"] = note
         return out
 
+    # ------------------------------------------------------------ nw_view
+    MAX_VIEW_CLASHES = 3000
+
+    def view(self, action: str, issues: Any, ghost: bool, clear_selection: bool = False) -> dict[str, Any]:
+        """Selection, framing and temporary colours in the open Navisworks view. View state only: nothing is written
+        to the document, so it needs no plan; reset (or closing the document) restores the appearance."""
+        if action not in ("select", "color", "reset"):
+            raise ToolFault(INVALID_PARAMS, "action must be select, color or reset")
+        if action == "reset":
+            ep, _, note = self.bridge.resolve()
+            res = self.bridge.call_at(ep, "view.reset", {"clear_selection": bool(clear_selection)})
+            return {**res, **({"note": note} if note else {})}
+        r = self._require_result()
+        if r.source not in ("navisworks", "simulator"):
+            raise ToolFault(INVALID_PARAMS, "nw_view needs an analysis of the open document, not of a file",
+                            "run nw_analyze without path while Navisworks is open")
+        ep, info, note = self.bridge.resolve()
+        fingerprint = str((info.get("doc") or {}).get("fingerprint", ""))
+        if fingerprint != str(r.document.get("fingerprint")):
+            raise ToolFault(STALE_DOCUMENT, "the open document is not the one this analysis was made for",
+                            "re-run nw_analyze on the open document")
+        if action == "select":
+            if not issues or issues == "all":
+                raise ToolFault(INVALID_PARAMS, "issues is required: an id, a list of ids, 'top:N' or a filter")
+            chosen = self._select([issues] if isinstance(issues, str) and not issues.startswith("top:") else issues, r)
+            if not chosen:
+                raise ToolFault(NOT_FOUND, "no issue matches that selector")
+            guids = [c.id for i in chosen for c in i.clashes]
+            if len(guids) > self.MAX_VIEW_CLASHES:
+                raise ToolFault("too_many", f"that selection holds {len(guids)} clashes; the limit is {self.MAX_VIEW_CLASHES}")
+            res = self.bridge.call_at(ep, "view.select", {"if_fingerprint": fingerprint, "guids": guids,
+                                                          "focus": chosen[0].rep.id, "ghost": bool(ghost)})
+            out = {**res, "issues": [i.id for i in chosen][:20], "framed_on": chosen[0].id}
+        else:
+            chosen = self._select(issues if issues else "all", r)
+            if not chosen:
+                raise ToolFault(NOT_FOUND, "no issue matches that selector")
+            total = sum(len(i.clashes) for i in chosen)
+            if total > self.MAX_VIEW_CLASHES * 5:
+                raise ToolFault("too_many", f"that selection holds {total} clashes; narrow it with a filter")
+            groups = []
+            for band in reversed(PRIORITIES):  # low first, so the most severe colour wins on shared elements
+                guids = [c.id for i in chosen if i.priority == band for c in i.clashes]
+                if guids:
+                    groups.append({"color": exports.PRIORITY_COLORS[band], "guids": guids, "priority": band})
+            res = self.bridge.call_at(ep, "view.color", {"if_fingerprint": fingerprint, "ghost": bool(ghost),
+                                                         "groups": [{"color": g["color"], "guids": g["guids"]} for g in groups]})
+            out = {**res, "legend": {g["priority"]: {"color": g["color"], "clashes": len(g["guids"])} for g in groups},
+                   "issues": len(chosen)}
+        out["hint"] = "temporary: nw_view(action='reset') restores the original appearance"
+        if note:
+            out["note"] = note
+        return out
+
     # ------------------------------------------------------------ nw_apply
     def apply(self, ops: list[dict[str, Any]] | None, plan_id: str, dry_run: bool) -> dict[str, Any]:
         if plan_id:
@@ -438,6 +494,8 @@ class App:
         return self._make_plan(ops or [])
 
     def _select(self, selector: Any, r: AnalysisResult) -> list:
+        if selector == "all":
+            return list(r.issues)
         if isinstance(selector, str) and selector.startswith("top:"):
             try:
                 return r.issues[: max(1, int(selector[4:]))]

@@ -35,7 +35,7 @@ python -m venv .venv
 pip install -e ".[dev]"
 ```
 
-**You should see** `(.venv)` at the start of the line and, at the end, `Successfully installed ... vdc-navis-lab-0.3.5`.
+**You should see** `(.venv)` at the start of the line and, at the end, `Successfully installed ... vdc-navis-lab-0.4.0`.
 
 **Why always `.venv`:** without it, pip puts the dependencies into your general Python and can break other programs. This happened once: `mcp` brings newer versions of `starlette` and `websockets`, while other packages on the machine (for example `gradio` or `fastapi`) ask for older ones. The "dependency conflicts" warning says exactly that. It does not affect vdc-navis-lab, only those other applications. If one of them broke, open a terminal **without** an active environment (no `(.venv)`) and run:
 
@@ -65,7 +65,7 @@ The product is now called `vdc-navis-lab`. The commands changed: `navis-mcp` bec
    ```powershell
    pip install -e ".[dev]"
    ```
-   **You should see** `Successfully installed ... vdc-navis-lab-0.3.5`.
+   **You should see** `Successfully installed ... vdc-navis-lab-0.4.0`.
 5. Replace the old Claude Desktop entry with the new one:
    ```powershell
    vdc-navis-lab-cli desktop-config --write
@@ -101,7 +101,7 @@ Other commands, in the same terminal:
 
 | Command | What it does |
 |---|---|
-| `vdc-navis-lab-cli tools` | Lists the 14 tools |
+| `vdc-navis-lab-cli tools` | Lists the 15 tools |
 | `vdc-navis-lab-cli call nw_status` | Calls a single tool |
 | `vdc-navis-lab-cli sample examples\tower.json` | Creates a sample file (a 5-level tower) |
 | `vdc-navis-lab-cli analyze examples\tower.json --lang en` | Analyzes a file and prints the report |

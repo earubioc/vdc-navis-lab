@@ -16,12 +16,14 @@ Every other method in `docs/PROTOCOL.md` is implemented and confirmed against a 
 - **Realistic priorities (v0.2.7 to v0.3.2):** thin conduits embedded in a floor or wall drop to low (`small_cap`); a conduit no longer vanishes into a "Nivel 5" category when it comes from a nested Revit link; the analysis checks the model for modelled sleeves and says when there are none; skipped results report how many were still open; beams, columns, conduits and pipes carry an oriented box so a passage through a beam is judged by angle, position along the span and the depth, and diameter (`engine/passage.py`). Measured on the first real model: critical 35 to 15, high 60 to 79, medium 18 to 17, low 0 to 2; electrical x structure went from 15 critical to 2.
 - **Image per clash:** `clash.image` (`DocumentClashTests.TestsImageForResult`, a `Bitmap` saved as PNG), exposed as `nw_report(kind="image", issue=<id>)`, confirmed against a real model (a 1.13 MB PNG matching the native Clash Detective render).
 
+- **PDF report (v0.4):** `nw_report(kind="pdf")`, a small PDF writer with no dependencies (A4, Helvetica, tables, priority bar); tried on the real model export (8 pages, 183 issues).
+- **View tools (v0.4):** `nw_view` selects an issue and frames it, colours the model by priority and resets, through `view.select`, `view.color` and `view.reset` in the add-in; compiled against the real Navisworks 2026 assemblies, pending the first live confirmation.
+
 ## Capabilities under consideration
 
 - Search sets from a query, to reuse a selection in Navisworks.
-- Color the model by priority, with a guaranteed reset.
 - Rule-based clash test creation from the discipline matrix.
-- PDF report and narrative report for a coordination meeting.
+- Narrative report for a coordination meeting.
 - Cross-project learning of which crossings are usually accepted.
 - Revit and IFC element enrichment (system, level, size) for better scoring.
 

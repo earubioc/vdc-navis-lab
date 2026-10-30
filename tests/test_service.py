@@ -169,6 +169,8 @@ def test_report_files_and_inline(app, tmp_path):
     with pytest.raises(ToolFault):
         app.report("csv", "../../escape.csv", True, 25, None)
     assert app.report("bcf", "tower.bcf", False, 25, None)["bytes"] > 100
+    pdf_out = app.report("pdf", "tower.pdf", False, 25, None)
+    assert pdf_out["bytes"] > 1000 and pdf_out["path"].endswith("tower.pdf")
     assert app.report("plan", "", False, 5, None)["packages"]
 
 
@@ -235,3 +237,39 @@ def test_status_lists_tests_and_flags_the_ones_never_run(app):
 def test_status_survives_an_addin_without_clash_tests(app, sim, monkeypatch):
     monkeypatch.setattr(sim, "m_clash_tests", lambda p: (_ for _ in ()).throw(__import__("vdc_navis_lab.bridge.simulator", fromlist=["Fault"]).Fault("unsupported", "no")))
     assert app.status()["tests"] == {"available": False, "reason": "unsupported", "detail": "no"}
+
+
+def test_view_selects_colours_and_resets_without_a_plan(app, sim):
+    live(app)
+    top = app.issues("critical", "", "", "", "", "rank", 10, 0, None)["items"][0]["id"]
+    sel = app.view("select", top, True)
+    assert sel["framed_on"] == top and sel["verified"] and sel["ghosted"] and sim.selection
+    col = app.view("color", None, True)
+    assert set(col["legend"]) <= {"critical", "high", "medium", "low"} and col["coloured_items"] > 0
+    assert col["legend"]["critical"]["color"] == "#C62828" and sim.colours and sim.ghosted
+    only = app.view("color", {"priority": "critical"}, False)
+    assert list(only["legend"]) == ["critical"] and not sim.ghosted
+    assert app.view("reset", None, False, True)["selection_cleared"] and not sim.colours and not sim.selection
+
+
+def test_view_refuses_what_it_cannot_do(app, tmp_path):
+    from vdc_navis_lab.bridge import Bridge
+    with pytest.raises(ToolFault) as exc:
+        app.view("paint", None, True)
+    assert exc.value.code == "invalid_params"
+    live(app)
+    for bad in (None, "all"):
+        with pytest.raises(ToolFault) as exc:
+            app.view("select", bad, True)
+        assert exc.value.code == "invalid_params"
+    with pytest.raises(ToolFault) as exc:
+        app.view("select", "NW-NOPE", True)
+    assert exc.value.code == "not_found"
+
+
+def test_view_needs_the_live_document(app, sim):
+    live(app)
+    sim.fingerprint = "changed"
+    with pytest.raises(ToolFault) as exc:
+        app.view("color", None, True)
+    assert exc.value.code == "stale_document"

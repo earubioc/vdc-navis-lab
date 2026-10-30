@@ -11,7 +11,7 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 
 SRC = str(Path(__file__).resolve().parents[1] / "src")
 EXPECTED = {"nw_status", "nw_connect", "nw_job", "nw_profile", "nw_model", "nw_query", "nw_run",
-            "nw_analyze", "nw_issues", "nw_issue", "nw_report", "nw_apply", "nw_snapshot", "nw_document"}
+            "nw_analyze", "nw_issues", "nw_issue", "nw_report", "nw_apply", "nw_snapshot", "nw_document", "nw_view"}
 
 
 def _text(result):

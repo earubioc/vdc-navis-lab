@@ -1,4 +1,4 @@
-"""MCP server: 14 tools, `nw_` prefix. Thin wrappers over service.App."""
+"""MCP server: 15 tools, `nw_` prefix. Thin wrappers over service.App."""
 
 from __future__ import annotations
 
@@ -149,7 +149,7 @@ def nw_issue(id: str, lang: str = "") -> dict[str, Any]:
 def nw_report(kind: str = "summary", path: str = "", overwrite: bool = False, limit: int = 25, lang: str = "",
               issue: str = "") -> dict[str, Any]:
     """kind: summary | matrix | hotspots | plan (work packages) return inline; markdown returns inline unless path is
-    given; csv | bcf (BCF 2.1) | json (re-readable export) write a file; image (needs issue=<id> and a live
+    given; csv | bcf (BCF 2.1) | pdf (readable report: decisions, who moves what, hotspots, top issues) | json (re-readable export) write a file; image (needs issue=<id> and a live
     Navisworks document, not a file analysis) writes a PNG framed on that issue's representative clash. Files go
     only under the allowed output folders (VDC_NAVIS_LAB_OUTPUT_ROOTS); a bare name lands in the default folder;
     overwrite defaults to false."""
@@ -166,6 +166,18 @@ def nw_apply(ops: list[dict[str, Any]] | None = None, plan_id: str = "", dry_run
     against the same document and reports what was verified by re-reading. Refused if the document changed since the
     analysis."""
     return APP.apply(ops, plan_id, dry_run)
+
+
+@mcp.tool(annotations=_add("Select, frame and colour issues in the open view", idempotent=True))
+@guarded
+def nw_view(action: str = "select", issues: str | list[str] | dict[str, Any] | None = None, ghost: bool = True,
+            clear_selection: bool = False) -> dict[str, Any]:
+    """Show issues in the open Navisworks view. Temporary and view-only: nothing is saved in the document and it needs no
+    plan. action='select' (issues: an id, a list of ids, 'top:N' or a filter {priority, discipline, level, limit}) selects
+    the elements of those issues and frames the first one; ghost=true fades the rest of the model. action='color' paints
+    the elements of the chosen issues (default all) by priority: red critical, orange high, yellow medium, green low.
+    action='reset' restores the original appearance (clear_selection=true also clears the selection)."""
+    return APP.view(action, issues, ghost, clear_selection)
 
 
 @mcp.tool(annotations=_add("Save and compare coordination deliveries"))
@@ -193,7 +205,7 @@ a mano en una terminal.
 
 To try it by hand / para probarlo a mano:
   vdc-navis-lab-cli demo              recorrido completo contra un Navisworks simulado
-  vdc-navis-lab-cli tools             lista las 14 herramientas
+  vdc-navis-lab-cli tools             lista las 15 herramientas
   vdc-navis-lab-cli call nw_status    llama una herramienta
 To connect a client / para conectar un cliente: see manual_para_dummies.md
 To force the server in a terminal anyway: vdc-navis-lab --serve

@@ -1040,6 +1040,185 @@ namespace VdcNavisLab.Addin
             }, 120000);
         }
 
+        // ------------------------------------------------------------ view.select / view.color / view.reset
+        // Selection and temporary appearance overrides are view state, not document data: nothing here is written to the
+        // file, and view.reset (or closing the document) puts the appearance back. So, like clash.image, they need no plan.
+
+        private static void CheckFingerprint(Dictionary<string, object> p, Document d)
+        {
+            var fp = p.ContainsKey("if_fingerprint") ? Convert.ToString(p["if_fingerprint"]) : "";
+            if (fp != Fingerprint(d))
+                throw new RpcException("stale_document", "the open document is not the one the analysis was made for",
+                    "run nw_status and re-analyze");
+        }
+
+        private static Dictionary<string, ClashResult> FindResults(Document d, IEnumerable<string> wanted)
+        {
+            var set = new HashSet<string>(wanted);
+            var found = new Dictionary<string, ClashResult>();
+            if (set.Count == 0) return found;
+            foreach (var t in Tests(d))
+                foreach (var r in Results(t))
+                {
+                    var g = r.Guid.ToString();
+                    if (set.Contains(g)) { found[g] = r; if (found.Count == set.Count) return found; }
+                }
+            return found;
+        }
+
+        private static void AddItems(ClashResult r, List<ModelItem> into)
+        {
+            if (r.Item1 != null) into.Add(r.Item1);
+            if (r.Item2 != null) into.Add(r.Item2);
+        }
+
+        /// <summary>The same oblique camera clash.apply uses for saved viewpoints, applied to the live view.</summary>
+        private static void FrameClash(Document d, ClashResult r)
+        {
+            var currentViewpoint = d.CurrentViewpoint;
+            var vp = currentViewpoint.CreateCopy();
+            var centre = r.Center;
+            double f = UnitFactor(d);
+            double ext = 0.3 / f;
+            try
+            {
+                var cb = r.BoundingBox;
+                if (cb != null && !cb.IsEmpty && NearBox(cb, centre))
+                {
+                    var sz = cb.Size;
+                    ext = Math.Max(ext, Math.Sqrt(sz.X * sz.X + sz.Y * sz.Y + sz.Z * sz.Z));
+                }
+            }
+            catch (Exception) { }
+            double dist = Math.Max(3.0 / f, 2 * ext);
+            double nx = 1, ny = -1, nz = 0.3, nl = Math.Sqrt(nx * nx + ny * ny + nz * nz);
+            vp.Projection = ViewpointProjection.Perspective;
+            vp.Position = new Point3D(centre.X + dist * nx / nl, centre.Y + dist * ny / nl, centre.Z + dist * nz / nl);
+            vp.PointAt(centre);
+            vp.AlignUp(new Vector3D(0, 0, 1));
+            currentViewpoint.CopyFrom(vp);
+        }
+
+        private static void Ghost(Document d)
+        {
+            d.Models.OverrideTemporaryTransparency(d.Models.CreateCollectionFromRootItems(), 0.85);
+        }
+
+        public object ViewSelect(Dictionary<string, object> p)
+        {
+            return UiThread.Run<object>(() =>
+            {
+                var d = Doc();
+                CheckFingerprint(p, d);
+                var guids = Strings(p.ContainsKey("guids") ? p["guids"] : null);
+                var focus = p.ContainsKey("focus") ? Convert.ToString(p["focus"]) : "";
+                bool ghost = p.ContainsKey("ghost") && Convert.ToBoolean(p["ghost"]);
+                if (guids.Count == 0) throw new RpcException("invalid_params", "guids is required");
+                var wanted = new List<string>(guids);
+                if (focus.Length > 0 && !wanted.Contains(focus)) wanted.Add(focus);
+                var found = FindResults(d, wanted);
+                var missing = guids.Where(g => !found.ContainsKey(g)).ToList();
+                var items = new List<ModelItem>();
+                foreach (var g in guids) { ClashResult r; if (found.TryGetValue(g, out r)) AddItems(r, items); }
+                if (items.Count == 0) throw new RpcException("not_found", "none of the clashes exist in the open document");
+
+                d.Models.ResetAllTemporaryMaterials();
+                d.CurrentSelection.Clear();
+                d.CurrentSelection.CopyFrom(items);
+                bool framed = false, ghosted = false;
+                ClashResult at;
+                if (focus.Length > 0 && found.TryGetValue(focus, out at))
+                {
+                    try { FrameClash(d, at); framed = true; }
+                    catch (Exception ex)
+                    {
+                        Log.Write("view.select frame failed: " + ex.GetType().Name + ": " + ex.Message);
+                        try { d.ActiveView.FocusOnCurrentSelection(); framed = true; } catch (Exception) { }
+                    }
+                }
+                else
+                {
+                    try { d.ActiveView.FocusOnCurrentSelection(); framed = true; } catch (Exception) { }
+                }
+                if (ghost)
+                {
+                    try
+                    {
+                        Ghost(d);
+                        d.Models.OverrideTemporaryTransparency(items, 0.0);
+                        ghosted = true;
+                    }
+                    catch (Exception ex) { Log.Write("view.select ghosting failed: " + ex.GetType().Name + ": " + ex.Message); }
+                }
+                return new Dictionary<string, object>
+                {
+                    { "selected", items.Count }, { "clashes", found.Count > 0 ? guids.Count - missing.Count : 0 },
+                    { "verified", !d.CurrentSelection.IsEmpty }, { "framed", framed }, { "ghosted", ghosted },
+                    { "missing", missing.Take(20).ToList() }
+                };
+            }, 60000);
+        }
+
+        private static Color ParseColor(string hex)
+        {
+            var h = (hex ?? "").TrimStart('#');
+            if (h.Length != 6) throw new RpcException("invalid_params", "colour must be #RRGGBB");
+            return Color.FromByteRGB(Convert.ToByte(h.Substring(0, 2), 16), Convert.ToByte(h.Substring(2, 2), 16), Convert.ToByte(h.Substring(4, 2), 16));
+        }
+
+        public object ViewColor(Dictionary<string, object> p)
+        {
+            return UiThread.Run<object>(() =>
+            {
+                var d = Doc();
+                CheckFingerprint(p, d);
+                var groupsArg = p.ContainsKey("groups") ? p["groups"] as System.Collections.ArrayList : null;
+                if (groupsArg == null || groupsArg.Count == 0) throw new RpcException("invalid_params", "groups is required");
+                bool ghost = p.ContainsKey("ghost") && Convert.ToBoolean(p["ghost"]);
+                var all = new List<string>();
+                foreach (var go in groupsArg) all.AddRange(Strings(((Dictionary<string, object>)go)["guids"]));
+                var found = FindResults(d, all);
+                var missing = all.Where(g => !found.ContainsKey(g)).Distinct().ToList();
+
+                d.Models.ResetAllTemporaryMaterials();
+                bool ghosted = false;
+                if (ghost)
+                {
+                    try { Ghost(d); ghosted = true; }
+                    catch (Exception ex) { Log.Write("view.color ghosting failed: " + ex.GetType().Name + ": " + ex.Message); }
+                }
+                int coloured = 0, groupsDone = 0;
+                foreach (var go in groupsArg)  // later groups win on elements they share: the server sends low to critical
+                {
+                    var gd = (Dictionary<string, object>)go;
+                    var items = new List<ModelItem>();
+                    foreach (var g in Strings(gd["guids"])) { ClashResult r; if (found.TryGetValue(g, out r)) AddItems(r, items); }
+                    if (items.Count == 0) continue;
+                    d.Models.OverrideTemporaryColor(items, ParseColor(Convert.ToString(gd["color"])));
+                    if (ghosted) { try { d.Models.OverrideTemporaryTransparency(items, 0.0); } catch (Exception) { } }
+                    coloured += items.Count;
+                    groupsDone++;
+                }
+                return new Dictionary<string, object>
+                {
+                    { "groups", groupsDone }, { "coloured_items", coloured }, { "ghosted", ghosted },
+                    { "missing", missing.Take(20).ToList() }
+                };
+            }, 120000);
+        }
+
+        public object ViewReset(Dictionary<string, object> p)
+        {
+            return UiThread.Run<object>(() =>
+            {
+                var d = Doc();
+                d.Models.ResetAllTemporaryMaterials();
+                bool cleared = p != null && p.ContainsKey("clear_selection") && Convert.ToBoolean(p["clear_selection"]);
+                if (cleared) d.CurrentSelection.Clear();
+                return new Dictionary<string, object> { { "reset", true }, { "selection_cleared", cleared } };
+            }, 30000);
+        }
+
         // ------------------------------------------------------------ jobs
         public object JobStatus(Dictionary<string, object> p) { return _jobs.Get(p).Status(); }
         public object JobResult(Dictionary<string, object> p)

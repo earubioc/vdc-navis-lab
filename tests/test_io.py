@@ -90,6 +90,29 @@ def test_csv_neutralises_formulas_but_not_numbers(result, profile):
     assert data.splitlines()[0].startswith("id,priority") and len(data.splitlines()) == len(result.issues) + 1
 
 
+def test_pdf_report_is_a_valid_document_in_both_languages(result, profile):
+    import dataclasses
+    for lang, needle in (("es", b"Decisiones por tomar"), ("en", b"Decisions to make")):
+        data = exports.to_pdf(dataclasses.replace(result, lang=lang), profile, 10)
+        assert data.startswith(b"%PDF-1.4") and data.rstrip().endswith(b"%%EOF")
+        assert needle in data and b"\xe2\x80\x94" not in data  # no em dash
+        # every xref offset points at its object
+        xref = int(data.rsplit(b"startxref\n", 1)[1].split(b"\n")[0])
+        n = int(data[xref:].split(b"\n")[1].split()[1])
+        offsets = [int(l[:10]) for l in data[xref:].split(b"\n")[3:3 + n - 1]]
+        for k, off in enumerate(offsets, 1):
+            assert data[off:].startswith(b"%d 0 obj" % k)
+
+
+def test_pdf_wraps_long_words_and_breaks_pages():
+    from vdc_navis_lab import pdf
+    assert all(pdf.width(l, 9) <= 100.01 for l in pdf.wrap("x" * 300 + " corto", 9, 100))
+    d = pdf.Document("t", "f")
+    for _ in range(200):
+        d.paragraph("línea con acentos ñ é ü", 10)
+    assert len(d.pages) > 3 and d.render().count(b"/Type /Page ") == len(d.pages)
+
+
 def test_markdown_report_has_scope_and_language(result, profile):
     es = exports.to_markdown(result, profile)
     assert "Alcance de la evidencia" in es

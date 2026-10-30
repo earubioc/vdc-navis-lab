@@ -3,7 +3,7 @@
 ```
  MCP client (any LLM)
         | stdio
- vdc_navis_lab.server      14 tools, thin wrappers, error mapping
+ vdc_navis_lab.server      15 tools, thin wrappers, error mapping
         |
  vdc_navis_lab.service     App: state, plans, jobs, snapshots
      |         |

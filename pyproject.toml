@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vdc-navis-lab"
-version = "0.3.5"
+version = "0.4.0"
 description = "MCP server for clash coordination in Autodesk Navisworks Manage: fewer tools, offline-capable, verified writes"
 readme = "README.md"
 requires-python = ">=3.11"
