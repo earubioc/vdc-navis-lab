@@ -445,7 +445,8 @@ def test_vertical_run_that_ends_inside_the_beam_is_not_a_passage(profile):
     from vdc_navis_lab.engine.passage import assess
     # a drop that starts 0.2 m below the top of a 1.1 m beam and goes up: it ends inside the beam
     beam, drop = _beam_and_run((0, 0, 1), run_centre=(0, 0, 0.75), run_len=1.0)
-    assert assess(profile, beam, drop, (0, 0, 0.5)) is None
+    r = assess(profile, beam, drop, (0, 0, 0.5))
+    assert r is not None and r.kind == "end" and r.ok
     # one that covers the whole depth is still judged, and says how much of it it covers
     beam, thru = _beam_and_run((0, 0, 1), run_len=2.0)
     r = assess(profile, beam, thru, (0, 0, 0))
@@ -475,3 +476,15 @@ def test_element_through_the_slab_on_both_sides_is_a_modelling_error(profile):
     # structure's own element is never called a modelling error by this rule
     col = Element(id="c", discipline="STR", category="Walls", bbox=((1, 1, 0.0), (3, 1.1, 7.65)))
     assert not any(c == "model_error" for c, _ in s.score([clash(slab, col, depth=0.10)]).reasons)
+
+
+def test_a_slab_embedding_and_a_beam_crossing_next_to_it_are_two_issues(profile):
+    slab = Element(id="s", discipline="STR", category="Floors", bbox=((0, 0, 0), (2, 2, 0.1)))
+    beam = Element(id="bm", discipline="STR", category="Structural Framing", bbox=((0, 0, -0.5), (2, 0.3, 0.1)))
+    c1 = Element(id="c1", discipline="ELE", category="Conduits", bbox=((0, 0, 0), (0.03, 0.03, 0.5)))
+    c2 = Element(id="c2", discipline="ELE", category="Conduits", bbox=((0, 0.1, 0), (0.03, 0.13, 0.5)))
+    flat = cluster([clash(slab, c1, point=(0, 0, 0), cid="1"), clash(beam, c2, point=(0.1, 0, 0), cid="2")], eps=1.5, max_span=100)
+    assert len(flat) == 1, "close together they would collapse into one issue"
+    split = cluster([clash(slab, c1, point=(0, 0, 0), cid="1"), clash(beam, c2, point=(0.1, 0, 0), cid="2")], eps=1.5, max_span=100,
+                    partition=lambda c: "floors" if "Floors" in (c.a.category, c.b.category) else "beam")
+    assert len(split) == 2

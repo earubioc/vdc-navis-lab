@@ -151,21 +151,30 @@ class Scorer:
                 if res is not None:
                     judged.append(res)
         if judged:
-            bad = [r for r in judged if not r.ok]
+            ends = [r for r in judged if r.kind == "end"]
+            real = [r for r in judged if r.kind != "end"]
+            bad = [r for r in real if not r.ok]
+            bp = p.section("score", "beam_pass")
             if bad:
-                bp = p.section("score", "beam_pass")
                 critical_kinds = {str(k) for k in bp.get("critical_kinds", ["longitudinal"])}
                 worst = max(bad, key=lambda r: (r.kind in critical_kinds, len(r.failures)))
                 passage_level = "critical" if worst.kind in critical_kinds else str(bp.get("fail_level", "high"))
                 for code in worst.failures:
                     reasons.append((f"beam_pass_{code}", {"angle": worst.angle_deg, "along": worst.along * 100,
                                                           "across": worst.across * 100, "ratio": worst.diameter_ratio * 100}))
-            else:
-                r0 = judged[0]
+            elif real:
+                r0 = real[0]
                 comps["penetration"] = comps.get("penetration", 0.0) * self.sleeve_damping
                 reasons.append(("beam_pass_ok", {"kind": r0.kind, "angle": r0.angle_deg, "along": r0.along * 100,
                                                  "across": r0.across * 100, "ratio": r0.diameter_ratio * 100}))
-                sleeve_cap = p.section("score", "beam_pass").get("ok_cap") or "medium"
+                sleeve_cap = bp.get("ok_cap") or "medium"
+            else:
+                e0 = max(ends, key=lambda r: r.intrusion_m)
+                comps["penetration"] = comps.get("penetration", 0.0) * self.sleeve_damping
+                reasons.append(("beam_end", {"mm": e0.intrusion_m * 1000, "pct": (e0.through or 0.0) * 100}))
+                end_cap = bp.get("end_cap") or "medium"
+                # next to a slab embedding that already says "low", the end of the run does not raise it again
+                sleeve_cap = end_cap if sleeve_cap is None or PRIORITIES.index(end_cap) > PRIORITIES.index(sleeve_cap) else sleeve_cap
 
         crit = p.criticality(a, b)
         comps["criticality"] = crit

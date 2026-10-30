@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import math
 from collections import defaultdict
+from collections.abc import Callable
 from itertools import product
 
 from ..model import Clash, Point, dist
@@ -54,7 +55,10 @@ def _bisect(group: list[Clash], max_span: float) -> list[list[Clash]]:
     return _bisect(ordered[:mid], max_span) + _bisect(ordered[mid:], max_span)
 
 
-def cluster(clashes: list[Clash], eps: float, max_span: float) -> list[list[Clash]]:
+def cluster(clashes: list[Clash], eps: float, max_span: float,
+            partition: Callable[[Clash], str] | None = None) -> list[list[Clash]]:
+    """``partition`` names the kind of crossing a clash is; clashes of different kinds are never joined by
+    proximity alone (a conduit buried in a slab and a conduit crossing the beam next to it are two decisions)."""
     n = len(clashes)
     uf = _UnionFind(n)
 
@@ -67,7 +71,7 @@ def cluster(clashes: list[Clash], eps: float, max_span: float) -> list[list[Clas
             uf.union(i, by_pair[key])
         else:
             by_pair[key] = i
-        pair = pair_key(c)
+        pair = (pair_key(c), partition(c) if partition else "")
         cx, cy, cz = (math.floor(v / cell) for v in c.point)
         for dx, dy, dz in _NEIGHBOURS:
             for j in grid.get((pair, cx + dx, cy + dy, cz + dz), ()):

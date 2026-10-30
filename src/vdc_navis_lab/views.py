@@ -35,6 +35,8 @@ def action_text(issue: Issue, profile: Profile, lang: str) -> str:
         code = "beam_pass_fail"
     elif "beam_pass_ok" in codes:
         code = "beam_pass_ok"
+    elif "beam_end" in codes:
+        code = "beam_end"
     elif "embedded_small" in codes:
         code = "embedded"
     elif "sleeve_missing" in codes:

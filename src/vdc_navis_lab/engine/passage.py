@@ -29,6 +29,7 @@ class Passage:
     diameter_ratio: float           # run diameter / checked dimension
     failures: list[str] = field(default_factory=list)  # codes: longitudinal, diagonal, span, zone, size
     through: float | None = None    # share of the beam depth the run covers (only measured for vertical runs)
+    intrusion_m: float = 0.0        # how far a vertical run that stops inside the beam goes into it
 
     @property
     def ok(self) -> bool:
@@ -61,7 +62,8 @@ def applicable(profile: Profile, a: Element, b: Element) -> tuple[Element, Eleme
 
 
 def assess(profile: Profile, beam: Element, run: Element, point: Point) -> Passage | None:
-    """None when the geometry cannot support a judgement (a stub, a vertical 'beam'): the clash then keeps its score."""
+    """None when the geometry cannot support a judgement (a stub, a vertical 'beam'): the clash then keeps its score.
+    A vertical run that stops inside the beam comes back as kind "end" (neither a pass nor a failure)."""
     p = _params(profile)
     lo, hi = (float(x) for x in p.get("middle_zone", (1 / 3, 2 / 3)))
     max_ratio = float(p.get("max_diameter_ratio", 1 / 3))
@@ -99,13 +101,13 @@ def assess(profile: Profile, beam: Element, run: Element, point: Point) -> Passa
     through = None
     if run_vertical:
         # A vertical run that stops inside the beam (a drop from the slab, a box, a stub) is not a passage through
-        # the beam: only one that covers its whole depth is a hole in it.
+        # the beam: only one that covers its whole depth is a hole in it. It is reported as kind "end", never as a failure.
         half = sum(rh[i] * abs(_dot(ru[i], depth_axis)) for i in range(3))
         mid = _dot(_sub(run.obb["c"], bc), depth_axis)
         overlap = max(0.0, min(mid + half, depth / 2) - max(mid - half, -depth / 2))
         through = overlap / depth
         if through < float(p.get("min_through_ratio", 0.9)):
-            return None
+            return Passage("end", 0.0, 0.0, 0.0, round(diameter / width, 3), through=round(through, 3), intrusion_m=overlap)
         kind = "vertical"
         across = _dot(rel, width_axis) / width + 0.5
         ratio = diameter / width

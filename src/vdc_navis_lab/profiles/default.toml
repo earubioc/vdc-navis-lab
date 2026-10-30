@@ -154,6 +154,7 @@ min_run_length_ratio = 2.0          # runs shorter than this many diameters are 
 ok_cap = "medium"
 fail_level = "high"                 # priority of a passage that does not comply (a transversal one outside the middle third, too thick, vertical...)
 critical_kinds = ["longitudinal"]   # kinds that are critical when they fail: a run inside the beam along its axis is not a passage
+end_cap = "medium"                 # a vertical run that stops inside the beam (a drop, a stub) is not a passage: at most this
 min_through_ratio = 0.9             # a vertical run must cover this share of the beam depth to count as a passage; shorter ones end inside it (not judged)
 
 [score.model_error]          # an element running through a slab or beam with this much of it on each side is a modelling error

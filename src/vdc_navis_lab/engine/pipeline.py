@@ -22,9 +22,10 @@ from .. import texts
 from ..model import CLEARANCE, HARD, Clash, ClashSet, Element, Point, dist
 from ..profile import PRIORITIES, Profile
 from .causes import Cause, detect
+from . import modelerror as _modelerror
 from .cluster import cluster, pair_key
 from .screen import Screened, NoiseScreen
-from .scoring import Scorer
+from .scoring import Scorer, mover_and_anchor
 from .tagging import Tagger
 
 _NEIGHBOURS = list(product((-1, 0, 1), repeat=3))
@@ -183,7 +184,15 @@ def analyze(cs: ClashSet, profile: Profile, lang: str | None = None) -> Analysis
 
     eps = profile.num("cluster", "eps_m", default=1.5)
     max_span = profile.num("cluster", "max_span_m", default=12.0)
-    groups = cluster(flt.passed, eps, max_span)
+    def crossing_kind(c: Clash) -> str:
+        """Which kind of crossing this is: a modelling error, or the category of the element that cannot move."""
+        if _modelerror.check(profile, c.a, c.b):
+            return "model_error"
+        _, anchor = mover_and_anchor(profile, *sorted((c.a.discipline, c.b.discipline)))
+        host = c.a if c.a.discipline == anchor else c.b
+        return host.category.lower()
+
+    groups = cluster(flt.passed, eps, max_span, crossing_kind)
 
     radius = profile.num("score", "params", "crowd_radius_m", default=5.0)
     sat = profile.num("score", "params", "crowd_saturation", default=5)
