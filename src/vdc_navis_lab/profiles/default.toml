@@ -154,6 +154,14 @@ min_run_length_ratio = 2.0          # runs shorter than this many diameters are 
 ok_cap = "medium"
 fail_level = "high"                 # priority of a passage that does not comply (a transversal one outside the middle third, too thick, vertical...)
 critical_kinds = ["longitudinal"]   # kinds that are critical when they fail: a run inside the beam along its axis is not a passage
+min_through_ratio = 0.9             # a vertical run must cover this share of the beam depth to count as a passage; shorter ones end inside it (not judged)
+
+[score.model_error]          # an element running through a slab or beam with this much of it on each side is a modelling error
+host_categories = ["floors", "pisos", "structural framing", "armazón estructural", "armazon estructural", "vigas"]
+element_categories = ["walls", "muros", "generic models", "modelos genéricos", "modelos genericos"]
+disciplines = ["ARC"]
+min_overhang_m = 1.0
+cap = "medium"                      # modelling errors are capped here: fixed in the source model, not a site decision
 
 [score.criticality]          # 0..1, keyed by sorted pair. Missing pairs use `default`.
 default = 0.5

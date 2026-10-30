@@ -28,6 +28,7 @@ class Passage:
     across: float                   # position across the checked dimension (depth, or width for a vertical run), 0..1
     diameter_ratio: float           # run diameter / checked dimension
     failures: list[str] = field(default_factory=list)  # codes: longitudinal, diagonal, span, zone, size
+    through: float | None = None    # share of the beam depth the run covers (only measured for vertical runs)
 
     @property
     def ok(self) -> bool:
@@ -95,7 +96,16 @@ def assess(profile: Profile, beam: Element, run: Element, point: Point) -> Passa
     rel = _sub(point, bc)
     along = _dot(rel, bu[0]) / span + 0.5
 
+    through = None
     if run_vertical:
+        # A vertical run that stops inside the beam (a drop from the slab, a box, a stub) is not a passage through
+        # the beam: only one that covers its whole depth is a hole in it.
+        half = sum(rh[i] * abs(_dot(ru[i], depth_axis)) for i in range(3))
+        mid = _dot(_sub(run.obb["c"], bc), depth_axis)
+        overlap = max(0.0, min(mid + half, depth / 2) - max(mid - half, -depth / 2))
+        through = overlap / depth
+        if through < float(p.get("min_through_ratio", 0.9)):
+            return None
         kind = "vertical"
         across = _dot(rel, width_axis) / width + 0.5
         ratio = diameter / width
@@ -104,7 +114,8 @@ def assess(profile: Profile, beam: Element, run: Element, point: Point) -> Passa
         across = _dot(rel, depth_axis) / depth + 0.5
         ratio = diameter / depth
 
-    out = Passage(kind, round(angle, 1), round(along, 3), round(across, 3), round(ratio, 3))
+    out = Passage(kind, round(angle, 1), round(along, 3), round(across, 3), round(ratio, 3),
+                  through=None if through is None else round(through, 3))
     if kind in ("longitudinal", "diagonal"):
         out.failures.append(kind)  # running inside the member or at an angle: position and size no longer matter
         return out

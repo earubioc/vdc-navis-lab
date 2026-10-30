@@ -13,6 +13,7 @@ from fnmatch import fnmatch
 
 from ..model import CLEARANCE, HARD, Clash, Element, TestInfo
 from ..profile import PRIORITIES, Profile
+from . import modelerror as _modelerror
 from . import passage as _passage
 
 
@@ -105,6 +106,16 @@ class Scorer:
         sleeve_cap: str | None = None
 
         max_depth = max((c.depth for c in hard), default=0.0)
+        # Every clash of the issue is an element running through the structure on both sides: a modelling error.
+        merr = None
+        merr_cap: str | None = None
+        if hard:
+            found_all = [_modelerror.check(p, c.a, c.b) for c in hard]
+            if all(found_all):
+                merr = max(found_all, key=lambda m: min(m.above_m, m.below_m))
+                merr_cap = str(p.section("score", "model_error").get("cap", "medium"))
+                reasons.append(("model_error", {"element": merr.element.name, "host": merr.host.category,
+                                                "above_m": merr.above_m, "below_m": merr.below_m}))
         if hard:
             applicable.add("penetration")
             deep = max(hard, key=lambda c: c.depth)
@@ -117,7 +128,7 @@ class Scorer:
                 comps["penetration"] = _clamp(deep.depth / self.ref_depth)
                 reasons.append(("depth_abs", {"depth_mm": deep.depth * 1000}))
 
-            found = self._sleeve_host(deep.a, deep.b, deep.depth)
+            found = None if merr else self._sleeve_host(deep.a, deep.b, deep.depth)
             if found is not None:
                 host, cross = found
                 comps["penetration"] *= self.sleeve_damping
@@ -133,7 +144,7 @@ class Scorer:
 
         passage_level: str | None = None
         judged = []
-        for c in hard:
+        for c in ([] if merr else hard):
             pair = _passage.applicable(p, c.a, c.b)
             if pair:
                 res = _passage.assess(p, pair[0], pair[1], c.point)
@@ -206,6 +217,8 @@ class Scorer:
             sleeve_cap = None
         if sleeve_cap and PRIORITIES.index(priority) < PRIORITIES.index(sleeve_cap):
             priority = sleeve_cap  # a sleeve candidate: no depth gate pushes it past this on its own
+        if merr_cap and PRIORITIES.index(priority) < PRIORITIES.index(merr_cap):
+            priority = merr_cap  # a modelling error is fixed in the source model, it is not a site decision
 
         return Verdict(score, priority, {k: round(v, 3) for k, v in comps.items()}, reasons, mover, anchor)
 

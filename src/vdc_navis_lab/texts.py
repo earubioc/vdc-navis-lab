@@ -29,6 +29,7 @@ REASONS = {
         "beam_pass_size": "el diámetro es el {ratio:.0f} % de la dimensión de la viga, más de lo permitido para un pase",
         "beam_pass_level": "pase por viga que no cumple: se clasifica como {level}",
         "embedded_small": "elemento de {size_mm:.0f} mm embebido en {host} de {host_mm:.0f} mm: embebido normal (no pasa de un tercio del espesor)",
+        "model_error": "{element} continúa {above_m:.1f} m por encima y {below_m:.1f} m por debajo de {host}: lo atraviesa; es un error de modelado, no se construiría así",
     },
     "en": {
         "depth_rel": "penetrates {depth_mm:.0f} mm, {pct:.0f}% of the element's smallest dimension",
@@ -49,6 +50,7 @@ REASONS = {
         "beam_pass_size": "the diameter is {ratio:.0f}% of the beam dimension, more than a passage allows",
         "beam_pass_level": "beam passage that does not comply: classified as {level}",
         "embedded_small": "{size_mm:.0f} mm run embedded in a {host_mm:.0f} mm {host}: ordinary embedding (within a third of the thickness)",
+        "model_error": "{element} continues {above_m:.1f} m above and {below_m:.1f} m below the {host}: it runs through it; a modelling error, it would not be built this way",
     },
 }
 
@@ -64,6 +66,7 @@ ACTIONS = {
         "beam_pass_ok": "{mover} solicita a {anchor} el aval del pase por la viga (cumple la geometría) y lo deja documentado; sin aval no se ejecuta.",
         "beam_pass_fail": "{mover} reencamina para cruzar la viga de forma transversal, en el tercio medio del canto y del vano y con el diámetro permitido, o acuerda otra solución con {anchor}; así no es aceptable.",
         "embedded": "Embebido normal: no requiere coordinación. {mover} deja el paso indicado en sus planos.",
+        "model_error": "Error de modelado: {mover} corta o ajusta el elemento por nivel en su modelo de origen. No requiere coordinación en obra.",
         "sleeve_missing": "{mover} pide a {anchor} el manguito o la abertura de este paso, lo modela y espera su aval; no hay ninguno modelado.",
         "sleeve_check": "{mover} verifica que el paso tenga manguito o abertura aprobada por {anchor}, y lo modela si falta.",
         "clearance": "Restituir la holgura de mantenimiento: {mover} debe separarse de {anchor}.",
@@ -81,6 +84,7 @@ ACTIONS = {
         "beam_pass_ok": "{mover} asks {anchor} to approve the passage through the beam (the geometry complies) and records it; without approval it is not built.",
         "beam_pass_fail": "{mover} reroutes to cross the beam transversally, in the middle third of its depth and span and within the allowed diameter, or agrees another solution with {anchor}; as modelled it is not acceptable.",
         "embedded": "Ordinary embedding: no coordination needed. {mover} shows the passage on its drawings.",
+        "model_error": "Modelling error: {mover} cuts or adjusts the element by level in its source model. No site coordination needed.",
         "sleeve_missing": "{mover} asks {anchor} for the sleeve or opening at this passage, models it and waits for approval; none is modelled.",
         "sleeve_check": "{mover} checks that the passage has a sleeve or an opening approved by {anchor}, and models it if missing.",
         "clearance": "Restore the maintenance clearance: {mover} must move away from {anchor}.",

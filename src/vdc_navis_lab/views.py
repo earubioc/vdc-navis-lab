@@ -29,6 +29,8 @@ def action_text(issue: Issue, profile: Profile, lang: str) -> str:
     codes = {c for c, _ in issue.reasons}
     if all(c.kind == "clearance" for c in issue.clashes):
         code = "clearance"
+    elif "model_error" in codes:
+        code = "model_error"
     elif any(c.startswith("beam_pass_") and c not in ("beam_pass_ok", "beam_pass_level") for c in codes):
         code = "beam_pass_fail"
     elif "beam_pass_ok" in codes:

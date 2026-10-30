@@ -439,3 +439,39 @@ def test_element_path_round_trips():
     assert e.path == ["fed.nwd", "x.rvt", "Walls"]
     assert Element.from_dict(e.to_dict()).path == e.path
     assert "path" not in Element(id="b").to_dict()
+
+
+def test_vertical_run_that_ends_inside_the_beam_is_not_a_passage(profile):
+    from vdc_navis_lab.engine.passage import assess
+    # a drop that starts 0.2 m below the top of a 1.1 m beam and goes up: it ends inside the beam
+    beam, drop = _beam_and_run((0, 0, 1), run_centre=(0, 0, 0.75), run_len=1.0)
+    assert assess(profile, beam, drop, (0, 0, 0.5)) is None
+    # one that covers the whole depth is still judged, and says how much of it it covers
+    beam, thru = _beam_and_run((0, 0, 1), run_len=2.0)
+    r = assess(profile, beam, thru, (0, 0, 0))
+    assert r is not None and r.kind == "vertical" and r.through == 1.0
+
+
+def test_vertical_drop_into_a_beam_under_a_thin_slab_stays_an_embedding(profile):
+    s = Scorer(profile, [])
+    floor = Element(id="f", discipline="STR", category="Floors", bbox=((0, 0, 0.5), (2.0, 2.0, 0.6)))
+    conduit = Element(id="c", discipline="ELE", category="Conduits", bbox=((0, 0, 0.3), (0.033, 0.033, 1.0)))
+    beam, drop = _beam_and_run((0, 0, 1), run_centre=(0, 0, 0.75), run_len=1.0)
+    v = s.score([clash(floor, conduit, depth=0.09), clash(beam, drop, depth=0.06)])
+    assert v.priority == "low", v.reasons
+    assert not any(code.startswith("beam_pass") for code, _ in v.reasons)
+
+
+def test_element_through_the_slab_on_both_sides_is_a_modelling_error(profile):
+    s = Scorer(profile, [])
+    slab = Element(id="s", discipline="STR", category="Floors", bbox=((0, 0, 3.9), (10, 10, 4.0)))
+    wall = Element(id="w", name="Muro 10cm enchape", discipline="ARC", category="Walls", bbox=((1, 1, 0.0), (3, 1.1, 7.65)))
+    v = s.score([clash(slab, wall, depth=0.10)])
+    assert v.priority == "medium" and any(c == "model_error" for c, _ in v.reasons)
+    # a storey-high wall that rests on the slab is nothing special
+    ok_wall = Element(id="w2", discipline="ARC", category="Walls", bbox=((1, 1, 3.8), (3, 1.1, 7.6)))
+    v2 = s.score([clash(slab, ok_wall, depth=0.10)])
+    assert not any(c == "model_error" for c, _ in v2.reasons)
+    # structure's own element is never called a modelling error by this rule
+    col = Element(id="c", discipline="STR", category="Walls", bbox=((1, 1, 0.0), (3, 1.1, 7.65)))
+    assert not any(c == "model_error" for c, _ in s.score([clash(slab, col, depth=0.10)]).reasons)
