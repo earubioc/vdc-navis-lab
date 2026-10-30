@@ -29,7 +29,7 @@ def action_text(issue: Issue, profile: Profile, lang: str) -> str:
     codes = {c for c, _ in issue.reasons}
     if all(c.kind == "clearance" for c in issue.clashes):
         code = "clearance"
-    elif "model_error" in codes:
+    elif codes & {"model_error", "model_finish"}:
         code = "model_error"
     elif any(c.startswith("beam_pass_") and c not in ("beam_pass_ok", "beam_pass_level") for c in codes):
         code = "beam_pass_fail"
@@ -51,7 +51,7 @@ def action_text(issue: Issue, profile: Profile, lang: str) -> str:
 
 
 def cause_text(cause: Cause, lang: str) -> dict[str, str]:
-    action_code = "cause_shared" if cause.kind == "shared_element" else "cause_repeat"
+    action_code = {"shared_element": "cause_shared", "model_update": "cause_model"}.get(cause.kind, "cause_repeat")
     return {
         "title": texts.render(texts.CAUSES, lang, cause.kind, cause.params),
         "action": texts.render(texts.ACTIONS, lang, action_code, cause.params),

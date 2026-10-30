@@ -1,4 +1,10 @@
-"""An element that runs through the structure on both sides is a modelling error, not a coordination conflict.
+"""Elements that were modelled in a way that cannot be built are modelling errors, not coordination conflicts.
+
+Two kinds, both profile-driven:
+
+* ``through``: an element that runs through the structure on both sides (see below);
+* ``finish``: an architectural floor finish that overlaps structure (a column, a beam, a slab, a wall) instead of
+  being cut around it. Nobody builds a finish through a column, but it makes quantities unreliable.
 
 Typical case: a wall or a finish drawn from the first floor to the roof in one piece, so it crosses every slab on the
 way. Nobody will build the slab and then open it to let the finish through; the author has to cut the element by
@@ -23,6 +29,7 @@ class ModelError:
     host: Element
     above_m: float
     below_m: float
+    kind: str = "through"          # through | finish
 
 
 def check(profile: Profile, a: Element, b: Element) -> ModelError | None:
@@ -30,10 +37,10 @@ def check(profile: Profile, a: Element, b: Element) -> ModelError | None:
     elements = {str(c).lower() for c in p.get("element_categories", [])}
     hosts = {str(c).lower() for c in p.get("host_categories", [])}
     disciplines = {str(d) for d in p.get("disciplines", [])}
-    if not elements or not hosts:
-        return None
     minimum = float(p.get("min_overhang_m", 1.0))
     for el, host in ((a, b), (b, a)):
+        if not elements or not hosts:
+            break
         if el.category.lower() not in elements or host.category.lower() not in hosts:
             continue
         if disciplines and el.discipline not in disciplines:
@@ -44,4 +51,13 @@ def check(profile: Profile, a: Element, b: Element) -> ModelError | None:
         above = el.bbox[1][2] - host.bbox[1][2]
         if below >= minimum and above >= minimum:
             return ModelError(el, host, above, below)
+    finishes = {str(c).lower() for c in p.get("finish_categories", [])}
+    finish_hosts = {str(c).lower() for c in p.get("finish_host_categories", [])}
+    host_disciplines = {str(d) for d in p.get("finish_host_disciplines", [])}
+    if finishes and finish_hosts:
+        for el, host in ((a, b), (b, a)):
+            if el.category.lower() in finishes and host.category.lower() in finish_hosts \
+                    and (not disciplines or el.discipline in disciplines) \
+                    and (not host_disciplines or host.discipline in host_disciplines):
+                return ModelError(el, host, 0.0, 0.0, "finish")
     return None

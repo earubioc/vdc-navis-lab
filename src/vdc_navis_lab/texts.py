@@ -30,6 +30,7 @@ REASONS = {
         "beam_pass_level": "pase por viga que no cumple: se clasifica como {level}",
         "beam_end": "el tramo vertical termina {mm:.0f} mm dentro de la viga ({pct:.0f} % del canto): no la atraviesa",
         "embedded_small": "elemento de {size_mm:.0f} mm embebido en {host} de {host_mm:.0f} mm: embebido normal (no pasa de un tercio del espesor)",
+        "model_finish": "el acabado {element} se superpone con {host} sin recortarse: no se construye así y no deja sacar cantidades fiables",
         "model_error": "{element} continúa {above_m:.1f} m por encima y {below_m:.1f} m por debajo de {host}: lo atraviesa; es un error de modelado, no se construiría así",
     },
     "en": {
@@ -52,6 +53,7 @@ REASONS = {
         "beam_pass_level": "beam passage that does not comply: classified as {level}",
         "beam_end": "the vertical run stops {mm:.0f} mm inside the beam ({pct:.0f}% of its depth): it does not cross it",
         "embedded_small": "{size_mm:.0f} mm run embedded in a {host_mm:.0f} mm {host}: ordinary embedding (within a third of the thickness)",
+        "model_finish": "the finish {element} overlaps the {host} instead of being cut around it: it is not built that way and it spoils quantities",
         "model_error": "{element} continues {above_m:.1f} m above and {below_m:.1f} m below the {host}: it runs through it; a modelling error, it would not be built this way",
     },
 }
@@ -75,6 +77,7 @@ ACTIONS = {
         "clearance": "Restituir la holgura de mantenimiento: {mover} debe separarse de {anchor}.",
         "cause_shared": "Resolver {element} en una sola decisión cierra {n} problemas.",
         "cause_repeat": "Corregir el detalle tipo ({signature}) una vez y replicarlo en {n} niveles.",
+        "cause_model": "Requerimiento de actualización de modelo: {mover} corrige estos {elements} elementos en {model} (cortar por nivel, recortar acabados contra la estructura). No es una decisión de obra; sin esto no se pueden sacar cantidades fiables.",
     },
     "en": {
         "move": "{mover} must reroute or shift; {anchor} stays.",
@@ -94,6 +97,7 @@ ACTIONS = {
         "clearance": "Restore the maintenance clearance: {mover} must move away from {anchor}.",
         "cause_shared": "Resolving {element} in one decision closes {n} issues.",
         "cause_repeat": "Fix the typical detail ({signature}) once and replicate it on {n} levels.",
+        "cause_model": "Model update request: {mover} fixes these {elements} elements in {model} (cut by level, trim finishes against the structure). Not a site decision; without it quantities cannot be trusted.",
     },
 }
 
@@ -101,10 +105,12 @@ CAUSES = {
     "es": {
         "shared_element": "{element} interviene como elemento móvil en {n} problemas",
         "repeated_detail": "El mismo cruce ({signature}) se repite en {n} niveles",
+        "model_update": "Actualización de modelo requerida en {model}: {n} problemas son elementos de {mover} modelados sin recortar o atravesando niveles",
     },
     "en": {
         "shared_element": "{element} is the movable party in {n} issues",
         "repeated_detail": "The same crossing ({signature}) repeats on {n} levels",
+        "model_update": "Model update required in {model}: {n} issues are {mover} elements modelled uncut or running through levels",
     },
 }
 

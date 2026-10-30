@@ -162,7 +162,11 @@ host_categories = ["floors", "pisos", "structural framing", "armazón estructura
 element_categories = ["walls", "muros", "generic models", "modelos genéricos", "modelos genericos"]
 disciplines = ["ARC"]
 min_overhang_m = 1.0
-cap = "medium"                      # modelling errors are capped here: fixed in the source model, not a site decision
+cap = "medium"                      # each modelling error is capped here: fixed in the source model, not a site decision
+finish_categories = ["floors", "pisos"]            # architectural finishes (an ARC floor is a finish: structure's floors are STR)
+finish_host_categories = ["structural columns", "structural framing", "floors", "walls", "pisos", "muros", "columnas estructurales", "armazón estructural", "armazon estructural"]
+finish_host_disciplines = ["STR"]
+decision_priority = "high"          # all modelling errors of one model are grouped in ONE "update the model" decision, with this priority
 
 [score.criticality]          # 0..1, keyed by sorted pair. Missing pairs use `default`.
 default = 0.5

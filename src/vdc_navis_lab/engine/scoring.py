@@ -112,10 +112,11 @@ class Scorer:
         if hard:
             found_all = [_modelerror.check(p, c.a, c.b) for c in hard]
             if all(found_all):
-                merr = max(found_all, key=lambda m: min(m.above_m, m.below_m))
+                merr = max(found_all, key=lambda m: (m.kind == "through", min(m.above_m, m.below_m)))
                 merr_cap = str(p.section("score", "model_error").get("cap", "medium"))
-                reasons.append(("model_error", {"element": merr.element.name, "host": merr.host.category,
-                                                "above_m": merr.above_m, "below_m": merr.below_m}))
+                reasons.append(("model_error" if merr.kind == "through" else "model_finish",
+                                {"element": merr.element.name, "host": merr.host.category,
+                                 "above_m": merr.above_m, "below_m": merr.below_m}))
         if hard:
             applicable.add("penetration")
             deep = max(hard, key=lambda c: c.depth)

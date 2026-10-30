@@ -3,7 +3,7 @@
 ## Next (needed to call it usable)
 
 1. **Field-test ingestion** with real Clash Detective XML and CSV exports from different Navisworks versions and languages.
-2. **Calibrate with a structural designer.** The beam-passage thresholds (middle third, diameter of a third of the dimension, 25 and 70 degrees, which failures are high or critical) are a starting point in `[score.beam_pass]`; they are not a code. A vertical run that crosses the whole beam is not yet told apart from one that only ends inside it, and columns have no rule of their own.
+2. **Calibrate with a structural designer.** The beam-passage thresholds (middle third, diameter of a third of the dimension, 25 and 70 degrees, which failures are high or critical) are a starting point in `[score.beam_pass]`; they are not a code. A vertical run that stops inside the beam is told apart from one that crosses it (kind `end`); columns still have no rule of their own.
 3. **A second model and Navisworks 2025.** Everything so far was measured on one federated model of one project.
 4. **Trade-specific profile overrides.** MEC files are classified as HVAC by default; some teams need their own mapping.
 

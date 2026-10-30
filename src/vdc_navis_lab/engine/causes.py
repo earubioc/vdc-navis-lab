@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from ..profile import Profile
+from . import modelerror as _modelerror
 
 if TYPE_CHECKING:
     from .pipeline import Issue
@@ -42,6 +43,26 @@ def detect(issues: list["Issue"], profile: Profile) -> list[Cause]:
     shared_min = int(profile.num("causes", "shared_element_min", default=4))
     repeat_min = int(profile.num("causes", "repeat_levels_min", default=3))
     causes: list[Cause] = []
+
+    # modelling errors: one request per responsible discipline and source model, whatever the number of clashes
+    flagged: dict[tuple[str, str], dict] = defaultdict(lambda: {"issues": set(), "elements": set()})
+    for issue in issues:
+        codes = {c for c, _ in issue.reasons}
+        if not codes & {"model_error", "model_finish"}:
+            continue
+        for clash in issue.clashes:
+            found = _modelerror.check(profile, clash.a, clash.b)
+            if found:
+                slot = flagged[(issue.responsible, found.element.model or "?")]
+                slot["issues"].add(issue.id)
+                slot["elements"].add(found.element.key)
+    updates: list[Cause] = []
+    for (mover, model), slot in sorted(flagged.items()):
+        updates.append(Cause(
+            id=f"CM-{_h(mover + model)}", kind="model_update", confidence=0.95, issue_ids=sorted(slot["issues"]),
+            params={"model": model, "n": len(slot["issues"]), "elements": len(slot["elements"]), "mover": mover},
+            evidence={"model": model, "elements": len(slot["elements"]), "issues": len(slot["issues"])},
+        ))
 
     # shared movable element
     by_element: dict[str, dict] = defaultdict(lambda: {"issues": set(), "name": "", "model": ""})
@@ -85,4 +106,4 @@ def detect(issues: list["Issue"], profile: Profile) -> list[Cause]:
         return c.confidence * len(c.issue_ids) * (1.5 if c.kind == "shared_element" else 1.0)
 
     causes.sort(key=lambda c: (-weight(c), c.id))
-    return causes
+    return updates + causes  # a model update explains its issues better than any routing cause, so it goes first

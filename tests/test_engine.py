@@ -488,3 +488,30 @@ def test_a_slab_embedding_and_a_beam_crossing_next_to_it_are_two_issues(profile)
     split = cluster([clash(slab, c1, point=(0, 0, 0), cid="1"), clash(beam, c2, point=(0.1, 0, 0), cid="2")], eps=1.5, max_span=100,
                     partition=lambda c: "floors" if "Floors" in (c.a.category, c.b.category) else "beam")
     assert len(split) == 2
+
+
+def test_architectural_floor_finish_over_structure_is_a_modelling_error(profile):
+    s = Scorer(profile, [])
+    column = Element(id="col", discipline="STR", category="Structural Columns", bbox=((0, 0, 0), (0.4, 0.4, 3)))
+    finish = Element(id="fin", name="Floor : BALDOSA", discipline="ARC", category="Floors", bbox=((0, 0, 2.9), (5, 5, 3.0)))
+    v = s.score([clash(column, finish, depth=0.10)])
+    assert v.priority == "medium" and any(c == "model_finish" for c, _ in v.reasons)
+    # an architectural wall against a column is an ordinary conflict
+    wall = Element(id="w", discipline="ARC", category="Walls", bbox=((0, 0, 0), (0.1, 2, 3)))
+    assert not any(c.startswith("model_") for c, _ in s.score([clash(column, wall, depth=0.10)]).reasons)
+
+
+def test_modelling_errors_of_one_model_become_one_decision(profile):
+    from vdc_navis_lab.engine.pipeline import analyze
+    from vdc_navis_lab.model import ClashSet
+    col = [Element(id=f"col{i}", discipline="STR", category="Structural Columns", model="EST.rvt",
+                   bbox=((10 * i, 0, 0), (10 * i + 0.4, 0.4, 3))) for i in range(3)]
+    fin = [Element(id=f"fin{i}", name="Floor : BALDOSA", discipline="ARC", category="Floors", model="ARQ.rvt",
+                   bbox=((10 * i, 0, 2.9), (10 * i + 5, 5, 3.0))) for i in range(3)]
+    cs = ClashSet(clashes=[clash(col[i], fin[i], depth=0.10, point=(10 * i * 5, 0, 3.0), cid=f"c{i}") for i in range(3)],
+                  tests=[], source="test")
+    r = analyze(cs, profile)
+    updates = [c for c in r.causes if c.kind == "model_update"]
+    assert len(updates) == 1 and updates[0].params["model"] == "ARQ.rvt"
+    decision = next(d for d in r.decisions if d.id == updates[0].id)
+    assert len(decision.issue_ids) == len(r.issues) and decision.priority == "high"

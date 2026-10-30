@@ -223,7 +223,7 @@ def analyze(cs: ClashSet, profile: Profile, lang: str | None = None) -> Analysis
         ))
 
     causes = detect(issues, profile)
-    decisions = _decisions(issues, causes)
+    decisions = _decisions(issues, causes, profile)
     issues.sort(key=lambda i: i.rank_key)
 
     return AnalysisResult(
@@ -239,7 +239,7 @@ def _span(group: list[Clash]) -> float:
     return round(max(max(p[i] for p in pts) - min(p[i] for p in pts) for i in range(3)), 2)
 
 
-def _decisions(issues: list[Issue], causes: list[Cause]) -> list[Decision]:
+def _decisions(issues: list[Issue], causes: list[Cause], profile: Profile) -> list[Decision]:
     """Fold issues that one cause explains into a single decision; the rest stand alone."""
     by_id = {i.id: i for i in issues}
     chosen: dict[str, Cause] = {}
@@ -256,7 +256,12 @@ def _decisions(issues: list[Issue], causes: list[Cause]) -> list[Decision]:
     for key, ids in grouped.items():
         members = [by_id[i] for i in ids]
         best = min(members, key=lambda m: m.rank_key)
+        priority = best.priority
+        if key.startswith("CM-"):  # a model update is one decision for all its issues, with its own priority
+            wanted = str(profile.section("score", "model_error").get("decision_priority", priority))
+            if wanted in PRIORITIES and PRIORITIES.index(wanted) < PRIORITIES.index(priority):
+                priority = wanted
         decisions.append(Decision(id=key, cause_id=key if key.startswith("C") else "", issue_ids=sorted(ids),
-                                  priority=best.priority, score=best.score))
+                                  priority=priority, score=best.score))
     decisions.sort(key=lambda d: (PRIORITIES.index(d.priority), -d.score, d.id))
     return decisions
