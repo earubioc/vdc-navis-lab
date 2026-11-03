@@ -19,7 +19,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 TEST_TYPES = ("hard", "clearance")
 MAX_SETUP_ITEMS = 200
-FIELDS = ("category", "family", "level", "name", "system")
+FIELDS = ("model", "category", "family", "level", "name", "system")
 
 
 @dataclass(slots=True)
@@ -127,7 +127,7 @@ def make_plan(app: "App", ops: list[dict[str, Any]]) -> dict[str, Any]:
                     raise ToolFault_(INVALID_PARAMS, "each criterion needs value and field (" + "|".join(FIELDS) + ") or category+property")
                 if c.get("op", "eq") not in ("eq", "contains", "wildcard"):
                     raise ToolFault_(INVALID_PARAMS, "criterion op must be eq, contains or wildcard")
-                crit.append({k: str(v) for k, v in c.items() if k in ("field", "op", "value", "category", "property")})
+                crit.append({k: str(v) for k, v in c.items() if k in ("field", "op", "value", "category", "property", "internal")})
             if len(crit) > 6:
                 raise ToolFault_(INVALID_PARAMS, "at most 6 criteria per search set")
             sets.append({"name": name[:120], "where": crit})

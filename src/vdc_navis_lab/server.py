@@ -191,8 +191,8 @@ def nw_setup(action: str = "plan", ops: list[dict[str, Any]] | None = None, plan
     previews and returns plan_id; nothing changes. discipline_sets saves one selection set per discipline from the models
     (classified like nw_model), in the folder 'VDC Lab'. tests creates one hard clash test per pair (pairs='matrix' uses the
     profile's expected_pairs, or a list like ['STR-ELE']; tolerance_mm, type hard|clearance, prefix 'VDC ') between those
-    models; run them with nw_run. search_set saves a dynamic search set; where fields: category|family|level|name|system, or
-    category+property with the display names of any property. Step 2: plan_id=... executes it and verifies by rereading.
+    models; run them with nw_run. search_set saves a dynamic search set; where fields: model (source file)|category|family|level|name|system, or
+    category+property with the display names of any property (internal=true to give Navisworks internal names). Step 2: plan_id=... executes it and verifies by rereading.
     Existing sets and tests with the same name are reused, never overwritten. action='list' shows the sets and tests in the
     document; action='properties' lists property names of the selected element, to write search criteria."""
     return APP.setup(action, ops, plan_id, dry_run)

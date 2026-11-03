@@ -610,38 +610,70 @@ namespace VdcNavisLab.Addin
 
         public object ModelCensus(Dictionary<string, object> p)
         {
+            // A federated NWD loads as ONE model whose tree holds the source files; Describe() resolves the real file of
+            // every element, so the census is grouped by that file and a federation reports each .rvt/.nwc separately.
             var names = UiThread.Run<List<string>>(() => ModelNames(Doc()), 30000);
-            var models = new List<object>();
+            var byFile = new Dictionary<string, Dictionary<string, object>>();
+            var order = new List<string>();
             foreach (var name in names)
             {
-                var slice = UiThread.Run<Dictionary<string, object>>(() =>
+                var slice = UiThread.Run<List<Dictionary<string, object>>>(() =>
                 {
                     var d = Doc();
                     var m = d.Models.FirstOrDefault(x => System.IO.Path.GetFileName(x.FileName ?? "") == name);
                     if (m == null) return null;  // removed between the listing and this slice
-                    int count = 0;
-                    var cats = new Dictionary<string, int>();
+                    double uf = UnitFactor(d);
+                    var perFile = new Dictionary<string, Dictionary<string, object>>();
                     foreach (var instance in Instances(m.RootItem))
                     {
-                        count++;
-                        var cat = Convert.ToString(Describe(d, instance)["category"]);
+                        var info = Describe(d, instance);
+                        var file = Convert.ToString(info["model"]);
+                        if (file.Length == 0) file = name;
+                        Dictionary<string, object> row;
+                        if (!perFile.TryGetValue(file, out row))
+                        {
+                            row = new Dictionary<string, object> { { "name", file }, { "elements", 0 }, { "cats", new Dictionary<string, int>() },
+                                { "lo", new double[] { double.MaxValue, double.MaxValue, double.MaxValue } }, { "hi", new double[] { double.MinValue, double.MinValue, double.MinValue } } };
+                            perFile[file] = row;
+                        }
+                        row["elements"] = (int)row["elements"] + 1;
+                        var cat = Convert.ToString(info["category"]);
                         if (cat.Length == 0) cat = "(sin categoría)";
+                        var cats = (Dictionary<string, int>)row["cats"];
                         cats[cat] = cats.TryGetValue(cat, out var n) ? n + 1 : 1;
+                        try
+                        {
+                            var bb = instance.BoundingBox();
+                            var lo = (double[])row["lo"]; var hi = (double[])row["hi"];
+                            lo[0] = Math.Min(lo[0], bb.Min.X * uf); lo[1] = Math.Min(lo[1], bb.Min.Y * uf); lo[2] = Math.Min(lo[2], bb.Min.Z * uf);
+                            hi[0] = Math.Max(hi[0], bb.Max.X * uf); hi[1] = Math.Max(hi[1], bb.Max.Y * uf); hi[2] = Math.Max(hi[2], bb.Max.Z * uf);
+                        }
+                        catch { }
                     }
-                    var top = cats.OrderByDescending(kv => kv.Value).Take(12).ToDictionary(kv => kv.Key, kv => (object)kv.Value);
-                    object bboxOut = null;
-                    try
-                    {
-                        var rb = m.RootItem.BoundingBox();
-                        double uf = UnitFactor(d);
-                        bboxOut = new object[] {
-                            new object[] { Math.Round(rb.Min.X * uf, 3), Math.Round(rb.Min.Y * uf, 3), Math.Round(rb.Min.Z * uf, 3) },
-                            new object[] { Math.Round(rb.Max.X * uf, 3), Math.Round(rb.Max.Y * uf, 3), Math.Round(rb.Max.Z * uf, 3) } };
-                    }
-                    catch { }
-                    return new Dictionary<string, object> { { "name", name }, { "elements", count }, { "categories", top }, { "bbox", bboxOut }, { "units", Convert.ToString(d.Units) } };
-                }, 300000);  // one model per slice: a federated NWD rarely has more than a handful
-                if (slice != null) models.Add(slice);
+                    return perFile.Values.ToList();
+                }, 300000);
+                if (slice == null) continue;
+                foreach (var row in slice)
+                {
+                    var file = Convert.ToString(row["name"]);
+                    Dictionary<string, object> acc;
+                    if (!byFile.TryGetValue(file, out acc)) { byFile[file] = row; order.Add(file); continue; }
+                    acc["elements"] = (int)acc["elements"] + (int)row["elements"];
+                    var ac = (Dictionary<string, int>)acc["cats"];
+                    foreach (var kv in (Dictionary<string, int>)row["cats"]) ac[kv.Key] = ac.TryGetValue(kv.Key, out var n) ? n + kv.Value : kv.Value;
+                }
+            }
+            var models = new List<object>();
+            foreach (var file in order)
+            {
+                var row = byFile[file];
+                var top = ((Dictionary<string, int>)row["cats"]).OrderByDescending(kv => kv.Value).Take(12).ToDictionary(kv => kv.Key, kv => (object)kv.Value);
+                var lo = (double[])row["lo"]; var hi = (double[])row["hi"];
+                object bbox = null;
+                if (lo[0] != double.MaxValue)
+                    bbox = new object[] { new object[] { Math.Round(lo[0], 3), Math.Round(lo[1], 3), Math.Round(lo[2], 3) },
+                                          new object[] { Math.Round(hi[0], 3), Math.Round(hi[1], 3), Math.Round(hi[2], 3) } };
+                models.Add(new Dictionary<string, object> { { "name", file }, { "elements", row["elements"] }, { "categories", top }, { "bbox", bbox } });
             }
             return new Dictionary<string, object> { { "units", "m" }, { "models", models } };
         }

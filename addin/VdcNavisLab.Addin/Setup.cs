@@ -13,12 +13,14 @@ namespace VdcNavisLab.Addin
         private const string LabFolder = "VDC Lab";
 
         // Display names a property can have, English and Spanish Navisworks. The first candidate that matches something wins.
+        // A third element "i" means the two names are Navisworks INTERNAL names, which do not change with the UI language.
         private static readonly Dictionary<string, string[][]> FieldCandidates = new Dictionary<string, string[][]>
         {
-            { "category", new[] { new[] { "Element", "Category" }, new[] { "Elemento", "Categoría" }, new[] { "Item", "Name" }, new[] { "Elemento", "Nombre" } } },
-            { "family", new[] { new[] { "Element", "Family" }, new[] { "Elemento", "Familia" } } },
-            { "level", new[] { new[] { "Element", "Level" }, new[] { "Elemento", "Nivel" }, new[] { "Elemento", "Capa" }, new[] { "Element", "Layer" } } },
-            { "name", new[] { new[] { "Item", "Name" }, new[] { "Elemento", "Nombre" } } },
+            { "model", new[] { new[] { "LcOaNode", "LcOaNodeSourceFile", "i" } } },
+            { "level", new[] { new[] { "LcOaNode", "LcOaNodeLayer", "i" }, new[] { "Element", "Level" }, new[] { "Elemento", "Nivel" } } },
+            { "category", new[] { new[] { "Element", "Category" }, new[] { "Elemento", "Categoría" }, new[] { "LcOaNode", "LcOaSceneBaseUserName", "i" } } },
+            { "family", new[] { new[] { "Element", "Family" }, new[] { "Elemento", "Familia" }, new[] { "LcOaNode", "LcOaSceneBaseUserName", "i" } } },
+            { "name", new[] { new[] { "LcOaNode", "LcOaSceneBaseUserName", "i" } } },
             { "system", new[] { new[] { "Element", "System Name" }, new[] { "Elemento", "Nombre del sistema" } } },
         };
 
@@ -34,12 +36,48 @@ namespace VdcNavisLab.Addin
             return folder;
         }
 
+        /// <summary>The tree nodes that are source files, by file name: the loaded models themselves and, in a federated
+        /// NWD, the .rvt/.nwc nodes inside the single loaded model (searched a few levels down, never into the elements).</summary>
+        private static Dictionary<string, List<ModelItem>> FileNodes(Document d)
+        {
+            var map = new Dictionary<string, List<ModelItem>>(StringComparer.OrdinalIgnoreCase);
+            Action<string, ModelItem> add = (name, node) =>
+            {
+                List<ModelItem> list;
+                if (!map.TryGetValue(name, out list)) { list = new List<ModelItem>(); map[name] = list; }
+                list.Add(node);
+            };
+            foreach (var m in d.Models)
+            {
+                var own = System.IO.Path.GetFileName(m.FileName ?? "");
+                if (own.Length > 0) add(own, m.RootItem);
+                var frontier = new List<ModelItem> { m.RootItem };
+                for (int depth = 0; depth < 4 && frontier.Count > 0; depth++)
+                {
+                    var next = new List<ModelItem>();
+                    foreach (var node in frontier)
+                        foreach (var child in node.Children)
+                        {
+                            var n = child.DisplayName ?? "";
+                            var l = n.ToLowerInvariant();
+                            if (FileExtensions.Any(e => l.EndsWith(e))) add(n, child);
+                            else next.Add(child);
+                        }
+                    frontier = next;
+                }
+            }
+            return map;
+        }
+
         private static List<ModelItem> RootsOf(Document d, IEnumerable<string> files)
         {
-            var wanted = new HashSet<string>(files, StringComparer.OrdinalIgnoreCase);
+            var map = FileNodes(d);
             var roots = new List<ModelItem>();
-            foreach (var m in d.Models)
-                if (wanted.Contains(System.IO.Path.GetFileName(m.FileName ?? ""))) roots.Add(m.RootItem);
+            foreach (var f in files)
+            {
+                List<ModelItem> nodes;
+                if (map.TryGetValue(f, out nodes)) roots.AddRange(nodes);
+            }
             return roots;
         }
 
@@ -50,9 +88,9 @@ namespace VdcNavisLab.Addin
             return c;
         }
 
-        private static SearchCondition Condition(string category, string property, string op, string value)
+        private static SearchCondition Condition(string category, string property, string op, string value, bool internalNames)
         {
-            var c = SearchCondition.HasPropertyByDisplayName(category, property);
+            var c = internalNames ? SearchCondition.HasPropertyByName(category, property) : SearchCondition.HasPropertyByDisplayName(category, property);
             switch (op)
             {
                 case "contains": return c.DisplayStringContains(value);
@@ -83,21 +121,23 @@ namespace VdcNavisLab.Addin
             var cat = c.ContainsKey("category") ? Convert.ToString(c["category"]) : "";
             var prop = c.ContainsKey("property") ? Convert.ToString(c["property"]) : "";
             var candidates = new List<string[]>();
-            if (cat.Length > 0 && prop.Length > 0) candidates.Add(new[] { cat, prop });
+            var explicitInternal = c.ContainsKey("internal") && Convert.ToString(c["internal"]).ToLowerInvariant() == "true";
+            if (cat.Length > 0 && prop.Length > 0) candidates.Add(explicitInternal ? new[] { cat, prop, "i" } : new[] { cat, prop });
             else
             {
                 var field = c.ContainsKey("field") ? Convert.ToString(c["field"]) : "";
                 string[][] list;
                 if (FieldCandidates.TryGetValue(field, out list)) candidates.AddRange(list);
-                else throw new RpcException("invalid_params", "a criterion needs category and property, or a field in category|family|level|name|system");
+                else throw new RpcException("invalid_params", "a criterion needs category and property, or a field in model|category|family|level|name|system");
             }
             foreach (var cand in candidates)
             {
                 var test = NewSearch(d);
                 SearchCondition cond;
-                try { cond = Condition(cand[0], cand[1], op, value); test.SearchConditions.Add(cond); }
+                var isInternal = cand.Length > 2;
+                try { cond = Condition(cand[0], cand[1], op, value, isInternal); test.SearchConditions.Add(cond); }
                 catch { continue; }
-                if (CountMatches(d, test) > 0) { used = cand[0] + "/" + cand[1]; return Condition(cand[0], cand[1], op, value); }
+                if (CountMatches(d, test) > 0) { used = cand[0] + "/" + cand[1]; return Condition(cand[0], cand[1], op, value, isInternal); }
             }
             used = "";
             return null;
@@ -136,6 +176,11 @@ namespace VdcNavisLab.Addin
 
         /// <summary>Property categories and names of one item (the current selection, or the first leaf of the first
         /// model), so a person can write a search criterion without guessing the localised names.</summary>
+        private static readonly string[] NoisyCategories = { "LcOaMaterial", "LcRevitMaterialProperties", "LcOaProteinMaterialAttribute", "LcOpGeometryProperty", "LcOdpTimeLinerProperty" };
+
+        /// <summary>Property categories and names of one item (the current selection, or the first element of the first
+        /// model), so a person can write a search criterion without guessing the localised names. Material and geometry
+        /// categories and empty properties are left out: they run to hundreds of rows and are never searched.</summary>
         public object PropsSample(Dictionary<string, object> p)
         {
             return UiThread.Run<object>(() =>
@@ -146,19 +191,25 @@ namespace VdcNavisLab.Addin
                 {
                     var m = d.Models.FirstOrDefault();
                     if (m == null) throw new RpcException("no_document", "the document has no models");
-                    item = m.RootItem.DescendantsAndSelf.FirstOrDefault(x => !x.Children.Any());
+                    var leaf = m.RootItem.DescendantsAndSelf.FirstOrDefault(x => !x.Children.Any());
+                    item = leaf != null && leaf.Parent != null ? leaf.Parent : leaf;  // the instance carries the Revit properties
                 }
                 var cats = new List<object>();
                 foreach (var cat in item.PropertyCategories)
                 {
+                    if (NoisyCategories.Any(n => string.Equals(cat.Name, n, StringComparison.OrdinalIgnoreCase))) continue;
                     var props = new List<object>();
                     foreach (var pr in cat.Properties)
                     {
                         string v; try { v = pr.Value.ToDisplayString(); } catch { v = ""; }
+                        if (v.Length == 0) continue;
                         if (v.Length > 80) v = v.Substring(0, 80);
                         props.Add(new Dictionary<string, object> { { "name", pr.DisplayName }, { "internal", pr.Name }, { "value", v } });
+                        if (props.Count >= 40) break;
                     }
+                    if (props.Count == 0) continue;
                     cats.Add(new Dictionary<string, object> { { "category", cat.DisplayName }, { "internal", cat.Name }, { "properties", props } });
+                    if (cats.Count >= 10) break;
                 }
                 return new Dictionary<string, object> { { "item", item.DisplayName }, { "from_selection", d.CurrentSelection.SelectedItems.Count > 0 }, { "categories", cats } };
             }, 60000);
