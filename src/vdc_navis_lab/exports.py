@@ -73,6 +73,44 @@ def to_markdown(result: AnalysisResult, profile: Profile, limit: int = 25) -> st
     return "\n".join(lines)
 
 
+def to_handoff(result: AnalysisResult, profile: Profile) -> bytes:
+    """One row per element that has to change, grouped by the model (file) of whoever authors it.
+
+    For the author: open that model, find the element by level, family and type, or by its authoring Id when the
+    Navisworks export carries one (it depends on how the NWC was exported), and apply the action. The coordinates are
+    the issue's centre in model units. CSV with a BOM, formula-safe, ready for Excel or Power BI."""
+    lang = result.lang
+    es = lang == "es"
+    decision_of = {iid: d.id for d in result.decisions for iid in d.issue_ids}
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["modelo_a_editar" if es else "model_to_edit", "prioridad" if es else "priority", "decision",
+                "problema" if es else "issue", "responsable" if es else "responsible",
+                "nivel" if es else "level", "categoria" if es else "category", "familia_tipo" if es else "family_type",
+                "id_autoria" if es else "authoring_id", "id_navisworks" if es else "navisworks_id",
+                "con_el_que_choca" if es else "clashes_with", "x", "y", "z",
+                "accion" if es else "action", "pruebas" if es else "tests"])
+    rows = []
+    for i in result.issues:
+        seen: set[str] = set()
+        action = action_text(i, profile, lang)
+        tests = ";".join(sorted({c.test for c in i.clashes}))
+        for c in i.clashes:
+            for mine, other in ((c.a, c.b), (c.b, c.a)):
+                if mine.discipline != i.responsible or mine.id in seen:
+                    continue
+                seen.add(mine.id)
+                rows.append([mine.model, texts.PRIORITY[lang][i.priority], decision_of.get(i.id, ""), i.id,
+                             profile.label(i.responsible, lang), mine.level or i.level, mine.category, mine.name,
+                             mine.props.get("Id", ""), mine.id, f"{other.model}: {other.name}",
+                             round(i.centroid[0], 3), round(i.centroid[1], 3), round(i.centroid[2], 3), action, tests])
+    order = {texts.PRIORITY[lang][p]: n for n, p in enumerate(PRIORITY_COLORS)}
+    rows.sort(key=lambda r: (r[0], order.get(r[1], 9), r[3]))
+    for r in rows:
+        w.writerow([csv_cell(v) for v in r])
+    return ("\ufeff" + buf.getvalue()).encode("utf-8")
+
+
 PRIORITY_COLORS = {"critical": "#C62828", "high": "#E8710A", "medium": "#C79100", "low": "#2E7D32"}
 
 

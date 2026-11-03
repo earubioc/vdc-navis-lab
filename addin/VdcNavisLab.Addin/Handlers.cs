@@ -785,6 +785,13 @@ namespace VdcNavisLab.Addin
             return null;
         }
 
+        private static SavedItem FindChild(GroupItem parent, string name)
+        {
+            foreach (SavedItem child in parent.Children)
+                if (child.DisplayName == name) return child;
+            return null;
+        }
+
         public object ClashApply(Dictionary<string, object> p)
         {
             return UiThread.Run<object>(() =>
@@ -1007,11 +1014,64 @@ namespace VdcNavisLab.Addin
                     }
                 }
 
+                // Selection sets: one static set per entry, inside the folder "VDC Lab" (created on demand). An existing set with
+                // the same name is reused, never overwritten, so a coordinator's own edits survive a second run.
+                var setsArg = p.ContainsKey("sets") ? p["sets"] as System.Collections.ArrayList : null;
+                int setsAdded = 0, setsReused = 0, verifiedSets = 0;
+                if (setsArg != null && setsArg.Count > 0)
+                {
+                    var ss = d.SelectionSets;
+                    var folder = FindChild(ss.RootItem, "VDC Lab") as GroupItem;
+                    if (folder == null)
+                    {
+                        try
+                        {
+                            ss.AddCopy(new FolderItem { DisplayName = "VDC Lab" });
+                            folder = FindChild(ss.RootItem, "VDC Lab") as GroupItem;
+                        }
+                        catch (Exception ex) { Log.Write("clash.apply set folder failed: " + ex.GetType().Name + ": " + ex.Message); }
+                    }
+                    foreach (var so in setsArg)
+                    {
+                        var sd = (Dictionary<string, object>)so;
+                        var name = Convert.ToString(sd["name"]);
+                        var guids = Strings(sd["guids"]);
+                        try
+                        {
+                            var parent = folder ?? (GroupItem)ss.RootItem;
+                            if (FindChild(parent, name) != null) setsReused++;
+                            else
+                            {
+                                var items = new List<ModelItem>();
+                                foreach (var g in guids)
+                                {
+                                    ClashResult r;
+                                    if (byGuid.TryGetValue(g, out r)) AddItems(r, items);
+                                    else missing.Add(g);
+                                }
+                                if (items.Count == 0) { missing.AddRange(guids); continue; }
+                                var coll = new ModelItemCollection();
+                                coll.AddRange(items);
+                                var set = new SelectionSet(coll) { DisplayName = name };
+                                ss.AddCopy(parent, set);
+                                setsAdded++;
+                            }
+                            var live = FindChild(folder ?? (GroupItem)ss.RootItem, name) as SelectionSet;
+                            if (live != null && live.HasExplicitModelItems && live.ExplicitModelItems.Count > 0) verifiedSets++;
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Write("clash.apply set '" + name + "' failed: " + ex.GetType().Name + ": " + ex.Message);
+                            missing.AddRange(guids);
+                        }
+                    }
+                }
+
                 int verifiedGroups = groupChecks.Count(kv => kv.Value.All(g => byGuid[g].Parent != null && byGuid[g].Parent.Guid == kv.Key));
                 var result = new Dictionary<string, object>
                 {
-                    { "applied", new Dictionary<string, object> { { "groups_added", groupsAdded }, { "groups_reused", groupsReused }, { "statuses_set", statusesSet }, { "viewpoints_added", viewpointsAdded }, { "viewpoints_reused", viewpointsReused } } },
-                    { "verified", new Dictionary<string, object> { { "groups", verifiedGroups }, { "statuses", verifiedStatuses }, { "viewpoints", verifiedViewpoints } } },
+                    { "applied", new Dictionary<string, object> { { "groups_added", groupsAdded }, { "groups_reused", groupsReused }, { "statuses_set", statusesSet }, { "viewpoints_added", viewpointsAdded }, { "viewpoints_reused", viewpointsReused }, { "sets_added", setsAdded }, { "sets_reused", setsReused } } },
+                    { "verified", new Dictionary<string, object> { { "groups", verifiedGroups }, { "statuses", verifiedStatuses }, { "viewpoints", verifiedViewpoints }, { "sets", verifiedSets } } },
                     { "missing", missing.Distinct().OrderBy(x => x, StringComparer.Ordinal).ToList() }
                 };
                 if (key.Length > 0) lock (_appliedGate) { _applied[key] = result; }

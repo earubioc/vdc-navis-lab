@@ -169,6 +169,7 @@ def test_report_files_and_inline(app, tmp_path):
     with pytest.raises(ToolFault):
         app.report("csv", "../../escape.csv", True, 25, None)
     assert app.report("bcf", "tower.bcf", False, 25, None)["bytes"] > 100
+    assert app.report("handoff", "tower-handoff.csv", False, 25, None)["bytes"] > 100
     pdf_out = app.report("pdf", "tower.pdf", False, 25, None)
     assert pdf_out["bytes"] > 1000 and pdf_out["path"].endswith("tower.pdf")
     assert app.report("plan", "", False, 5, None)["packages"]
@@ -273,3 +274,17 @@ def test_view_needs_the_live_document(app, sim):
     with pytest.raises(ToolFault) as exc:
         app.view("color", None, True)
     assert exc.value.code == "stale_document"
+
+
+def test_selection_sets_per_issue_or_merged_go_through_a_plan(app, sim):
+    live(app)
+    preview = app.apply([{"op": "set", "issues": "top:3"},
+                         {"op": "set", "issues": {"priority": "critical"}, "name": "Críticos"}], "", True)
+    ops = preview["ops"]
+    assert ops[0]["sets"] == 3 and ops[1]["sets"] == 1 and ops[1]["sample"] == ["Críticos"]
+    assert not sim.sets, "a dry run changes nothing"
+    done = app.apply(None, preview["plan_id"], False)
+    assert done["state"] == "completed" and done["requested"]["sets"] == 4 and done["verified"]["sets"] == 4
+    assert "Críticos" in sim.sets and len(sim.sets) == 4
+    again = app.apply([{"op": "set", "issues": "top:3"}], "", True)
+    assert app.apply(None, again["plan_id"], False)["applied"]["sets_reused"] == 3

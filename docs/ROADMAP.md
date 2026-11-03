@@ -19,9 +19,11 @@ Every other method in `docs/PROTOCOL.md` is implemented and confirmed against a 
 - **PDF report (v0.4):** `nw_report(kind="pdf")`, a small PDF writer with no dependencies (A4, Helvetica, tables, priority bar); tried on the real model export (8 pages, 183 issues).
 - **View tools (v0.4):** `nw_view` selects an issue and frames it, colours the model by priority and resets, through `view.select`, `view.color` and `view.reset` in the add-in; compiled against the real Navisworks 2026 assemblies, pending the first live confirmation.
 
+- **Author hand-off and selection sets (v0.5):** `nw_report(kind="handoff")` and `nw_apply` op `set`; the hand-off was generated from the real model's export, the sets still have to be run in Navisworks.
+
 ## Capabilities under consideration
 
-- Search sets from a query, to reuse a selection in Navisworks.
+- Search sets built from a query (dynamic, by discipline) and clash tests created from the discipline matrix.
 - Rule-based clash test creation from the discipline matrix.
 - Narrative report for a coordination meeting.
 - Cross-project learning of which crossings are usually accepted.

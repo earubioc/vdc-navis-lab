@@ -59,6 +59,7 @@ class Plan:
     statuses: list[dict[str, Any]]
     viewpoints: list[dict[str, Any]]
     preview: dict[str, Any]
+    sets: list[dict[str, Any]] = field(default_factory=list)
     executed: bool = False
 
 
@@ -394,16 +395,18 @@ class App:
             return {"packages": work_packages(r, self.profile)[:limit]}
         if kind == "markdown" and not path:
             return {"markdown": exports.to_markdown(r, self.profile, min(limit, 50))}
-        ext = {"markdown": "md", "csv": "csv", "bcf": "bcf", "json": "json", "pdf": "pdf"}.get(kind)
+        ext = {"markdown": "md", "csv": "csv", "bcf": "bcf", "json": "json", "pdf": "pdf", "handoff": "csv"}.get(kind)
         if ext is None:
-            raise ToolFault(INVALID_PARAMS, "kind must be summary, matrix, hotspots, plan, markdown, csv, bcf, json, pdf or image")
-        target = _output(path, f"vdc-navis-lab-{r.analysis_id}.{ext}", overwrite)
+            raise ToolFault(INVALID_PARAMS, "kind must be summary, matrix, hotspots, plan, markdown, csv, bcf, json, pdf, handoff or image")
+        target = _output(path, f"vdc-navis-lab-{r.analysis_id}{'-handoff' if kind == 'handoff' else ''}.{ext}", overwrite)
         if kind == "markdown":
             data = exports.to_markdown(r, self.profile, min(limit, 500)).encode("utf-8")
         elif kind == "csv":
             data = exports.to_csv(r, self.profile)
         elif kind == "bcf":
             data = exports.to_bcf(r, self.profile, limit)
+        elif kind == "handoff":
+            data = exports.to_handoff(r, self.profile)
         elif kind == "pdf":
             data = exports.to_pdf(r, self.profile, limit if limit != 25 else 40)
         else:
@@ -538,12 +541,13 @@ class App:
         groups: list[dict[str, Any]] = []
         statuses: list[dict[str, Any]] = []
         viewpoints: list[dict[str, Any]] = []
+        sets: list[dict[str, Any]] = []
         preview_ops = []
         issues_seen: set[str] = set()
         clashes_total = 0
         for op in ops:
             kind = op.get("op") if isinstance(op, dict) else None
-            members = self._select(op.get("issues"), r) if kind in ("group", "status", "viewpoint") else None
+            members = self._select(op.get("issues"), r) if kind in ("group", "status", "viewpoint", "set") else None
             if kind == "group":
                 names = []
                 for i in members:
@@ -574,14 +578,27 @@ class App:
                     names.append(name)
                     issues_seen.add(i.id)
                 preview_ops.append({"op": "viewpoint", "issues": len(members), "sample": names[:4]})
+            elif kind == "set":
+                merged = str(op.get("name") or "").strip()
+                if merged:  # one set holding the elements of every chosen issue
+                    sets.append({"name": merged[:120], "guids": [c.id for i in members for c in i.clashes]})
+                    names = [merged]
+                else:
+                    names = []
+                    for i in members:
+                        name = _group_name(i, self.profile, r.lang)
+                        sets.append({"name": name, "guids": [c.id for c in i.clashes]})
+                        names.append(name)
+                issues_seen.update(i.id for i in members)
+                preview_ops.append({"op": "set", "issues": len(members), "sets": len(names), "sample": names[:4]})
             else:
-                raise ToolFault(INVALID_PARAMS, "each op needs op='group', op='status' or op='viewpoint'")
+                raise ToolFault(INVALID_PARAMS, "each op needs op='group', op='status', op='viewpoint' or op='set'")
         if len(issues_seen) > MAX_PLAN_ISSUES or clashes_total > MAX_PLAN_CLASHES:
             raise ToolFault("plan_too_large", f"limit is {MAX_PLAN_ISSUES} issues and {MAX_PLAN_CLASHES} clashes per plan",
                             "split the work into several plans")
         plan = Plan(id=f"P-{uuid.uuid4().hex[:8]}", analysis_id=r.analysis_id, instance_id=self.analysis_instance,
                     fingerprint=str(doc.get("fingerprint")), revision=self.seen_revision, created=time.time(),
-                    groups=groups, statuses=statuses, viewpoints=viewpoints,
+                    groups=groups, statuses=statuses, viewpoints=viewpoints, sets=sets,
                     preview={"ops": preview_ops, "issues": len(issues_seen), "clashes": clashes_total})
         self.plans[plan.id] = plan
         return {"plan_id": plan.id, "dry_run": True, "document": doc.get("title"), "expires_in_s": PLAN_TTL,
@@ -607,19 +624,24 @@ class App:
             raise ToolFault(STALE_DOCUMENT, "the document changed since the plan was made", "plan again")
         res = self.bridge.call_at(ep, "clash.apply", {
             "if_fingerprint": plan.fingerprint, "dedupe_key": plan.id,
-            "groups": plan.groups, "statuses": plan.statuses, "viewpoints": plan.viewpoints})
+            "groups": plan.groups, "statuses": plan.statuses, "viewpoints": plan.viewpoints,
+            "sets": plan.sets})
         plan.executed = True
         verified, applied = res.get("verified", {}), res.get("applied", {})
         want_groups, want_status = len(plan.groups), sum(len(s["guids"]) for s in plan.statuses)
         want_viewpoints = len(plan.viewpoints)
+        want_sets = len(plan.sets)
         ok = (verified.get("groups", 0) == want_groups and verified.get("statuses", 0) == want_status
-              and verified.get("viewpoints", 0) == want_viewpoints and not res.get("missing"))
+              and verified.get("viewpoints", 0) == want_viewpoints and verified.get("sets", 0) == want_sets
+              and not res.get("missing"))
         state = "completed" if ok else (
-            "failed" if not (verified.get("groups") or verified.get("statuses") or verified.get("viewpoints")) else "partial")
+            "failed" if not (verified.get("groups") or verified.get("statuses") or verified.get("viewpoints")
+                         or verified.get("sets")) else "partial")
         live = self.bridge.call_at(ep, "hello")
         self.seen_revision = str((live.get("doc") or {}).get("revision", ""))  # our own change is not staleness
         out = {"state": state,
-               "requested": {"groups": want_groups, "statuses": want_status, "viewpoints": want_viewpoints},
+               "requested": {"groups": want_groups, "statuses": want_status, "viewpoints": want_viewpoints,
+                             "sets": want_sets},
                "applied": applied, "verified": verified, "missing": res.get("missing", [])[:10]}
         if plan.statuses:
             out["hint"] = "statuses changed in the document: run nw_analyze again to refresh the ranking"

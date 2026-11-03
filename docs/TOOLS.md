@@ -34,7 +34,7 @@ All tools return JSON. Failures come back as `{"error": code, "detail": ..., "hi
 
 ## Output
 
-**`nw_report(kind, path, overwrite, limit, lang, issue)`** `summary`, `matrix`, `hotspots`, `plan` come back inline. `markdown` is inline unless `path` is given. `csv`, `bcf` (BCF 2.1), `pdf` (decisions to make, who moves what, where it concentrates, top issues; no dependencies, `limit` caps the rows) and `json` write a file under an allowed output folder. `image` (needs `issue=<id>` and a live Navisworks document, not a file analysis) writes a PNG framed on that issue's representative clash.
+**`nw_report(kind, path, overwrite, limit, lang, issue)`** `summary`, `matrix`, `hotspots`, `plan` come back inline. `markdown` is inline unless `path` is given. `csv`, `bcf` (BCF 2.1), `pdf` (decisions to make, who moves what, where it concentrates, top issues; no dependencies, `limit` caps the rows) `handoff` (a CSV for the authors: one row per element to change, grouped by the model to edit, with level, family and type, authoring Id when the export has one, coordinates and action) and `json` write a file under an allowed output folder. `image` (needs `issue=<id>` and a live Navisworks document, not a file analysis) writes a PNG framed on that issue's representative clash.
 
 **`nw_snapshot(action, name, against)`** `save`, `list`, `compare`. Compares by element-pair sets; disappeared issues are `absent`, not `resolved`.
 
@@ -44,7 +44,7 @@ All tools return JSON. Failures come back as `{"error": code, "detail": ..., "hi
 
 ## Writes
 
-**`nw_apply(ops, plan_id, dry_run)`** Step 1: `ops=[{"op":"group","issues":"top:20"}, {"op":"status","issues":{"priority":"low"},"status":"reviewed"}]` returns a preview and `plan_id`. Step 2: `plan_id=..., dry_run=false` executes it and reports verified counts. Closing critical issues produces a warning in the preview.
+**`nw_apply(ops, plan_id, dry_run)`** Step 1: `ops=[{"op":"group","issues":"top:20"}, {"op":"status","issues":{"priority":"low"},"status":"reviewed"}]` returns a preview and `plan_id`. Step 2: `plan_id=..., dry_run=false` executes it and reports verified counts. `{"op":"viewpoint","issues":"top:5"}` saves viewpoints; `{"op":"set","issues":{"priority":"critical"},"name":"Críticos"}` saves one selection set (folder `VDC Lab`) with all their elements, or one set per issue when `name` is omitted. Closing critical issues produces a warning in the preview.
 
 **`nw_document(action, path, confirm, overwrite)`** `save` or `save_as`. Without `confirm` it previews; `confirm=true` works only right after a preview of the same action.
 

@@ -4,7 +4,7 @@ Clash coordination for Autodesk Navisworks Manage, exposed as an [MCP](https://m
 
 Navisworks reports thousands of raw clashes. The hard part of coordination is deciding which ones matter, which discipline has to move, and which fifty of them are the same mistake repeated on every floor. `vdc-navis-lab` does that analysis in a deterministic engine and gives the assistant a small set of tools to work with the result, instead of handing it a pile of raw rows.
 
-> **Status: v0.3, early.** The analysis engine, file ingestion, exports, the MCP server and a Navisworks simulator are implemented and tested (116 tests). The Navisworks add-in is built and verified against a real Navisworks Manage 2026: every method in the protocol works against a real document, including writes (`clash.apply`, `doc.save`), re-running tests (`clash.run`), a model census (`model.census`, `elements.query`) and an image per clash (`clash.image`). Saved viewpoints (camera on the clash, ghosted model, clashing items in red) and the beam-passage rule (from oriented boxes of the real geometry) are confirmed against a real model; issues are split by kind of crossing and modelling errors (an element running through a slab, a finish overlapping structure) are grouped into one model-update request, tried on an export of that model and still to be re-confirmed live. Tested on one real model, one installation; the beam-passage thresholds are a starting point to agree with a structural designer; a PDF report (`nw_report(kind="pdf")`, tried on the real export) and `nw_view` (select an issue, colour by priority, reset; built against the real Navisworks assemblies, to confirm live) arrive in v0.4; Navisworks 2025 is still missing. See [What is verified](#what-is-verified).
+> **Status: v0.5, beta.** Built and tested on one real model (a Revit-based federation of 654 clash results, Navisworks Manage 2026) and one installation. The analysis engine, exports, MCP server and simulator are covered by 118 automated tests; the add-in is verified against the real application for reading, analysis, grouping, statuses, saved viewpoints, images, saving and `nw_view` (select, colour by priority, reset). The beam-passage and modelling-error rules use default thresholds that a structural designer has not signed off. Selection sets and the author hand-off CSV are new in this version and only tested against the simulator and an export. Navisworks 2025 is not supported yet. See [What is verified](#what-is-verified) and [CHANGELOG.md](CHANGELOG.md).
 
 ## What it does
 
@@ -56,9 +56,9 @@ Fourteen tools, prefix `nw_`. Heavy data never enters the conversation: results 
 | Criteria | `nw_profile` |
 | Model | `nw_model`, `nw_query` |
 | Analysis | `nw_run`, `nw_analyze`, `nw_issues`, `nw_issue` |
-| Output | `nw_report` (markdown, csv, bcf, json, pdf, plan), `nw_snapshot` |
+| Output | `nw_report` (markdown, csv, bcf, json, pdf, handoff, plan, image), `nw_snapshot` |
 | View | `nw_view` (select, colour by priority, reset) |
-| Writes | `nw_apply`, `nw_document` |
+| Writes | `nw_apply` (groups, statuses, viewpoints, selection sets), `nw_document` |
 
 ## Safety defaults
 
@@ -81,6 +81,9 @@ The add-in listens on a Windows named pipe restricted to the current user. File 
 | Windows named pipe client | Verified on Windows against a real Navisworks Manage 2026 (Claude Desktop through the connector) |
 | Navisworks add-in (C#) | Verified on Navisworks Manage 2026 (net48): connection, test listing, extraction and analysis of a real 654-clash model; `clash.apply` (status, grouping) and `doc.save` (save_as) verified by re-reading the document; `clash.run` re-ran a test; `model.census`/`elements.query` returned 3798 real elements, 749 of them grouped by level; `clash.image` wrote a 1.13 MB PNG matching the native Clash Detective render |
 | Saved viewpoints, sleeve and embedded-conduit rules, beam passage from oriented boxes | Confirmed on one real model: on it, critical 35 to 15 and electrical x structure critical 15 to 2; thresholds are defaults, not a code |
+| PDF report, author hand-off CSV | Generated from the real model's export (8-page PDF, 423 element rows); the PDF also generated live through the connector |
+| `nw_view` (select an issue, colour by priority, reset) | Executed against the real application with verified results; the on-screen look was not independently checked |
+| Selection sets (`nw_apply` op `set`) | Compiled against the real Navisworks 2026 assemblies and tested on the simulator; not yet run in Navisworks |
 | Scoring weights and bands | Reasonable defaults, calibrated only on the sleeve, conduit and beam-passage components of one real model |
 
 ## Documentation

@@ -52,6 +52,7 @@ class Simulator:
         self.status: dict[str, str] = {c.id: c.status for c in self.clashset.clashes}
         self.viewpoints: dict[str, str] = {}
         self.selection: list[str] = []
+        self.sets: dict[str, set[str]] = {}
         self.colours: dict[str, str] = {}
         self.ghosted = False
         self.jobs: dict[str, dict[str, Any]] = {}
@@ -252,17 +253,30 @@ class Simulator:
                 viewpoints_added += 1
             else:
                 missing.append(guid)
+        sets_added = sets_reused = 0
+        for st in p.get("sets") or []:
+            guids = [x for x in st["guids"] if x in known]
+            missing += [x for x in st["guids"] if x not in known]
+            if st["name"] in self.sets:
+                sets_reused += 1
+            else:
+                sets_added += 1
+                self.sets[st["name"]] = set(guids)
+        verified_sets = sum(1 for st in p.get("sets") or []
+                            if {x for x in st["guids"] if x in known} <= self.sets.get(st["name"], set()))
         wanted_groups = {g["name"]: {x for x in g["guids"] if x in known} for g in p.get("groups") or []}
         verified_groups = sum(1 for n, ids in wanted_groups.items() if ids <= self.groups.get(n, set()))
         verified_status = sum(1 for s in p.get("statuses") or [] for guid in s["guids"]
                               if guid in known and self.status[guid] == s["status"])
         verified_viewpoints = sum(1 for v in p.get("viewpoints") or []
                                   if v["guid"] in known and self.viewpoints.get(v["guid"]) == v["name"])
-        if created or status_set or viewpoints_added:
+        if created or status_set or viewpoints_added or sets_added:
             self.revision += 1
         result = {"applied": {"groups_added": created, "groups_reused": reused, "statuses_set": status_set,
-                              "viewpoints_added": viewpoints_added},
-                  "verified": {"groups": verified_groups, "statuses": verified_status, "viewpoints": verified_viewpoints},
+                              "viewpoints_added": viewpoints_added,
+                              "sets_added": sets_added, "sets_reused": sets_reused},
+                  "verified": {"groups": verified_groups, "statuses": verified_status, "viewpoints": verified_viewpoints,
+                               "sets": verified_sets},
                   "missing": sorted(set(missing))}
         if key:
             self.applied[key] = result

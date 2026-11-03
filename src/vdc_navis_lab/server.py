@@ -149,7 +149,7 @@ def nw_issue(id: str, lang: str = "") -> dict[str, Any]:
 def nw_report(kind: str = "summary", path: str = "", overwrite: bool = False, limit: int = 25, lang: str = "",
               issue: str = "") -> dict[str, Any]:
     """kind: summary | matrix | hotspots | plan (work packages) return inline; markdown returns inline unless path is
-    given; csv | bcf (BCF 2.1) | pdf (readable report: decisions, who moves what, hotspots, top issues) | json (re-readable export) write a file; image (needs issue=<id> and a live
+    given; csv | bcf (BCF 2.1) | pdf (readable report: decisions, who moves what, hotspots, top issues) | handoff (CSV for the authors: one row per element to change, grouped by the model that has to be edited, with its authoring Id when the export carries one) | json (re-readable export) write a file; image (needs issue=<id> and a live
     Navisworks document, not a file analysis) writes a PNG framed on that issue's representative clash. Files go
     only under the allowed output folders (VDC_NAVIS_LAB_OUTPUT_ROOTS); a bare name lands in the default folder;
     overwrite defaults to false."""
@@ -162,7 +162,7 @@ def nw_apply(ops: list[dict[str, Any]] | None = None, plan_id: str = "", dry_run
     """Two steps. (1) ops=[{"op":"group","issues":"top:20"}, {"op":"status","issues":{"priority":"low"},"status":"reviewed"},
     {"op":"viewpoint","issues":"top:5"}] previews and returns plan_id; nothing changes. issues is a list of ids, 'top:N', or
     a filter {priority, discipline, level, limit}. 'viewpoint' saves a Navisworks viewpoint per issue (framed on its
-    representative clash), so a person can jump straight to it from the Saved Viewpoints panel. (2) plan_id=... executes it
+    representative clash), so a person can jump straight to it from the Saved Viewpoints panel. 'set' saves a selection set (folder 'VDC Lab') with the elements of each issue, or one set with all of them when name is given ({"op":"set","issues":{"priority":"critical"},"name":"Críticos"}), to reuse in Navisworks. (2) plan_id=... executes it
     against the same document and reports what was verified by re-reading. Refused if the document changed since the
     analysis."""
     return APP.apply(ops, plan_id, dry_run)

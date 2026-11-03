@@ -104,6 +104,19 @@ def test_pdf_report_is_a_valid_document_in_both_languages(result, profile):
             assert data[off:].startswith(b"%d 0 obj" % k)
 
 
+def test_handoff_lists_the_elements_each_author_has_to_change(result, profile):
+    import csv, io
+    data = exports.to_handoff(result, profile).decode("utf-8-sig")
+    rows = list(csv.DictReader(io.StringIO(data)))
+    assert rows and {"modelo_a_editar", "id_navisworks", "accion", "prioridad"} <= set(rows[0])
+    by_issue = {i.id: i for i in result.issues}
+    for r in rows:
+        issue = by_issue[r["problema"]]
+        assert r["responsable"] == profile.label(issue.responsible, "es")  # only the party that has to move
+    assert len({(r["problema"], r["id_navisworks"]) for r in rows}) == len(rows)  # one row per element and issue
+    assert "\u2014" not in data
+
+
 def test_pdf_wraps_long_words_and_breaks_pages():
     from vdc_navis_lab import pdf
     assert all(pdf.width(l, 9) <= 100.01 for l in pdf.wrap("x" * 300 + " corto", 9, 100))
