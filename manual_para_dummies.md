@@ -1,4 +1,4 @@
-# vdc-navis-lab: manual para dummies
+# VDC Navis Lab: manual para dummies
 
 Guía paso a paso para instalar vdc-navis-lab y probarlo. Cada paso dice **dónde** se escribe (qué terminal) y **qué debes ver**.
 

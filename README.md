@@ -1,8 +1,8 @@
-# vdc-navis-lab
+# VDC Navis Lab
 
 Clash coordination for Autodesk Navisworks Manage, exposed as an [MCP](https://modelcontextprotocol.io) server so any MCP-capable assistant can read, rank and act on clash results.
 
-Navisworks reports thousands of raw clashes. The hard part of coordination is deciding which ones matter, which discipline has to move, and which fifty of them are the same mistake repeated on every floor. `vdc-navis-lab` does that analysis in a deterministic engine and gives the assistant a small set of tools to work with the result, instead of handing it a pile of raw rows.
+Navisworks reports thousands of raw clashes. The hard part of coordination is deciding which ones matter, which discipline has to move, and which fifty of them are the same mistake repeated on every floor. VDC Navis Lab does that analysis in a deterministic engine and gives the assistant a small set of tools to work with the result, instead of handing it a pile of raw rows.
 
 > **Status: v0.5, beta.** Built and tested on one real model (a Revit-based federation of 654 clash results, Navisworks Manage 2026) and one installation. The analysis engine, exports, MCP server and simulator are covered by 118 automated tests; the add-in is verified against the real application for reading, analysis, grouping, statuses, saved viewpoints, images, saving and `nw_view` (select, colour by priority, reset). The beam-passage and modelling-error rules use default thresholds that a structural designer has not signed off. Selection sets and the author hand-off CSV are new in this version and only tested against the simulator and an export. Navisworks 2025 is not supported yet. See [What is verified](#what-is-verified) and [CHANGELOG.md](CHANGELOG.md).
 
@@ -97,3 +97,5 @@ The add-in listens on a Windows named pipe restricted to the current user. File 
 ## License
 
 MIT, see [LICENSE](LICENSE).
+
+VDC Navis Lab is an independent project by VDC Process Lab. It is not affiliated with, endorsed or sponsored by Autodesk. Autodesk and Navisworks are trademarks of Autodesk, Inc. The Navisworks assemblies are not included and are never redistributed: they are read from your own installation when the add-in is built.
