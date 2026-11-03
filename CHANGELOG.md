@@ -4,6 +4,7 @@
 
 - `nw_report(kind="handoff")`: a CSV for the authors, one row per element that has to change, grouped by the model that has to be edited, with level, family and type, the authoring Id when the export carries one, the issue's coordinates and the action.
 - `nw_apply` op `set`: saves selection sets (folder "VDC Lab") with the elements of each issue, or one merged set when `name` is given. Existing sets with the same name are reused. New in this version, not yet run in Navisworks.
+- Licence changed from MIT to Apache License 2.0 (with a NOTICE file); the public name is VDC Navis Lab.
 - 118 tests.
 
 ## 0.4.0

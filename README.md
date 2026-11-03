@@ -96,6 +96,6 @@ The add-in listens on a Windows named pipe restricted to the current user. File 
 
 ## License
 
-MIT, see [LICENSE](LICENSE).
+Apache License 2.0, see [LICENSE](LICENSE) and [NOTICE](NOTICE). Versions up to 0.4.0 were published under the MIT License and remain available under it.
 
 VDC Navis Lab is an independent project by VDC Process Lab. It is not affiliated with, endorsed or sponsored by Autodesk. Autodesk and Navisworks are trademarks of Autodesk, Inc. The Navisworks assemblies are not included and are never redistributed: they are read from your own installation when the add-in is built.

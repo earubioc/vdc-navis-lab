@@ -8,8 +8,8 @@ version = "0.5.0"
 description = "VDC Navis Lab: MCP server for clash coordination in Autodesk Navisworks Manage: fewer tools, offline-capable, verified writes"
 readme = "README.md"
 requires-python = ">=3.11"
-license = "MIT"
-license-files = ["LICENSE"]
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 keywords = ["navisworks", "bim", "clash-detection", "coordination", "mcp", "vdc"]
 dependencies = ["mcp>=2.0,<3"]
 
