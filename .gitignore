@@ -6,6 +6,7 @@ comparativo.md
 contexto/
 .claude/
 insumos/
+linkedin/
 *.claude.md
 
 # --- Python ---
