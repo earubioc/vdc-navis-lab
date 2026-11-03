@@ -1,7 +1,12 @@
 # Shows why the add-in may not be answering. Run it while Navisworks is open.
-#   powershell -ExecutionPolicy Bypass -File D:\IA_WORK\MCP_NAVIS\addin\check.ps1
-param([string]$Version = "2026")
+#   powershell -ExecutionPolicy Bypass -File .\addin\check.ps1 [-Version 2025]
+param([string]$Version = "")
+if (-not $Version) {
+    $cand = Get-ChildItem (Join-Path $env:APPDATA "Autodesk") -Directory -Filter "Navisworks Manage *" -ErrorAction SilentlyContinue | Where-Object { Test-Path (Join-Path $_.FullName "Plugins\VdcNavisLab") }
+    $Version = if ($cand) { ($cand | Sort-Object Name | Select-Object -Last 1).Name -replace "^Navisworks Manage ", "" } else { "2026" }
+}
 $dest = Join-Path $env:APPDATA "Autodesk\Navisworks Manage $Version\Plugins\VdcNavisLab"
+Write-Host "Version checked: Navisworks Manage $Version (use -Version to change)"
 Write-Host "--- 1. Navisworks running? ---"
 $p = Get-Process -Name Roamer -ErrorAction SilentlyContinue
 if ($p) { $p | Select-Object Id, ProcessName, MainWindowTitle | Format-Table -AutoSize } else { Write-Host "NO: Roamer.exe is not running. Open Navisworks Manage $Version." }

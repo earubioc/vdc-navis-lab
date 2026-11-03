@@ -1,6 +1,6 @@
 # Navisworks add-in
 
-**Status: reads and writes verified on Navisworks Manage 2026 (net48).** Connection, test listing and clash extraction work on a real federated NWD built from Revit exports. `clash.apply` (status, grouping) and `doc.save` (save_as) ran against a real open document and were verified by re-reading it: results come back read-only from the API, so both go through `DocumentClashTests` (`TestsEditResultStatus`, `TestsInsertCopy`, `TestsMove`) instead of setting properties directly. Not yet verified: Navisworks 2025 (its folder on the test machine had no API DLLs).
+**Status: reads and writes verified on Navisworks Manage 2026 (net48).** Connection, test listing and clash extraction work on a real federated NWD built from Revit exports. `clash.apply` (status, grouping) and `doc.save` (save_as) ran against a real open document and were verified by re-reading it: results come back read-only from the API, so both go through `DocumentClashTests` (`TestsEditResultStatus`, `TestsInsertCopy`, `TestsMove`) instead of setting properties directly. **Navisworks versions:** only Manage 2026 is verified. `build-and-install.ps1 -Version 2023|2024|2025` builds against the DLLs of that installation and installs into that version's plugin folder, but it is untested: a compile error means the add-in uses an API member that version lacks, and the log is what is needed to fix it. Simulate and Freedom are not supported (no Clash Detective API).
 
 ## What it does
 
@@ -12,11 +12,13 @@ Extraction and `clash.run` run one test per UI-thread slice, confirmed against t
 
 ## Build and install (one command)
 
-Requires the .NET SDK and the Navisworks assemblies copied to `addin\refs\2026\` (the folder is git-ignored; never commit them). Close Navisworks, then in PowerShell:
+Requires the .NET 8 SDK (internet is needed once to restore the .NET Framework 4.8 reference assemblies). The script copies the four Autodesk assemblies it needs (`Api`, `Clash`, `ComApi`, `Interop.ComApi`) from `C:\Program Files\Autodesk\Navisworks Manage <Version>` into `addin\refs\<Version>\` (git-ignored; never commit them). Close Navisworks, then in PowerShell, from the repository folder:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File D:\IA_WORK\MCP_NAVIS\addin\build-and-install.ps1
+powershell -ExecutionPolicy Bypass -File .\addin\build-and-install.ps1 -Version 2026
 ```
+
+`..\instalar.ps1` does the same for every Navisworks Manage it finds, plus the Python side. `todo.ps1 [-Version]` builds, installs, waits for you to open Navisworks and runs the live test. `check.ps1 [-Version]` shows why the add-in may not answer.
 
 It builds and copies `VdcNavisLab.dll` to `%APPDATA%\Autodesk\Navisworks Manage 2026\Plugins\VdcNavisLab\` (current user, no administrator rights), the same layout other third-party plugins use. The folder name must equal the DLL name. Then open Navisworks and run `addin\check.ps1` to see whether it loaded.
 

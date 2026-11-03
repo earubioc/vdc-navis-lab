@@ -18,6 +18,16 @@ Navisworks reports thousands of raw clashes. The hard part of coordination is de
 
 ## Quick start
 
+**Windows, one command** (installs Python side, registers Claude Desktop, builds the Navisworks add-in for each Navisworks Manage found; needs Python 3.11+ and the .NET 8 SDK):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\instalar.ps1
+```
+
+Verified on Navisworks Manage 2026. 2023 to 2025 are attempted and untested. Full guide with expected output at each step: [manual_for_dummies.md](manual_for_dummies.md).
+
+**Any platform, Python only:**
+
 Use a virtual environment, not your global Python (the `mcp` dependency pulls recent `starlette` and `websockets`, which can conflict with other tools installed globally).
 
 ```bash
@@ -30,7 +40,7 @@ vdc-navis-lab-cli analyze examples/tower-demo.json --lang en
 
 `vdc-navis-lab` itself is a stdio server meant to be launched by an MCP client; typed into a terminal it prints a note and exits (`--serve` forces it). To let a client talk to a simulated Navisworks, keep `vdc-navis-lab-cli simulate` running in another terminal.
 
-Step-by-step guides for non-programmers: [manual_para_dummies.md](manual_para_dummies.md) (es), [manual_for_dummies.md](manual_for_dummies.md) (en).
+Step-by-step guides for non-programmers (install, Navisworks versions, troubleshooting): [manual_para_dummies.md](manual_para_dummies.md) (es), [manual_for_dummies.md](manual_for_dummies.md) (en).
 
 ### Connect an assistant
 

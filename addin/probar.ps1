@@ -1,19 +1,20 @@
 # Prueba completa contra Navisworks real. Un solo comando; espera a que abras Navisworks.
-#   powershell -ExecutionPolicy Bypass -File D:\IA_WORK\MCP_NAVIS\addin\probar.ps1
+#   powershell -ExecutionPolicy Bypass -File .\addin\probar.ps1 [-Version 2026]
+param([string]$Version = "2026")
 $root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 $env:PYTHONIOENCODING = "utf-8"
 $env:PYTHONUTF8 = "1"
 $cli = Join-Path $root ".venv\Scripts\vdc-navis-lab-cli.exe"
 if (-not (Test-Path $cli)) { throw "No existe $cli. Activa el entorno e instala: pip install -e `".[dev]`"" }
-Write-Host "Esperando a Navisworks con el add-in cargado (hasta 3 minutos). Abre Navisworks Manage 2026 y un modelo."
+Write-Host "Esperando a Navisworks con el add-in cargado (hasta 3 minutos). Abre Navisworks Manage $Version y un modelo."
 $ok = $false
 for ($i = 0; $i -lt 90; $i++) {
     $pipes = [IO.Directory]::GetFiles("\\.\pipe\") | Where-Object { $_ -like "*vdc-navis-lab*" }
     if ($pipes) { $ok = $true; break }
     Start-Sleep -Seconds 2
 }
-if (-not $ok) { Write-Host "NO apareció el pipe. Navisworks no cargó el add-in."; Get-Content (Join-Path $env:LOCALAPPDATA "vdc-navis-lab\addin.log") -Tail 10 -ErrorAction SilentlyContinue; return }
+if (-not $ok) { Write-Host "NO aparecio el pipe. Navisworks no cargo el add-in (NO pipe found: Navisworks did not load the add-in)."; Get-Content (Join-Path $env:LOCALAPPDATA "vdc-navis-lab\addin.log") -Tail 10 -ErrorAction SilentlyContinue; return }
 Write-Host "Pipe encontrado: $pipes"
 Write-Host "Esperando a que haya un modelo abierto en Navisworks (hasta 3 minutos)..."
 $open = $false
