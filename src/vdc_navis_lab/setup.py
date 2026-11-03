@@ -112,7 +112,7 @@ def make_plan(app: "App", ops: list[dict[str, Any]]) -> dict[str, Any]:
                     skipped.append(code)
                     continue
                 name = f"{code} {app.profile.label(code, lang)}"
-                sets.append({"name": name, "models": files})
+                sets.append({"name": name, "files": files})
                 names.append({"name": name, "models": len(files)})
             preview.append({"op": "discipline_sets", "sets": names, **({"skipped": skipped} if skipped else {})})
         elif kind == "search_set":
@@ -144,9 +144,12 @@ def make_plan(app: "App", ops: list[dict[str, Any]]) -> dict[str, Any]:
             made = []
             for a, b in pairs:
                 name = f"{prefix}{a}-{b}"[:120]
-                tests.append({"name": name, "type": kind_t, "tolerance_m": tol_mm / 1000.0,
-                              "a": by_disc[a], "b": by_disc[b]})
-                made.append({"name": name, "a_models": len(by_disc[a]), "b_models": len(by_disc[b])})
+                a_set, b_set = f"{a} {app.profile.label(a, lang)}", f"{b} {app.profile.label(b, lang)}"
+                for code, set_name in ((a, a_set), (b, b_set)):  # a test points at its discipline sets: make sure they exist
+                    if not any(x["name"] == set_name for x in sets):
+                        sets.append({"name": set_name, "files": by_disc[code]})
+                tests.append({"name": name, "type": kind_t, "tolerance_m": tol_mm / 1000.0, "a_set": a_set, "b_set": b_set})
+                made.append({"name": name, "a_set": a_set, "b_set": b_set})
             preview.append({"op": "tests", "tests": made, **({"skipped": skipped} if skipped else {})})
         else:
             raise ToolFault_(INVALID_PARAMS, "each op needs op='discipline_sets', 'search_set' or 'tests'")

@@ -228,12 +228,15 @@ namespace VdcNavisLab.Addin
                 int setsAdded = 0, setsReused = 0, setsVerified = 0, testsAdded = 0, testsReused = 0, testsVerified = 0;
 
                 var setsArg = p.ContainsKey("sets") ? p["sets"] as System.Collections.ArrayList : null;
-                if (setsArg != null && setsArg.Count > 0)
+                var testsArg = p.ContainsKey("tests") ? p["tests"] as System.Collections.ArrayList : null;
+                GroupItem parent = (GroupItem)d.SelectionSets.RootItem;
+                if ((setsArg != null && setsArg.Count > 0) || (testsArg != null && testsArg.Count > 0))
                 {
-                    GroupItem folder = null;
-                    try { folder = LabFolderOf(d, true); }
+                    try { parent = LabFolderOf(d, true) ?? parent; }
                     catch (Exception ex) { Log.Write("setup folder failed: " + ex.GetType().Name + ": " + ex.Message); }
-                    var parent = folder ?? (GroupItem)d.SelectionSets.RootItem;
+                }
+
+                if (setsArg != null)
                     foreach (var so in setsArg)
                     {
                         var sd = (Dictionary<string, object>)so;
@@ -243,12 +246,26 @@ namespace VdcNavisLab.Addin
                             if (FindChild(parent, name) != null) setsReused++;
                             else
                             {
-                                SelectionSet set;
-                                if (sd.ContainsKey("models"))
+                                SelectionSet set = null;
+                                if (sd.ContainsKey("files"))
                                 {
-                                    var roots = RootsOf(d, Strings(sd["models"]));
-                                    if (roots.Count == 0) { missing.Add(name + ": ningún modelo coincide"); continue; }
-                                    set = new SelectionSet(Collect(roots)) { DisplayName = name };
+                                    // Dynamic: one search on the source-file property (internal names: independent of the UI language).
+                                    var files = Strings(sd["files"]);
+                                    var search = NewSearch(d);
+                                    for (int i = 0; i < files.Count; i++)
+                                    {
+                                        var cond = Condition("LcOaNode", "LcOaNodeSourceFile", "eq", files[i], true);
+                                        if (i > 0) cond = cond.StartGroup();  // groups are OR-ed
+                                        search.SearchConditions.Add(cond);
+                                    }
+                                    var n = CountMatches(d, search);
+                                    if (n > 0) { set = new SelectionSet(search) { DisplayName = name }; notes.Add(name + ": búsqueda por archivo de origen, " + n + " elementos"); }
+                                    else
+                                    {
+                                        var roots = RootsOf(d, files);  // documents whose files are loaded as separate models
+                                        if (roots.Count > 0) { set = new SelectionSet(Collect(roots)) { DisplayName = name }; notes.Add(name + ": " + roots.Count + " modelos cargados"); }
+                                    }
+                                    if (set == null) { missing.Add(name + ": ningún archivo coincide"); continue; }
                                 }
                                 else
                                 {
@@ -281,10 +298,8 @@ namespace VdcNavisLab.Addin
                             missing.Add(name + ": " + ex.GetType().Name);
                         }
                     }
-                }
 
-                var testsArg = p.ContainsKey("tests") ? p["tests"] as System.Collections.ArrayList : null;
-                if (testsArg != null && testsArg.Count > 0)
+                if (testsArg != null)
                 {
                     var edit = d.GetClash().TestsData;
                     foreach (var to in testsArg)
@@ -296,23 +311,25 @@ namespace VdcNavisLab.Addin
                             if (Tests(d).Any(t => t.DisplayName == name)) testsReused++;
                             else
                             {
-                                var a = RootsOf(d, Strings(td["a"]));
-                                var b = RootsOf(d, Strings(td["b"]));
-                                if (a.Count == 0 || b.Count == 0) { missing.Add(name + ": falta un lado del cruce en el documento"); continue; }
+                                var setA = FindChild(parent, Convert.ToString(td["a_set"]));
+                                var setB = FindChild(parent, Convert.ToString(td["b_set"]));
+                                if (setA == null || setB == null) { missing.Add(name + ": falta el conjunto de un lado (" + Convert.ToString(td["a_set"]) + " / " + Convert.ToString(td["b_set"]) + ")"); continue; }
                                 var t = new ClashTest { DisplayName = name };
                                 t.TestType = Convert.ToString(td.ContainsKey("type") ? td["type"] : "hard") == "clearance" ? ClashTestType.Clearance : ClashTestType.Hard;
                                 var tolM = td.ContainsKey("tolerance_m") ? Convert.ToDouble(td["tolerance_m"]) : 0.001;
                                 var f = UnitFactor(d);
                                 t.Tolerance = f > 0 ? tolM / f : tolM;
-                                t.SelectionA.Selection.CopyFrom(Collect(a));
-                                t.SelectionB.Selection.CopyFrom(Collect(b));
+                                var srcA = new SelectionSourceCollection(); srcA.Add(d.SelectionSets.CreateSelectionSource(setA));
+                                var srcB = new SelectionSourceCollection(); srcB.Add(d.SelectionSets.CreateSelectionSource(setB));
+                                t.SelectionA.Selection.CopyFrom(srcA);
+                                t.SelectionB.Selection.CopyFrom(srcB);
                                 t.SelectionA.SelfIntersect = false;
                                 t.SelectionB.SelfIntersect = false;
                                 edit.TestsAddCopy(t);
                                 testsAdded++;
                             }
                             var live = Tests(d).FirstOrDefault(x => x.DisplayName == name);
-                            if (live != null && live.SelectionA.Selection.HasExplicitSelection && live.SelectionB.Selection.HasExplicitSelection) testsVerified++;
+                            if (live != null && live.SelectionA.Selection.HasSelectionSources && live.SelectionB.Selection.HasSelectionSources) testsVerified++;
                         }
                         catch (Exception ex)
                         {

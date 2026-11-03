@@ -298,8 +298,8 @@ class Simulator:
     def m_sets_list(self, p: dict) -> dict:
         rows = [{"name": n, "path": f"VDC Lab/{n}", "kind": "explicit", "items": len(ids)} for n, ids in self.sets.items()]
         for n, st in self.setup_sets.items():
-            if "models" in st:
-                rows.append({"name": n, "path": f"VDC Lab/{n}", "kind": "explicit", "items": len(st["models"])})
+            if "files" in st:
+                rows.append({"name": n, "path": f"VDC Lab/{n}", "kind": "search", "conditions": len(st["files"]), "matches": 10})
             else:
                 rows.append({"name": n, "path": f"VDC Lab/{n}", "kind": "search", "conditions": len(st["where"]), "matches": 10})
         return {"sets": rows}
@@ -319,9 +319,9 @@ class Simulator:
             if st["name"] in self.setup_sets or st["name"] in self.sets:
                 sets_reused += 1
                 continue
-            if "models" in st:
-                if not set(st["models"]) & set(self.clashset.models):
-                    missing.append(st["name"] + ": ningún modelo coincide")
+            if "files" in st:
+                if not set(st["files"]) & set(self.clashset.models):
+                    missing.append(st["name"] + ": ningún archivo coincide")
                     continue
             else:
                 if any(c.get("value") == "__none__" for c in st["where"]):
@@ -332,6 +332,9 @@ class Simulator:
         for t in p.get("tests") or []:
             if t["name"] in self.setup_tests:
                 tests_reused += 1
+                continue
+            if t["a_set"] not in self.setup_sets or t["b_set"] not in self.setup_sets:
+                missing.append(t["name"] + ": falta el conjunto de un lado")
                 continue
             self.setup_tests[t["name"]] = t
             tests_added += 1

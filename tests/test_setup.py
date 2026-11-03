@@ -24,7 +24,7 @@ def test_discipline_sets_and_tests_from_the_matrix_go_through_a_plan(app, sim):
     redo = app.setup("plan", None, again["plan_id"], False)
     assert redo["applied"]["sets_added"] == 0 and redo["applied"]["tests_reused"] == plan["tests"]
     listing = app.setup("list", None, "", True)
-    assert any(r["kind"] == "explicit" for r in listing["sets"]) and len(listing["tests"]) > plan["tests"]
+    assert any(r["kind"] == "search" for r in listing["sets"]) and len(listing["tests"]) > plan["tests"]
     with pytest.raises(ToolFault):
         app.setup("plan", None, plan["plan_id"], False)  # already executed
 
@@ -40,6 +40,9 @@ def test_tests_pairs_are_checked_and_missing_disciplines_skipped(app):
     names = [t["name"] for t in plan["ops"][0]["tests"]]
     assert names == ["VDC STR-ELE"], "reversed duplicate dropped"
     assert plan["ops"][0]["skipped"][0]["pair"] == "STR-DRN"
+    assert plan["sets"] == 2, "the tests bring their two discipline sets along"
+    only_tests = app.setup("plan", None, plan["plan_id"], False)
+    assert only_tests["state"] == "completed" and only_tests["verified"] == {"sets": 2, "tests": 1}
 
 
 def test_search_set_needs_valid_criteria(app, sim):
