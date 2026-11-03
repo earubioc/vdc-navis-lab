@@ -186,3 +186,25 @@ default = 0.5
 [causes]
 shared_element_min = 4       # one movable element involved in this many issues is one decision
 repeat_levels_min = 3        # the same detail on this many levels is one decision
+
+# --- model audit (nw_model audit=true) -------------------------------------
+
+[audit]
+max_offset_m = 2000          # a model whose centre is farther than this from the others is flagged
+max_extent_m = 5000          # a model larger than this is flagged (stray elements or wrong units)
+size_ratio = 50              # a model this many times bigger or smaller than the typical one is flagged
+
+# --- rules (nw_apply op "rules") --------------------------------------------
+# Uncomment and adapt. Each rule selects issues with `when` and applies status, group, viewpoint or set.
+# when keys: priority, pair (A-B), discipline, responsible, level, cause, limit.
+#
+# [[rules]]
+# name = "bajos revisados"
+# when = { priority = "low" }
+# status = "reviewed"
+#
+# [[rules]]
+# name = "criticos"
+# when = { priority = "critical" }
+# viewpoint = true
+# set = true

@@ -4,7 +4,7 @@ Clash coordination for Autodesk Navisworks Manage, exposed as an [MCP](https://m
 
 Navisworks reports thousands of raw clashes. The hard part of coordination is deciding which ones matter, which discipline has to move, and which fifty of them are the same mistake repeated on every floor. VDC Navis Lab does that analysis in a deterministic engine and gives the assistant a small set of tools to work with the result, instead of handing it a pile of raw rows.
 
-> **Status: v0.5, beta.** Built and tested on one real model (a Revit-based federation of 654 clash results, Navisworks Manage 2026) and one installation. The analysis engine, exports, MCP server and simulator are covered by 118 automated tests; the add-in is verified against the real application for reading, analysis, grouping, statuses, saved viewpoints, images, saving and `nw_view` (select, colour by priority, reset). The beam-passage and modelling-error rules use default thresholds that a structural designer has not signed off. Selection sets and the author hand-off CSV are new in this version and only tested against the simulator and an export. Navisworks 2025 is not supported yet. See [What is verified](#what-is-verified) and [CHANGELOG.md](CHANGELOG.md).
+> **Status: v1.0.** Built and tested on one real model (a Revit-based federation of 654 clash results, Navisworks Manage 2026) and one installation. The analysis engine, exports, MCP server and simulator are covered by 131 automated tests, and the add-in is verified against the real application for everything it does: reading, analysis, grouping (per issue and per level), statuses, saved viewpoints, selection sets, images, saving, `nw_view`, and creating discipline sets and clash tests from the matrix. The scoring weights and the beam-passage thresholds are defaults calibrated on that one model; a structural designer has not signed them off, and a second project will move them. Navisworks 2025 and 2024 are not supported yet. See [What is verified](#what-is-verified) and [CHANGELOG.md](CHANGELOG.md).
 
 ## What it does
 
@@ -48,17 +48,18 @@ Claude Code: `claude mcp add vdc-navis-lab -- vdc-navis-lab`
 
 ## Tools
 
-Fourteen tools, prefix `nw_`. Heavy data never enters the conversation: results are summaries or file paths. Details in [docs/TOOLS.md](docs/TOOLS.md).
+Sixteen tools, prefix `nw_`. Heavy data never enters the conversation: results are summaries or file paths. Details in [docs/TOOLS.md](docs/TOOLS.md).
 
 | Area | Tools |
 |---|---|
 | State | `nw_status`, `nw_connect`, `nw_job` |
 | Criteria | `nw_profile` |
-| Model | `nw_model`, `nw_query` |
+| Model | `nw_model` (census, discipline proposal, model audit), `nw_query` |
 | Analysis | `nw_run`, `nw_analyze`, `nw_issues`, `nw_issue` |
 | Output | `nw_report` (markdown, csv, bcf, json, pdf, handoff, plan, image), `nw_snapshot` |
 | View | `nw_view` (select, colour by priority, reset) |
-| Writes | `nw_apply` (groups, statuses, viewpoints, selection sets), `nw_document` |
+| Writes | `nw_apply` (groups per issue or level, statuses, viewpoints, selection sets, profile rules), `nw_document` |
+| Setup | `nw_setup` (discipline sets, search sets, clash tests from the matrix) |
 
 ## Safety defaults
 
@@ -76,14 +77,17 @@ The add-in listens on a Windows named pipe restricted to the current user. File 
 | Part | State |
 |---|---|
 | Analysis engine, profile, exports (CSV, Markdown, BCF 2.1 against the official XSD), snapshots | Tested on synthetic data |
-| MCP server over stdio, 15 tools, write flow, read-only mode | Tested end to end against the simulator |
+| MCP server over stdio, 16 tools, write flow, read-only mode | Tested end to end against the simulator |
 | Clash Detective XML ingestion | Tested on a synthetic file in the common layout; real exports vary and need field testing |
 | Windows named pipe client | Verified on Windows against a real Navisworks Manage 2026 (Claude Desktop through the connector) |
 | Navisworks add-in (C#) | Verified on Navisworks Manage 2026 (net48): connection, test listing, extraction and analysis of a real 654-clash model; `clash.apply` (status, grouping) and `doc.save` (save_as) verified by re-reading the document; `clash.run` re-ran a test; `model.census`/`elements.query` returned 3798 real elements, 749 of them grouped by level; `clash.image` wrote a 1.13 MB PNG matching the native Clash Detective render |
 | Saved viewpoints, sleeve and embedded-conduit rules, beam passage from oriented boxes | Confirmed on one real model: on it, critical 35 to 15 and electrical x structure critical 15 to 2; thresholds are defaults, not a code |
 | PDF report, author hand-off CSV | Generated from the real model's export (8-page PDF, 423 element rows); the PDF also generated live through the connector |
-| `nw_view` (select an issue, colour by priority, reset) | Executed against the real application with verified results; the on-screen look was not independently checked |
-| Selection sets (`nw_apply` op `set`) | Compiled against the real Navisworks 2026 assemblies and tested on the simulator; not yet run in Navisworks |
+| `nw_view` (select an issue, colour by priority, reset) | Executed against the real application; the colours were seen on screen (938 elements, four priorities) and `reset` restored the model |
+| Selection sets (`nw_apply` op `set`) | Run in Navisworks: 4 sets created in the folder "VDC Lab" and verified by rereading |
+| `nw_setup` (discipline sets, search set, clash tests from the matrix) | Run in Navisworks on the same model: 5 discipline search sets (by source file) and 7 tests created, verified, run and analysed (417 results, 106 issues, the same top critical issues as the tests made by hand) |
+| Group by level, profile rules | Group by level run live (12 groups, verified); rules tested through their previews |
+| Model audit (`nw_model` with `audit=true`) | Run on the real model: found one model whose box spans 4.7 million metres (elements at the origin) and one model whose file name and content disagree |
 | Scoring weights and bands | Reasonable defaults, calibrated only on the sleeve, conduit and beam-passage components of one real model |
 
 ## Documentation

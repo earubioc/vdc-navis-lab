@@ -18,7 +18,7 @@ All tools return JSON. Failures come back as `{"error": code, "detail": ..., "hi
 
 ## Model
 
-**`nw_model()`** Federation census: models, element counts, top categories, and the discipline each model looks like by name and by content, flagging disagreement.
+**`nw_model(audit)`** Federation census: each source file (also inside a federated NWD) with element count, top categories, and the discipline it looks like by name and by content, flagging disagreement. `audit=true` adds the model audit: empty or duplicated models, models without discipline, models far from the rest or in other units (thresholds in the profile's `[audit]`), and the disciplines the expected pairs need but no model provides.
 
 **`nw_query(where, group_by, limit)`** Count and sample elements. `where=[{"field":"category","op":"eq|contains|in","value":...}]`. Fields: `category`, `model`, `level`, `family`, `name`, `system`, or any property name.
 
@@ -44,10 +44,11 @@ All tools return JSON. Failures come back as `{"error": code, "detail": ..., "hi
 
 ## Writes
 
-**`nw_apply(ops, plan_id, dry_run)`** Step 1: `ops=[{"op":"group","issues":"top:20"}, {"op":"status","issues":{"priority":"low"},"status":"reviewed"}]` returns a preview and `plan_id`. Step 2: `plan_id=..., dry_run=false` executes it and reports verified counts. `{"op":"viewpoint","issues":"top:5"}` saves viewpoints; `{"op":"set","issues":{"priority":"critical"},"name":"Críticos"}` saves one selection set (folder `VDC Lab`) with all their elements, or one set per issue when `name` is omitted. Closing critical issues produces a warning in the preview.
+**`nw_apply(ops, plan_id, dry_run)`** Op `group` accepts `by`: `issue` (default), `level`, `pair` or `pair_level`, for one group per level or pair and test instead of one per issue. Op `rules` runs the `[[rules]]` of the profile (or `rules=[...]` inline, optionally `names=[...]` to pick some) as ordinary ops: each rule is `{name, when:{priority, pair, discipline, responsible, level, cause}, status | group | viewpoint | set}`. Step 1: `ops=[{"op":"group","issues":"top:20"}, {"op":"status","issues":{"priority":"low"},"status":"reviewed"}]` returns a preview and `plan_id`. Step 2: `plan_id=..., dry_run=false` executes it and reports verified counts. `{"op":"viewpoint","issues":"top:5"}` saves viewpoints; `{"op":"set","issues":{"priority":"critical"},"name":"Críticos"}` saves one selection set (folder `VDC Lab`) with all their elements, or one set per issue when `name` is omitted. Closing critical issues produces a warning in the preview.
 
 **`nw_document(action, path, confirm, overwrite)`** `save` or `save_as`. Without `confirm` it previews; `confirm=true` works only right after a preview of the same action.
 
-## Planned
+## Setup
 
-See [ROADMAP.md](ROADMAP.md): search sets, rule-based test setup, model audit.
+**`nw_setup(action, ops, plan_id, dry_run)`** Builds the coordination scaffolding. `action="plan"` (default), step 1: `ops=[{"op":"discipline_sets"}, {"op":"tests","pairs":"matrix"}, {"op":"search_set","name":"Ductos","where":[{"field":"category","op":"contains","value":"Duct"}]}]` returns a preview and `plan_id`; step 2: `plan_id=...` executes it and verifies by rereading. `discipline_sets` saves one dynamic search set per discipline (models classified like `nw_model`) in the folder "VDC Lab". `tests` creates one clash test per pair (`pairs="matrix"` uses the profile's `expected_pairs`, or a list such as `["STR-ELE"]`; `tolerance_mm`, default 1; `type` `hard` or `clearance`; `prefix`, default `VDC `) between the discipline sets, which it creates if missing; pairs with a discipline that has no model are skipped and reported. The tests are not run: call `nw_run`. `search_set` takes `where=[{field, op, value}]` with `field` in `model`, `category`, `family`, `level`, `name`, `system`, or `category` plus `property` for any property (`internal=true` to give Navisworks internal names); `op` is `eq`, `contains` or `wildcard`. A criterion that finds nothing is reported, not saved. Existing sets and tests with the same name are reused. `action="list"` shows the sets and tests of the document; `action="properties"` lists the property names and values of the selected element (or of a sample element), to write criteria.
+

@@ -1,11 +1,11 @@
 # Roadmap
 
-## Next (needed to call it usable)
+## Next (after 1.0)
 
-1. **Field-test ingestion** with real Clash Detective XML and CSV exports from different Navisworks versions and languages.
-2. **Calibrate with a structural designer.** The beam-passage thresholds (middle third, diameter of a third of the dimension, 25 and 70 degrees, which failures are high or critical) are a starting point in `[score.beam_pass]`; they are not a code. A vertical run that stops inside the beam is told apart from one that crosses it (kind `end`); columns still have no rule of their own.
-3. **A second model and Navisworks 2025.** Everything so far was measured on one federated model of one project.
-4. **Trade-specific profile overrides.** MEC files are classified as HVAC by default; some teams need their own mapping.
+1. **A second model and Navisworks 2025 and 2024.** Everything so far was measured on one federated model of one project; the add-in is built against the 2026 assemblies.
+2. **Calibrate with a structural designer.** The beam-passage thresholds (middle third, diameter of a third of the dimension, 25 and 70 degrees, which failures are high or critical) are a starting point in `[score.beam_pass]`; they are not a code. Columns still have no rule of their own.
+3. **A criteria document.** A short yes/no sheet for a structural designer, turned into profile rules, so the coordination and structural criteria both live in a file the server reads.
+4. **Prebuilt add-in and one-command installer.**
 
 Every other method in `docs/PROTOCOL.md` is implemented and confirmed against a real Navisworks document (2026-10-21 to 2026-10-23):
 
@@ -19,12 +19,12 @@ Every other method in `docs/PROTOCOL.md` is implemented and confirmed against a 
 - **PDF report (v0.4):** `nw_report(kind="pdf")`, a small PDF writer with no dependencies (A4, Helvetica, tables, priority bar); tried on the real model export (8 pages, 183 issues).
 - **View tools (v0.4):** `nw_view` selects an issue and frames it, colours the model by priority and resets, through `view.select`, `view.color` and `view.reset` in the add-in; compiled against the real Navisworks 2026 assemblies, pending the first live confirmation.
 
-- **Author hand-off and selection sets (v0.5):** `nw_report(kind="handoff")` and `nw_apply` op `set`; the hand-off was generated from the real model's export, the sets still have to be run in Navisworks.
+- **Author hand-off and selection sets (v0.5):** `nw_report(kind="handoff")` and `nw_apply` op `set`; the hand-off was generated from the real model's export and the sets were run in Navisworks in v1.0.
+- **Setup, audit, group by level and rules (v1.0):** `nw_setup` (`sets.list`, `props.sample`, `setup.apply`), `nw_model(audit=true)`, `nw_apply` `by` and `rules`; all run against the real application except the rule previews. A federated NWD reports each source file in the census.
 
 ## Capabilities under consideration
 
-- Search sets built from a query (dynamic, by discipline) and clash tests created from the discipline matrix.
-- Rule-based clash test creation from the discipline matrix.
+- Ignore rules and tolerances per pair in the generated tests; a full audit that compares units and coordinates against the project origin.
 - Narrative report for a coordination meeting.
 - Cross-project learning of which crossings are usually accepted.
 - Revit and IFC element enrichment (system, level, size) for better scoring.

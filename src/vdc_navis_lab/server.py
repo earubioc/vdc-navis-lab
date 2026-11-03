@@ -1,4 +1,4 @@
-"""MCP server: 15 tools, `nw_` prefix. Thin wrappers over service.App."""
+"""MCP server: 16 tools, `nw_` prefix. Thin wrappers over service.App."""
 
 from __future__ import annotations
 

@@ -3,7 +3,7 @@
 ```
  MCP client (any LLM)
         | stdio
- vdc_navis_lab.server      15 tools, thin wrappers, error mapping
+ vdc_navis_lab.server      16 tools, thin wrappers, error mapping
         |
  vdc_navis_lab.service     App: state, plans, jobs, snapshots
      |         |
@@ -50,5 +50,5 @@ A snapshot stores the issues of an analysis by the set of element pairs they con
 
 - **Analysis outside Navisworks.** The Navisworks API is single-threaded and runs in-process, so heavy work there freezes the user's session. The add-in only extracts and applies; scoring happens in the server.
 - **A profile file instead of code.** Criteria are data, validated on load, with a checksum shown in every report.
-- **Few tools, rich results.** Fourteen tools with actions and filters, instead of dozens of narrow ones, keep the assistant's tool list small enough to choose from reliably.
+- **Few tools, rich results.** Sixteen tools with actions and filters, instead of dozens of narrow ones, keep the assistant's tool list small enough to choose from reliably.
 - **Offline first.** Everything except live extraction and writes works from a file.

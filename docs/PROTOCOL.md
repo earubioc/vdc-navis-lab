@@ -28,6 +28,9 @@ Transport: Windows named pipe `\\.\pipe\vdc-navis-lab.<pid>` (ACL: current user 
 | `clash.image` | `clash_id`, `path` | `saved`, `path` |
 | `view.select` | `if_fingerprint`, `guids[]`, `focus?`, `ghost?` | `selected`, `clashes`, `verified`, `framed`, `ghosted`, `missing` |
 | `view.color` | `if_fingerprint`, `groups[{color, guids[]}]`, `ghost?` | `groups`, `coloured_items`, `ghosted`, `missing` |
+| `sets.list` | none | `sets[{name, path, kind, items or conditions/matches}]` (selection and search sets, folders included) |
+| `props.sample` | none | `item`, `from_selection`, `categories[{category, internal, properties[]}]` of the selected or a sample element |
+| `setup.apply` | `if_fingerprint`, `sets[]`, `tests[]` | `applied`, `verified`, `missing`, `notes`; `sets[]` is `{name, files[]}` or `{name, where[]}`, `tests[]` is `{name, type, tolerance_m, a_set, b_set}` |
 | `view.reset` | `clear_selection?` | `reset`, `selection_cleared` |
 | `job.status` / `job.result` / `job.cancel` / `job.list` | `job_id` | job state, result, or list |
 

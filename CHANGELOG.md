@@ -1,6 +1,15 @@
 # Changelog
 
-## 0.5.0 (beta)
+## 1.0.0
+
+- `nw_setup`: builds the coordination scaffolding in Navisworks through the same two-step plan as `nw_apply`. `discipline_sets` saves one dynamic search set per discipline (on the source-file property, with Navisworks internal names so it does not depend on the interface language); `tests` creates one clash test per pair of the matrix (the profile's `expected_pairs` or a list), pointing at those sets; `search_set` saves a dynamic search set from criteria (`model`, `category`, `family`, `level`, `name`, `system`, or any property). Existing sets and tests are reused, never overwritten. `action="list"` shows the sets and tests in the document and `action="properties"` lists the property names of an element.
+- `nw_model(audit=true)`: model audit. Empty or duplicated models, models without discipline, file name against content, models far from the rest or in other units (co-location), and disciplines the expected pairs need but no model provides.
+- The model census now looks inside a federated NWD and reports each source file with its box, instead of one model with the name of the NWD.
+- `nw_apply` op `group` accepts `by="level"`, `"pair"` or `"pair_level"`; op `rules` runs the profile's `[[rules]]` (or rules given inline) as ordinary group, status, viewpoint and set operations, with the same preview.
+- Selection sets (op `set`), `nw_view` and group by level confirmed in a real Navisworks Manage 2026 document.
+- 131 tests. The scoring weights and the beam-passage thresholds are defaults calibrated on one real model.
+
+## 0.5.0
 
 - `nw_report(kind="handoff")`: a CSV for the authors, one row per element that has to change, grouped by the model that has to be edited, with level, family and type, the authoring Id when the export carries one, the issue's coordinates and the action.
 - `nw_apply` op `set`: saves selection sets (folder "VDC Lab") with the elements of each issue, or one merged set when `name` is given. Existing sets with the same name are reused. New in this version, not yet run in Navisworks.
