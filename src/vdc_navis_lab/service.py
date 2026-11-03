@@ -13,17 +13,18 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from . import exports, ingest, texts, views
+from . import exports, ingest, setup as setup_ops, texts, views
 from .bridge import Bridge, BridgeError
 from .bridge.protocol import INVALID_PARAMS, NO_DOCUMENT, NOT_FOUND, STALE_DOCUMENT
 from .engine import AnalysisResult, analyze
+from .engine.audit import audit_models
 from .engine.diff import compare, snapshot_of
 from .engine.plan import hotspots, matrix, work_packages
 from .engine.pipeline import level_label
 from .engine.tagging import Tagger
 from .model import ClashSet
 from .paths import PathError, home, output_roots, resolve_output
-from .profile import PRIORITIES, Profile, ProfileError
+from .profile import PRIORITIES, Profile, ProfileError, check_rule
 
 PLAN_TTL = 30 * 60
 MAX_PLAN_ISSUES = 500
@@ -72,6 +73,7 @@ class App:
     seen_revision: str = ""
     pending_analysis: dict[str, Any] = field(default_factory=dict)
     plans: dict[str, Plan] = field(default_factory=dict)
+    setup_plans: dict[str, Any] = field(default_factory=dict)
     pending_save: dict[str, Any] = field(default_factory=dict)
 
     # ------------------------------------------------------------ helpers
@@ -231,7 +233,7 @@ class App:
         return True
 
     # ------------------------------------------------------------ nw_model / nw_query
-    def model(self) -> dict[str, Any]:
+    def model(self, audit: bool = False) -> dict[str, Any]:
         census, info, note = self.bridge.call("model.census")
         tagger = Tagger(self.profile)
         models = []
@@ -248,9 +250,12 @@ class App:
             models.append({
                 "name": m["name"], "elements": m.get("elements", 0), "main_categories": dict(list(cats.items())[:5]),
                 "by_file_name": by_file or None, "by_categories": {k: round(v, 2) for k, v in sorted(share.items(), key=lambda kv: -kv[1])[:3]},
-                "proposed": proposed, "agree": (not by_file) or by_file == by_cat,
+                "proposed": proposed, "agree": (not by_file) or by_file == by_cat, "bbox": m.get("bbox"),
             })
-        out = {"document": (info.get("doc") or {}).get("title"), "units": census.get("units", "m"), "models": models}
+        out = {"document": (info.get("doc") or {}).get("title"), "units": census.get("units", "m"),
+               "models": [{k: v for k, v in m.items() if k != "bbox"} for m in models]}
+        if audit:
+            out["audit"] = audit_models(models, self.profile, self.profile.lang)
         if note:
             out["note"] = note
         return out
@@ -496,6 +501,56 @@ class App:
                             "call nw_apply(ops=[...]) first; execution never takes raw ops")
         return self._make_plan(ops or [])
 
+    def _expand_rules(self, ops: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """op 'rules' runs the rules of the profile ([[rules]]), or the ones given inline, as ordinary group, status,
+        viewpoint and set ops. The preview shows exactly what each rule will touch."""
+        out: list[dict[str, Any]] = []
+        for op in ops:
+            if not (isinstance(op, dict) and op.get("op") == "rules"):
+                out.append(op)
+                continue
+            rules = op.get("rules")
+            if rules is None:
+                rules = self.profile.raw.get("rules", [])
+            if not isinstance(rules, list) or not rules:
+                raise ToolFault(INVALID_PARAMS, "there are no rules to run",
+                                "add [[rules]] to the profile, or pass rules=[{when:{...}, status:...}] inline")
+            only = {str(n) for n in op.get("names") or []}
+            for n, rule in enumerate(rules):
+                problems = check_rule(rule, self.profile.disciplines)
+                if problems:
+                    raise ToolFault(INVALID_PARAMS, f"rule {n + 1}: " + "; ".join(problems))
+                if only and str(rule.get("name", "")) not in only:
+                    continue
+                sel = dict(rule["when"])
+                if sel.get("pair"):
+                    sel["pair"] = str(sel["pair"]).upper()
+                if rule.get("status"):
+                    out.append({"op": "status", "issues": sel, "status": rule["status"]})
+                if rule.get("group"):
+                    out.append({"op": "group", "issues": sel, "by": rule["group"] if rule["group"] in ("level", "pair", "pair_level") else "issue"})
+                if rule.get("viewpoint"):
+                    out.append({"op": "viewpoint", "issues": sel})
+                if rule.get("set"):
+                    out.append({"op": "set", "issues": sel, "name": str(rule.get("name") or "")})
+        return out
+
+    # ------------------------------------------------------------ nw_setup
+    def setup(self, action: str, ops: list[dict[str, Any]] | None, plan_id: str, dry_run: bool) -> dict[str, Any]:
+        if action == "list":
+            return setup_ops.listing(self)
+        if action == "properties":
+            return setup_ops.properties(self)
+        if action != "plan":
+            raise ToolFault(INVALID_PARAMS, "action must be plan, list or properties")
+        if plan_id:
+            return setup_ops.execute(self, plan_id)
+        if not dry_run:
+            raise ToolFault(INVALID_PARAMS, "to execute, pass the plan_id returned by a dry run",
+                            "call nw_setup(ops=[...]) first; execution never takes raw ops")
+        self._refuse_if_read_only()
+        return setup_ops.make_plan(self, ops or [])
+
     def _select(self, selector: Any, r: AnalysisResult) -> list:
         if selector == "all":
             return list(r.issues)
@@ -518,6 +573,13 @@ class App:
                 items = [i for i in items if selector["discipline"].upper() in i.pair]
             if selector.get("level"):
                 items = [i for i in items if i.level.lower() == str(selector["level"]).lower()]
+            if selector.get("pair"):
+                want = set(str(selector["pair"]).upper().split("-"))
+                items = [i for i in items if set(i.pair) == want]
+            if selector.get("responsible"):
+                items = [i for i in items if i.responsible == str(selector["responsible"]).upper()]
+            if selector.get("cause"):
+                items = [i for i in items if str(selector["cause"]) in i.cause_ids]
             return items[: int(selector.get("limit", MAX_PLAN_ISSUES))]
         raise ToolFault(INVALID_PARAMS, "issues must be a list of ids, 'top:N', or a filter object")
 
@@ -545,18 +607,38 @@ class App:
         preview_ops = []
         issues_seen: set[str] = set()
         clashes_total = 0
+        ops = self._expand_rules(ops)
         for op in ops:
             kind = op.get("op") if isinstance(op, dict) else None
             members = self._select(op.get("issues"), r) if kind in ("group", "status", "viewpoint", "set") else None
             if kind == "group":
+                by = str(op.get("by", "issue"))
+                if by not in ("issue", "level", "pair", "pair_level"):
+                    raise ToolFault(INVALID_PARAMS, "group by must be issue, level, pair or pair_level")
                 names = []
-                for i in members:
-                    name = _group_name(i, self.profile, r.lang)
-                    groups.append({"name": name, "guids": [c.id for c in i.clashes]})
-                    names.append(name)
-                    issues_seen.add(i.id)
-                    clashes_total += len(i.clashes)
-                preview_ops.append({"op": "group", "issues": len(members), "sample": names[:4]})
+                if by == "issue":
+                    for i in members:
+                        name = _group_name(i, self.profile, r.lang)
+                        groups.append({"name": name, "guids": [c.id for c in i.clashes]})
+                        names.append(name)
+                        issues_seen.add(i.id)
+                        clashes_total += len(i.clashes)
+                else:
+                    # A Navisworks group lives under one test, so each (test, label) is its own group.
+                    buckets: dict[tuple[str, str], list[str]] = {}
+                    for i in members:
+                        no_level = "sin nivel" if r.lang == "es" else "no level"
+                        label = {"level": i.level or no_level, "pair": f"{i.pair[0]}-{i.pair[1]}",
+                                 "pair_level": f"{i.pair[0]}-{i.pair[1]} {i.level or no_level}"}[by]
+                        for c in i.clashes:
+                            buckets.setdefault((c.test, label[:110]), []).append(c.id)
+                        issues_seen.add(i.id)
+                        clashes_total += len(i.clashes)
+                    for (_test, label), guids in sorted(buckets.items()):
+                        groups.append({"name": label, "guids": guids})
+                        if label not in names:
+                            names.append(label)
+                preview_ops.append({"op": "group", "by": by, "issues": len(members), "groups": len(names), "sample": names[:4]})
             elif kind == "status":
                 st = str(op.get("status", ""))
                 if st not in SETTABLE_STATUS:

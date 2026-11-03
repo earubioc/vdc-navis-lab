@@ -27,10 +27,10 @@ def test_demo_never_touches_the_users_data_folder(tmp_path):
     assert not (tmp_path / "mine" / "snapshots").exists()
 
 
-def test_tools_lists_the_fourteen():
+def test_tools_lists_the_sixteen():
     r = run("vdc_navis_lab.cli", "tools")
     names = [line.split()[0] for line in r.stdout.splitlines()]
-    assert r.returncode == 0 and len(names) == 15 and all(n.startswith("nw_") for n in names)
+    assert r.returncode == 0 and len(names) == 16 and all(n.startswith("nw_") for n in names)
 
 
 def test_call_one_tool_and_fail_cleanly():

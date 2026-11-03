@@ -151,6 +151,8 @@ class Profile:
             parts = str(pair).split("-")
             if len(parts) != 2 or any(p not in self.disciplines for p in parts):
                 problems.append(f"expected_pairs entry {pair!r} references unknown disciplines")
+        for i, rule in enumerate(self.raw.get("rules", [])):
+            problems.extend(f"rules[{i}]: {m}" for m in check_rule(rule, self.disciplines))
         for gate in self.raw.get("score", {}).get("gates", []):
             if gate.get("floor") not in PRIORITIES:
                 problems.append(f"gate floor {gate.get('floor')!r} is not a priority")
@@ -162,3 +164,35 @@ class Profile:
             "disciplines": {c: self.label(c) for c in self.disciplines},
             "overrides": dict(self.overrides),
         }
+
+
+RULE_STATUS = ("active", "reviewed", "approved", "resolved")
+RULE_WHEN = ("priority", "pair", "discipline", "level", "cause", "responsible", "limit")
+
+
+def check_rule(rule: Any, disciplines: dict[str, Any]) -> list[str]:
+    """A rule is `{name, when: {priority, pair, discipline, level, ...}, status?, group?, viewpoint?, set?}`."""
+    if not isinstance(rule, dict):
+        return ["must be a table"]
+    problems: list[str] = []
+    when = rule.get("when")
+    if not isinstance(when, dict) or not when:
+        problems.append("needs a non-empty 'when' table")
+        when = {}
+    for key in when:
+        if key not in RULE_WHEN:
+            problems.append(f"unknown condition {key!r} (use {', '.join(RULE_WHEN)})")
+    if when.get("priority") and when["priority"] not in PRIORITIES:
+        problems.append(f"priority {when['priority']!r} is not one of {', '.join(PRIORITIES)}")
+    for key in ("discipline", "responsible"):
+        if when.get(key) and str(when[key]).upper() not in disciplines:
+            problems.append(f"{key} {when[key]!r} is not a known discipline")
+    if when.get("pair"):
+        parts = str(when["pair"]).upper().split("-")
+        if len(parts) != 2 or any(x not in disciplines for x in parts):
+            problems.append(f"pair {when['pair']!r} must name two known disciplines, as A-B")
+    if rule.get("status") and rule["status"] not in RULE_STATUS:
+        problems.append(f"status must be one of {', '.join(RULE_STATUS)}")
+    if not any(rule.get(k) for k in ("status", "group", "viewpoint", "set")):
+        problems.append("needs at least one action: status, group, viewpoint or set")
+    return problems

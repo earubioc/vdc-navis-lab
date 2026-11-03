@@ -26,7 +26,7 @@ from .protocol import (API_VERSION, BUSY, INVALID_PARAMS, NOT_FOUND, STALE_DOCUM
 from .transport import registry_dir
 
 METHODS = ["hello", "doc.info", "model.census", "elements.query", "clash.tests", "clash.run", "clash.export",
-           "clash.apply", "clash.image", "view.select", "view.color", "view.reset", "doc.save", "job.status", "job.result", "job.cancel", "job.list"]
+           "clash.apply", "clash.image", "view.select", "view.color", "view.reset", "sets.list", "props.sample", "setup.apply", "doc.save", "job.status", "job.result", "job.cancel", "job.list"]
 
 # A 1x1 transparent PNG: the simulator cannot render, so this stands in for whatever real image
 # Navisworks would have produced, just to exercise the file-writing path end to end.
@@ -53,6 +53,8 @@ class Simulator:
         self.viewpoints: dict[str, str] = {}
         self.selection: list[str] = []
         self.sets: dict[str, set[str]] = {}
+        self.setup_sets: dict[str, dict] = {}
+        self.setup_tests: dict[str, dict] = {}
         self.colours: dict[str, str] = {}
         self.ghosted = False
         self.jobs: dict[str, dict[str, Any]] = {}
@@ -154,7 +156,13 @@ class Simulator:
         for name in self.clashset.models:
             els = [e for e in self.elements if e.model == name]
             cats = Counter(e.category for e in els)
-            models.append({"name": name, "elements": len(els), "categories": dict(cats.most_common(12))})
+            bbox = None
+            if els:
+                lo = [min(e.bbox[0][i] for e in els) for i in range(3)]
+                hi = [max(e.bbox[1][i] for e in els) for i in range(3)]
+                bbox = [lo, hi]
+            models.append({"name": name, "elements": len(els), "categories": dict(cats.most_common(12)), "bbox": bbox,
+                           "units": "Meters"})
         return {"units": "m", "models": models}
 
     def m_elements_query(self, p: dict) -> dict:
@@ -186,8 +194,11 @@ class Simulator:
         return out
 
     def m_clash_tests(self, p: dict) -> list[dict]:
-        return [{**t.to_dict(), "count": sum(1 for c in self.clashset.clashes if c.test == t.name)}
+        rows = [{**t.to_dict(), "count": sum(1 for c in self.clashset.clashes if c.test == t.name)}
                 for t in self.clashset.tests]
+        rows += [{"name": n, "kind": t["type"], "status": "new", "tolerance": t["tolerance_m"], "count": 0}
+                 for n, t in self.setup_tests.items()]
+        return rows
 
     def m_clash_run(self, p: dict) -> dict:
         names = set(p.get("tests") or [t.name for t in self.clashset.tests])
@@ -230,14 +241,16 @@ class Simulator:
         known = {c.id for c in self.clashset.clashes}
         created = reused = status_set = 0
         missing: list[str] = []
+        test_of = {c.id: c.test for c in self.clashset.clashes}
+        gkey = lambda g: (test_of.get(next((x for x in g["guids"] if x in known), ""), "") + "|" + g["name"])  # a group lives under one test
         for g in p.get("groups") or []:
             guids = [x for x in g["guids"] if x in known]
             missing += [x for x in g["guids"] if x not in known]
-            if g["name"] in self.groups:
+            if gkey(g) in self.groups:
                 reused += 1
             else:
                 created += 1
-            self.groups.setdefault(g["name"], set()).update(guids)
+            self.groups.setdefault(gkey(g), set()).update(guids)
         for s in p.get("statuses") or []:
             for guid in s["guids"]:
                 if guid in known:
@@ -264,7 +277,7 @@ class Simulator:
                 self.sets[st["name"]] = set(guids)
         verified_sets = sum(1 for st in p.get("sets") or []
                             if {x for x in st["guids"] if x in known} <= self.sets.get(st["name"], set()))
-        wanted_groups = {g["name"]: {x for x in g["guids"] if x in known} for g in p.get("groups") or []}
+        wanted_groups = {gkey(g): {x for x in g["guids"] if x in known} for g in p.get("groups") or []}
         verified_groups = sum(1 for n, ids in wanted_groups.items() if ids <= self.groups.get(n, set()))
         verified_status = sum(1 for s in p.get("statuses") or [] for guid in s["guids"]
                               if guid in known and self.status[guid] == s["status"])
@@ -281,6 +294,54 @@ class Simulator:
         if key:
             self.applied[key] = result
         return result
+
+    def m_sets_list(self, p: dict) -> dict:
+        rows = [{"name": n, "path": f"VDC Lab/{n}", "kind": "explicit", "items": len(ids)} for n, ids in self.sets.items()]
+        for n, st in self.setup_sets.items():
+            if "models" in st:
+                rows.append({"name": n, "path": f"VDC Lab/{n}", "kind": "explicit", "items": len(st["models"])})
+            else:
+                rows.append({"name": n, "path": f"VDC Lab/{n}", "kind": "search", "conditions": len(st["where"]), "matches": 10})
+        return {"sets": rows}
+
+    def m_props_sample(self, p: dict) -> dict:
+        return {"item": "Conduit : sample", "from_selection": False, "categories": [
+            {"category": "Element", "internal": "LcRevitData_Element", "properties": [
+                {"name": "Category", "internal": "LcRevitPropertyElementCategory", "value": "Conduits"},
+                {"name": "Level", "internal": "LcRevitPropertyElementLevel", "value": "Level 1"}]}]}
+
+    def m_setup_apply(self, p: dict) -> dict:
+        if p.get("if_fingerprint") != self.fingerprint:
+            raise Fault(STALE_DOCUMENT, "the open document is not the one the plan was made for", "plan again")
+        missing: list[str] = []
+        sets_added = sets_reused = tests_added = tests_reused = 0
+        for st in p.get("sets") or []:
+            if st["name"] in self.setup_sets or st["name"] in self.sets:
+                sets_reused += 1
+                continue
+            if "models" in st:
+                if not set(st["models"]) & set(self.clashset.models):
+                    missing.append(st["name"] + ": ningún modelo coincide")
+                    continue
+            else:
+                if any(c.get("value") == "__none__" for c in st["where"]):
+                    missing.append(st["name"] + ": el criterio no encuentra elementos")
+                    continue
+            self.setup_sets[st["name"]] = st
+            sets_added += 1
+        for t in p.get("tests") or []:
+            if t["name"] in self.setup_tests:
+                tests_reused += 1
+                continue
+            self.setup_tests[t["name"]] = t
+            tests_added += 1
+        if sets_added or tests_added:
+            self.revision += 1
+        ok_sets = sum(1 for st in p.get("sets") or [] if st["name"] in self.setup_sets or st["name"] in self.sets)
+        ok_tests = sum(1 for t in p.get("tests") or [] if t["name"] in self.setup_tests)
+        return {"applied": {"sets_added": sets_added, "sets_reused": sets_reused, "tests_added": tests_added,
+                            "tests_reused": tests_reused},
+                "verified": {"sets": ok_sets, "tests": ok_tests}, "missing": missing, "notes": []}
 
     def m_doc_save(self, p: dict) -> dict:
         if p.get("if_fingerprint") != self.fingerprint:

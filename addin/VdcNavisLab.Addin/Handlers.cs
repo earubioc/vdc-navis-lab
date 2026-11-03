@@ -12,7 +12,7 @@ using Autodesk.Navisworks.Api.DocumentParts;
 
 namespace VdcNavisLab.Addin
 {
-    internal sealed class Handlers
+    internal sealed partial class Handlers
     {
         private static readonly DateTime Started = DateTime.UtcNow;
         private readonly string _instance = Guid.NewGuid().ToString("N").Substring(0, 8);
@@ -629,7 +629,17 @@ namespace VdcNavisLab.Addin
                         cats[cat] = cats.TryGetValue(cat, out var n) ? n + 1 : 1;
                     }
                     var top = cats.OrderByDescending(kv => kv.Value).Take(12).ToDictionary(kv => kv.Key, kv => (object)kv.Value);
-                    return new Dictionary<string, object> { { "name", name }, { "elements", count }, { "categories", top } };
+                    object bboxOut = null;
+                    try
+                    {
+                        var rb = m.RootItem.BoundingBox();
+                        double uf = UnitFactor(d);
+                        bboxOut = new object[] {
+                            new object[] { Math.Round(rb.Min.X * uf, 3), Math.Round(rb.Min.Y * uf, 3), Math.Round(rb.Min.Z * uf, 3) },
+                            new object[] { Math.Round(rb.Max.X * uf, 3), Math.Round(rb.Max.Y * uf, 3), Math.Round(rb.Max.Z * uf, 3) } };
+                    }
+                    catch { }
+                    return new Dictionary<string, object> { { "name", name }, { "elements", count }, { "categories", top }, { "bbox", bboxOut }, { "units", Convert.ToString(d.Units) } };
                 }, 300000);  // one model per slice: a federated NWD rarely has more than a handful
                 if (slice != null) models.Add(slice);
             }

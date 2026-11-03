@@ -95,10 +95,12 @@ def nw_profile(action: str = "show", path: str = "", mapping: dict[str, str] | N
 
 @mcp.tool(annotations=_ro("Federation census with discipline proposals"))
 @guarded
-def nw_model() -> dict[str, Any]:
+def nw_model(audit: bool = False) -> dict[str, Any]:
     """Models in the open federation: element counts, top categories, and the discipline each one looks like
-    (by file name and by categories, flagging disagreement). Use it before analysis to catch misclassified models."""
-    return APP.model()
+    (by file name and by categories, flagging disagreement). Use it before analysis to catch misclassified models.
+    audit=true adds a model audit: empty or duplicated models, unclassified ones, models far from the rest or in other
+    units (co-location), and disciplines the expected clash pairs need but no model provides."""
+    return APP.model(audit)
 
 
 @mcp.tool(annotations=_ro("Query and count elements"))
@@ -162,7 +164,7 @@ def nw_apply(ops: list[dict[str, Any]] | None = None, plan_id: str = "", dry_run
     """Two steps. (1) ops=[{"op":"group","issues":"top:20"}, {"op":"status","issues":{"priority":"low"},"status":"reviewed"},
     {"op":"viewpoint","issues":"top:5"}] previews and returns plan_id; nothing changes. issues is a list of ids, 'top:N', or
     a filter {priority, discipline, level, limit}. 'viewpoint' saves a Navisworks viewpoint per issue (framed on its
-    representative clash), so a person can jump straight to it from the Saved Viewpoints panel. 'set' saves a selection set (folder 'VDC Lab') with the elements of each issue, or one set with all of them when name is given ({"op":"set","issues":{"priority":"critical"},"name":"Críticos"}), to reuse in Navisworks. (2) plan_id=... executes it
+    representative clash), so a person can jump straight to it from the Saved Viewpoints panel. 'group' accepts by='issue'|'level'|'pair'|'pair_level' to group per level or pair instead of per issue. 'rules' runs the profile's [[rules]] (or inline rules=[{when:{priority,pair,discipline,level,responsible,cause}, status|group|viewpoint|set}]) as ordinary ops. 'set' saves a selection set (folder 'VDC Lab') with the elements of each issue, or one set with all of them when name is given ({"op":"set","issues":{"priority":"critical"},"name":"Críticos"}), to reuse in Navisworks. (2) plan_id=... executes it
     against the same document and reports what was verified by re-reading. Refused if the document changed since the
     analysis."""
     return APP.apply(ops, plan_id, dry_run)
@@ -178,6 +180,22 @@ def nw_view(action: str = "select", issues: str | list[str] | dict[str, Any] | N
     the elements of the chosen issues (default all) by priority: red critical, orange high, yellow medium, green low.
     action='reset' restores the original appearance (clear_selection=true also clears the selection)."""
     return APP.view(action, issues, ghost, clear_selection)
+
+
+@mcp.tool(annotations=_mutating("Create discipline sets, search sets and clash tests in Navisworks"))
+@guarded
+def nw_setup(action: str = "plan", ops: list[dict[str, Any]] | None = None, plan_id: str = "",
+             dry_run: bool = True) -> dict[str, Any]:
+    """Build the coordination scaffolding. action='plan' (default). Step 1: ops=[{"op":"discipline_sets"},
+    {"op":"tests","pairs":"matrix"}, {"op":"search_set","name":"Ductos","where":[{"field":"category","op":"contains","value":"Duct"}]}]
+    previews and returns plan_id; nothing changes. discipline_sets saves one selection set per discipline from the models
+    (classified like nw_model), in the folder 'VDC Lab'. tests creates one hard clash test per pair (pairs='matrix' uses the
+    profile's expected_pairs, or a list like ['STR-ELE']; tolerance_mm, type hard|clearance, prefix 'VDC ') between those
+    models; run them with nw_run. search_set saves a dynamic search set; where fields: category|family|level|name|system, or
+    category+property with the display names of any property. Step 2: plan_id=... executes it and verifies by rereading.
+    Existing sets and tests with the same name are reused, never overwritten. action='list' shows the sets and tests in the
+    document; action='properties' lists property names of the selected element, to write search criteria."""
+    return APP.setup(action, ops, plan_id, dry_run)
 
 
 @mcp.tool(annotations=_add("Save and compare coordination deliveries"))
@@ -205,7 +223,7 @@ a mano en una terminal.
 
 To try it by hand / para probarlo a mano:
   vdc-navis-lab-cli demo              recorrido completo contra un Navisworks simulado
-  vdc-navis-lab-cli tools             lista las 15 herramientas
+  vdc-navis-lab-cli tools             lista las 16 herramientas
   vdc-navis-lab-cli call nw_status    llama una herramienta
 To connect a client / para conectar un cliente: see manual_para_dummies.md
 To force the server in a terminal anyway: vdc-navis-lab --serve
