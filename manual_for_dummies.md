@@ -50,9 +50,9 @@ How to find out, either way:
 
 ## 4. Download the program
 
-1. Open https://github.com/earubioc/vdc-navis-lab in the browser.
-2. Green **Code** button, then **Download ZIP**.
-3. Open the downloaded ZIP and copy the folder inside (`vdc-navis-lab-main`) to `C:\VDC`. Create `C:\VDC` if it does not exist. The result is `C:\VDC\vdc-navis-lab-main`.
+1. Open https://github.com/earubioc/vdc-navis-lab/releases/latest in the browser. It is the latest published version.
+2. At the bottom of the page, under "Assets", click **Source code (zip)**.
+3. Open the downloaded ZIP and copy the folder inside to `C:\VDC`. Create `C:\VDC` if it does not exist. **Rename the folder to `vdc-navis-lab`** (the ZIP names it with the version, for example `vdc-navis-lab-1.0.1`). The result is `C:\VDC\vdc-navis-lab`.
 
 **Why there:** a short path with no spaces, accents or synced folders (OneDrive, Desktop) avoids problems. You may use another path that meets that; in this manual it is called "the program folder".
 
@@ -61,7 +61,7 @@ How to find out, either way:
 ## 5. Install, with one command
 
 1. Open the program folder in File Explorer.
-2. Click the address bar (where the path is), delete what is there, type `powershell` and press Enter. A blue PowerShell window opens **already in that folder**. (Alternative: open PowerShell and type `cd C:\VDC\vdc-navis-lab-main`.)
+2. Click the address bar (where the path is), delete what is there, type `powershell` and press Enter. A blue PowerShell window opens **already in that folder**. (Alternative: open PowerShell and type `cd C:\VDC\vdc-navis-lab`.)
 3. **Close Navisworks** if it is open.
 4. Paste and press Enter:
    ```powershell

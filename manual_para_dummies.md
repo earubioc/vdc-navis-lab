@@ -50,9 +50,9 @@ Cómo saberlo, cualquiera de las dos:
 
 ## 4. Descargar el programa
 
-1. Abre https://github.com/earubioc/vdc-navis-lab en el navegador.
-2. Botón verde **Code**, luego **Download ZIP**.
-3. Abre el ZIP descargado y copia la carpeta de adentro (`vdc-navis-lab-main`) a `C:\VDC`. Si `C:\VDC` no existe, créala. Queda `C:\VDC\vdc-navis-lab-main`.
+1. Abre https://github.com/earubioc/vdc-navis-lab/releases/latest en el navegador. Es la última versión publicada.
+2. Al final de la página, en "Assets", haz clic en **Source code (zip)**.
+3. Abre el ZIP descargado y copia la carpeta de adentro a `C:\VDC`. Si `C:\VDC` no existe, créala. **Cambia el nombre de la carpeta a `vdc-navis-lab`** (el ZIP la trae con el nombre y la versión, por ejemplo `vdc-navis-lab-1.0.1`). Queda `C:\VDC\vdc-navis-lab`.
 
 **Por qué ahí:** una ruta corta, sin espacios ni tildes ni carpetas sincronizadas (OneDrive, Escritorio) evita problemas. Puedes usar otra ruta que cumpla eso; en el manual se llama "la carpeta del programa".
 
@@ -61,7 +61,7 @@ Cómo saberlo, cualquiera de las dos:
 ## 5. Instalar, con un solo comando
 
 1. Abre la carpeta del programa en el Explorador de archivos.
-2. Haz clic en la barra de direcciones (donde dice la ruta), borra lo que hay, escribe `powershell` y pulsa Enter. Se abre una ventana azul de PowerShell **ya ubicada en esa carpeta**. (Alternativa: abre PowerShell y escribe `cd C:\VDC\vdc-navis-lab-main`.)
+2. Haz clic en la barra de direcciones (donde dice la ruta), borra lo que hay, escribe `powershell` y pulsa Enter. Se abre una ventana azul de PowerShell **ya ubicada en esa carpeta**. (Alternativa: abre PowerShell y escribe `cd C:\VDC\vdc-navis-lab`.)
 3. **Cierra Navisworks** si lo tienes abierto.
 4. Pega y pulsa Enter:
    ```powershell
