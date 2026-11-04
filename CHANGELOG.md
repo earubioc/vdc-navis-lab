@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1
+
+- Add-in: changing a clash result's status no longer references the `Assignee` type at compile time; the call picks the overload the running Navisworks has (two or three arguments). It was the only error when building against Navisworks Manage 2025. 2025 is not listed as verified until a live run confirms it.
+- Installer and manuals: `instalar.ps1`, version-aware add-in scripts and step-by-step guides in Spanish and English.
+
 ## 1.0.0
 
 - `nw_setup`: builds the coordination scaffolding in Navisworks through the same two-step plan as `nw_apply`. `discipline_sets` saves one dynamic search set per discipline (on the source-file property, with Navisworks internal names so it does not depend on the interface language); `tests` creates one clash test per pair of the matrix (the profile's `expected_pairs` or a list), pointing at those sets; `search_set` saves a dynamic search set from criteria (`model`, `category`, `family`, `level`, `name`, `system`, or any property). Existing sets and tests are reused, never overwritten. `action="list"` shows the sets and tests in the document and `action="properties"` lists the property names of an element.

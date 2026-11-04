@@ -785,6 +785,26 @@ namespace VdcNavisLab.Addin
             return list;
         }
 
+        // TestsEditResultStatus takes a third Assignee argument in Navisworks 2026 (an empty one means "no one") and
+        // only two arguments in earlier versions. Reflection keeps one source file buildable against every version.
+        private static void EditStatus(object edit, ClashResult r, ClashResultStatus status)
+        {
+            System.Reflection.MethodInfo two = null, three = null;
+            foreach (var m in edit.GetType().GetMethods())
+            {
+                if (m.Name != "TestsEditResultStatus") continue;
+                var n = m.GetParameters().Length;
+                if (n == 2) two = m; else if (n == 3) three = m;
+            }
+            if (three != null)
+            {
+                var assignee = Activator.CreateInstance(three.GetParameters()[2].ParameterType);
+                three.Invoke(edit, new object[] { r, status, assignee });
+            }
+            else if (two != null) two.Invoke(edit, new object[] { r, status });
+            else throw new MissingMethodException("DocumentClashTests.TestsEditResultStatus");
+        }
+
         private static ClashResultStatus? ParseStatus(string s)
         {
             switch (s)  // VERIFY enum names; "new" is intentionally not reachable here (server never offers it, see SETTABLE_STATUS)
@@ -947,7 +967,7 @@ namespace VdcNavisLab.Addin
                             if (!byGuid.TryGetValue(g, out r)) { missing.Add(g); continue; }
                             try
                             {
-                                edit.TestsEditResultStatus(r, want.Value, new Assignee());  // VERIFY: Assignee() means "no one"
+                                EditStatus(edit, r, want.Value);
                                 statusesSet++;
                                 if (r.Status == want.Value) verifiedStatuses++;
                             }

@@ -71,7 +71,7 @@ Cómo saberlo, cualquiera de las dos:
 
 | Bloque | Qué debes ver |
 |---|---|
-| `=== 1. Python y paquete` | `Python 3.12 (py)` (o tu versión) y, tras un rato de descargas, `Successfully installed ... vdc-navis-lab-1.0.0` |
+| `=== 1. Python y paquete` | `Python 3.12 (py)` (o tu versión) y, tras un rato de descargas, `Successfully installed ... vdc-navis-lab-1.0.1` |
 | `=== 2. Prueba sin Navisworks (demo)` | Cinco pasos numerados y al final `Listo.` |
 | `=== 3. Registrar en Claude Desktop` | `backup: ...` y `vdc-navis-lab added to ...claude_desktop_config.json` |
 | `=== 4. Add-in de Navisworks` | `Versiones de Navisworks Manage: 2025` (las que haya), la compilación, y `3/3 Done. Installed in: ...\Plugins\VdcNavisLab` |

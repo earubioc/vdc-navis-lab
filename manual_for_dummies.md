@@ -71,7 +71,7 @@ How to find out, either way:
 
 | Block | What you should see |
 |---|---|
-| `=== 1. Python and package` | `Python 3.12 (py)` (or your version) and, after some downloading, `Successfully installed ... vdc-navis-lab-1.0.0` |
+| `=== 1. Python and package` | `Python 3.12 (py)` (or your version) and, after some downloading, `Successfully installed ... vdc-navis-lab-1.0.1` |
 | `=== 2. Offline test (demo)` | Five numbered steps and at the end `Listo.` (or `Done.`) |
 | `=== 3. Register in Claude Desktop` | `backup: ...` and `vdc-navis-lab added to ...claude_desktop_config.json` |
 | `=== 4. Navisworks add-in` | `Navisworks Manage versions: 2025` (whatever is installed), the build, and `3/3 Done. Installed in: ...\Plugins\VdcNavisLab` |
