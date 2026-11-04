@@ -94,7 +94,11 @@ namespace VdcNavisLab.Addin
                 if (clock.ElapsedMilliseconds > 3000) Log.Write("slow call " + method + ": " + clock.ElapsedMilliseconds + " ms");
                 return result;
             }
-            catch (RpcException ex) { return Rpc.Error(id, ex.Code, ex.Message, ex.Hint); }
+            catch (RpcException ex)
+            {
+                if (ex.Code == "internal" || ex.Code == "busy") Log.Write("call " + called + " failed after " + clock.ElapsedMilliseconds + " ms: " + ex.Code + ": " + ex.Message);
+                return Rpc.Error(id, ex.Code, ex.Message, ex.Hint);
+            }
             catch (ArgumentException) { return Rpc.Error(id, "invalid_params", "malformed request"); }
             catch (InvalidOperationException) { return Rpc.Error(id, "invalid_params", "malformed request"); }
             catch (Exception ex)

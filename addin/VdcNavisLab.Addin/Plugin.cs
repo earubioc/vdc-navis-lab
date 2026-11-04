@@ -15,13 +15,31 @@ namespace VdcNavisLab.Addin
             try
             {
                 // OnLoaded runs on the Navisworks UI thread: this context is how every request gets back to it.
-                UiThread.Capture(SynchronizationContext.Current);
+                var ctx = SynchronizationContext.Current;
+                Log.Write("OnLoaded: thread " + Thread.CurrentThread.ManagedThreadId + ", context " + (ctx == null ? "null" : ctx.GetType().FullName));
+                UiThread.Capture(ctx);
+                // Events raised by Navisworks arrive on its UI thread: use them to recapture the context if OnLoaded ran elsewhere.
+                try
+                {
+                    Autodesk.Navisworks.Api.Application.ActiveDocumentChanged += (s, e) => Recapture("ActiveDocumentChanged");
+                    Autodesk.Navisworks.Api.Application.DocumentAdded += (s, e) => Recapture("DocumentAdded");
+                }
+                catch (Exception ex) { Log.Write("could not subscribe to document events: " + ex.GetType().Name + ": " + ex.Message); }
                 var name = "vdc-navis-lab." + System.Diagnostics.Process.GetCurrentProcess().Id;
                 _server = new PipeServer(name, new Dispatcher());
                 _server.Start();
                 Log.Write("loaded; listening on pipe " + name);
             }
             catch (Exception ex) { Log.Write("OnLoaded failed: " + ex); }
+        }
+
+        private static void Recapture(string source)
+        {
+            var ctx = SynchronizationContext.Current;
+            if (ctx == null || ctx.GetType() == typeof(SynchronizationContext)) return;  // not a UI context
+            if (UiThread.Matches(ctx)) return;
+            UiThread.Capture(ctx);
+            Log.Write("UI context recaptured on " + source + ": thread " + Thread.CurrentThread.ManagedThreadId + ", " + ctx.GetType().FullName);
         }
 
         public override void OnUnloading()
@@ -57,6 +75,7 @@ namespace VdcNavisLab.Addin
         private static SynchronizationContext _ctx;
 
         public static void Capture(SynchronizationContext ctx) { _ctx = ctx; }
+        public static bool Matches(SynchronizationContext ctx) { return ReferenceEquals(_ctx, ctx); }
 
         public static T Run<T>(Func<T> work, int timeoutMs = 30000)
         {
