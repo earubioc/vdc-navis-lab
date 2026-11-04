@@ -440,6 +440,11 @@ namespace VdcNavisLab.Addin
             return new Dictionary<string, object> { { "job_id", job.Id } };
         }
 
+        private static long PrivateBytes()
+        {
+            using (var p = System.Diagnostics.Process.GetCurrentProcess()) return p.PrivateMemorySize64;
+        }
+
         /// <summary>One short UI-thread call per test instead of one call for the whole export, so
         /// Navisworks processes its own message queue (repaint, input) between tests rather than
         /// freezing for as long as the extraction takes.</summary>
@@ -467,6 +472,10 @@ namespace VdcNavisLab.Addin
                 int skippedOpen = 0;
                 OrientedCache.Clear();
                 OrientedStatus.Clear();
+                // Memory guard: extraction holds every clash in the Navisworks process. If it grows past the budget the export
+                // stops and is marked truncated (reported in the coverage) instead of taking Navisworks down (observed in 2025).
+                var baseline = PrivateBytes();
+                const long MemoryBudget = 1024L * 1024 * 1024;
 
                 for (int i = 0; i < testNames.Count; i++)
                 {
@@ -489,6 +498,11 @@ namespace VdcNavisLab.Addin
                             foreach (var r in results)
                             {
                                 if (remaining >= 0 && sliceClashes.Count >= remaining) { sliceTruncated = true; break; }
+                                if ((sliceClashes.Count & 255) == 255 && PrivateBytes() - baseline > MemoryBudget)
+                                {
+                                    Log.Write("export stopped by the memory guard after " + (clashes.Count + sliceClashes.Count) + " clashes");
+                                    sliceTruncated = true; break;
+                                }
                                 if (r.Item1 == null || r.Item2 == null)
                                 {
                                     sliceSkipped++;

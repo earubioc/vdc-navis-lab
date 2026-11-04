@@ -307,7 +307,10 @@ class App:
         else:
             ep, info, note = self.bridge.resolve()
             ep_text = str(ep)
-            started = self.bridge.call_at(ep, "clash.export", {"tests": tests or [], "limit": 0})
+            # A federation with hundreds of thousands of results does not fit in the Navisworks process or in one pipe
+            # message; the export is capped and reported as truncated (coverage warning) instead of failing late.
+            cap = int(os.environ.get("VDC_NAVIS_LAB_MAX_CLASHES", "40000") or 0)
+            started = self.bridge.call_at(ep, "clash.export", {"tests": tests or [], "limit": max(cap, 0)})
             self.pending_analysis = {"job_id": started["job_id"], "endpoint": ep_text, "info": info}
 
         from .bridge.transport import Endpoint
