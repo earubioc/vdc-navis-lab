@@ -17,6 +17,13 @@ namespace VdcNavisLab.Addin
                 // OnLoaded runs on the Navisworks UI thread: this context is how every request gets back to it.
                 var ctx = SynchronizationContext.Current;
                 Log.Write("OnLoaded: thread " + Thread.CurrentThread.ManagedThreadId + ", context " + (ctx == null ? "null" : ctx.GetType().FullName));
+                if (ctx == null || ctx.GetType() == typeof(SynchronizationContext))
+                {
+                    // Navisworks 2025 leaves no context installed on its UI thread (2026 does). OnLoaded runs on that thread, so a
+                    // WinForms context created here posts back to it through the message loop Navisworks is already pumping.
+                    ctx = new System.Windows.Forms.WindowsFormsSynchronizationContext();
+                    Log.Write("OnLoaded: no UI context installed, created " + ctx.GetType().Name + " on thread " + Thread.CurrentThread.ManagedThreadId);
+                }
                 UiThread.Capture(ctx);
                 // Events raised by Navisworks arrive on its UI thread: use them to recapture the context if OnLoaded ran elsewhere.
                 try
