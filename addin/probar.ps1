@@ -21,9 +21,16 @@ $open = $false
 for ($i = 0; $i -lt 90; $i++) {
     try {
         $st = (& $cli call nw_status 2>$null) -join "`n" | ConvertFrom-Json
+        $last = $st
         if ($st.bridge.instances | Where-Object { $_.open }) { $open = $true; break }
     } catch { }
     Start-Sleep -Seconds 2
+}
+if (-not $open) {
+    Write-Host "Lo que vio el conector / what the connector saw:"
+    if ($last) { $last.bridge | ConvertTo-Json -Depth 6 } else { Write-Host "(sin respuesta / no answer)" }
+    Write-Host "Log del add-in / add-in log:"
+    Get-Content (Join-Path $env:LOCALAPPDATA "vdc-navis-lab\addin.log") -Tail 8 -ErrorAction SilentlyContinue
 }
 if (-not $open) { Write-Host "Navisworks esta abierto pero sin modelo. Abre tu .nwd/.nwf y vuelve a ejecutar este script."; return }
 Write-Host "Modelo abierto. Probando..."

@@ -45,6 +45,13 @@ namespace VdcNavisLab.Addin
             return Sha1(sb.ToString()).Substring(0, 12);
         }
 
+        // A document whose tests cannot be read (an older API, a test still loading) must not make the add-in look unreachable.
+        private static string SafeRevision(Document d)
+        {
+            try { return Revision(d); }
+            catch (Exception ex) { Log.Write("revision unavailable: " + ex.GetType().Name + ": " + ex.Message); return ""; }
+        }
+
         private static string Sha1(string s)
         {
             using (var h = SHA1.Create())
@@ -55,7 +62,7 @@ namespace VdcNavisLab.Addin
         {
             return new Dictionary<string, object>
             {
-                { "open", true }, { "title", d.Title }, { "fingerprint", Fingerprint(d) }, { "revision", Revision(d) }
+                { "open", true }, { "title", d.Title }, { "fingerprint", Fingerprint(d) }, { "revision", SafeRevision(d) }
             };
         }
 

@@ -78,21 +78,33 @@ namespace VdcNavisLab.Addin
         public string Handle(string line)
         {
             object id = null;
+            string called = null;
+            var clock = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 var msg = Rpc.Parse(line);
                 msg.TryGetValue("id", out id);
                 var method = msg.ContainsKey("method") ? msg["method"] as string : null;
+                called = method;
                 var p = msg.ContainsKey("params") ? msg["params"] as Dictionary<string, object> : null;
                 Func<Dictionary<string, object>, object> fn;
                 if (method == null || !_methods.TryGetValue(method, out fn))
                     return Rpc.Error(id, "unsupported", "unknown method " + method, "call hello for the method list");
-                return Rpc.Result(id, fn(p ?? new Dictionary<string, object>()));
+                var result = Rpc.Result(id, fn(p ?? new Dictionary<string, object>()));
+                if (clock.ElapsedMilliseconds > 3000) Log.Write("slow call " + method + ": " + clock.ElapsedMilliseconds + " ms");
+                return result;
             }
             catch (RpcException ex) { return Rpc.Error(id, ex.Code, ex.Message, ex.Hint); }
             catch (ArgumentException) { return Rpc.Error(id, "invalid_params", "malformed request"); }
             catch (InvalidOperationException) { return Rpc.Error(id, "invalid_params", "malformed request"); }
-            catch (Exception ex) { return Rpc.Error(id, "internal", ex.GetType().Name); }  // never echo model data in errors
+            catch (Exception ex)
+            {
+                // The reply carries only the exception type (never model data); the local log keeps the detail for diagnosis.
+                var inner = ex is System.Reflection.TargetInvocationException && ex.InnerException != null ? ex.InnerException : ex;
+                var where = (inner.StackTrace ?? "").Split('\n');
+                Log.Write("call " + called + " failed after " + clock.ElapsedMilliseconds + " ms: " + inner.GetType().Name + ": " + inner.Message + " @ " + (where.Length > 0 ? where[0].Trim() : ""));
+                return Rpc.Error(id, "internal", inner.GetType().Name);
+            }
         }
     }
 }
