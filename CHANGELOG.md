@@ -3,6 +3,9 @@
 ## 1.0.1
 
 - Add-in: changing a clash result's status no longer references the `Assignee` type at compile time; the call picks the overload the running Navisworks has (two or three arguments). It was the only error when building against Navisworks Manage 2025. 2025 is not listed as verified until a live run confirms it.
+- Navisworks 2025: the add-in now creates a WinForms UI context when Navisworks leaves none installed on its main thread (2025 does; 2026 does not), which is what made every call fail with "UI thread context not captured". Verified live in Manage 2025: connection, model audit, `nw_setup` (5 sets and 5 tests created) and running the tests.
+- `nw_analyze` counted modeled sleeves with one full pass over the model per name pattern (ten passes); on a large federation that took minutes and outlasted the client's wait. It is now one pass (`contains_any` in `elements.query`). An unknown criterion operator is rejected instead of matching nothing.
+- The add-in logs failed and slow calls and the UI context it found at load (`%LOCALAPPDATA%\vdc-navis-lab\addin.log`); `probar.ps1` prints what the connector saw when no model is found.
 - Installer and manuals: `instalar.ps1`, version-aware add-in scripts and step-by-step guides in Spanish and English.
 
 ## 1.0.0

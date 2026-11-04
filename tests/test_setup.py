@@ -172,3 +172,14 @@ def test_nw_model_audit_flag_attaches_the_audit(app):
     assert "audit" not in plain and all("bbox" not in m for m in plain["models"])
     audited = app.model(True)
     assert audited["audit"]["status"] in ("ok", "warn", "fail") and audited["audit"]["models"]
+
+
+def test_elements_query_contains_any_counts_each_element_once():
+    from vdc_navis_lab.bridge.simulator import Simulator
+    sim = Simulator.__new__(Simulator)
+    from types import SimpleNamespace as NS
+    sim.elements = [NS(id="1", name="Manguito 100", category="x", model="m", level="L1", props={}),
+                    NS(id="2", name="Sleeve and abertura", category="x", model="m", level="L1", props={}),
+                    NS(id="3", name="Viga", category="x", model="m", level="L1", props={})]
+    res = sim.m_elements_query({"criteria": [{"field": "name", "op": "contains_any", "value": ["manguito", "sleeve", "abertura"]}], "limit": 1})
+    assert res["count"] == 2

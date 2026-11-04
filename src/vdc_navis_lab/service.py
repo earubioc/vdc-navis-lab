@@ -337,15 +337,14 @@ class App:
         patterns = [str(x) for x in self.profile.section("score", "sleeve").get("element_name_patterns", [])]
         if not patterns:
             return None
-        total = 0
         try:
-            for pat in patterns:
-                res = self.bridge.call_at(ep, "elements.query", {
-                    "criteria": [{"field": "name", "op": "contains", "value": pat}], "group_by": "", "limit": 1})
-                total += int(res.get("count", 0))
+            # One pass over the model for all the patterns: each pass reads every element, so one call per pattern
+            # took minutes on a large federation and outlasted the client's wait.
+            res = self.bridge.call_at(ep, "elements.query", {
+                "criteria": [{"field": "name", "op": "contains_any", "value": patterns}], "group_by": "", "limit": 1})
+            return int(res.get("count", 0))
         except Exception:
             return None
-        return total
 
     # ------------------------------------------------------------ nw_issues / nw_issue
     def issues(self, priority: str, discipline: str, level: str, cause: str, responsible: str, sort: str,

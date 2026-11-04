@@ -183,6 +183,8 @@ class Simulator:
                     return False
                 if op == "in" and v not in [str(x).lower() for x in c["value"]]:
                     return False
+                if op == "contains_any" and not any(str(x).lower() in v for x in c["value"]):
+                    return False
             return True
 
         hits = [e for e in self.elements if ok(e)]

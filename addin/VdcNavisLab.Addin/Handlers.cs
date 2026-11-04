@@ -709,16 +709,23 @@ namespace VdcNavisLab.Addin
                 {
                     if (!v.Contains(Convert.ToString(c["value"]).ToLowerInvariant())) return false;
                 }
+                else if (op == "contains_any")
+                {
+                    var arr = c["value"] as System.Collections.ArrayList;
+                    var opts = arr != null ? arr.Cast<object>().Select(x => Convert.ToString(x).ToLowerInvariant()).ToList() : new List<string>();
+                    if (!opts.Any(o => v.Contains(o))) return false;
+                }
                 else if (op == "in")
                 {
                     var arr = c["value"] as System.Collections.ArrayList;
                     var opts = arr != null ? arr.Cast<object>().Select(x => Convert.ToString(x).ToLowerInvariant()).ToList() : new List<string>();
                     if (!opts.Contains(v)) return false;
                 }
-                else  // eq
+                else if (op == "eq")
                 {
                     if (v != Convert.ToString(c["value"]).ToLowerInvariant()) return false;
                 }
+                else throw new ArgumentException("unknown criterion operator");  // never silently match nothing
             }
             return true;
         }
