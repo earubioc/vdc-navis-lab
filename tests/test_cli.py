@@ -96,3 +96,19 @@ def test_desktop_config_replaces_the_pre_rename_entry_but_keeps_others(tmp_path)
     assert r.returncode == 0 and "removed the old" in r.stdout, r.stderr
     servers = json.loads(cfg.read_text(encoding="utf-8"))["mcpServers"]
     assert old not in servers and "vdc-navis-lab" in servers and "keep" in servers and "mine" in servers
+
+
+def test_desktop_config_for_lm_studio_writes_its_mcp_json_and_keeps_other_servers(tmp_path):
+    home = tmp_path / "home"
+    (home / ".lmstudio").mkdir(parents=True)
+    cfg = home / ".lmstudio" / "mcp.json"
+    cfg.write_text(json.dumps({"mcpServers": {"otro": {"url": "https://example.test/mcp"}}}), encoding="utf-8")
+    env = {**os.environ, "PYTHONPATH": SRC, "HOME": str(home), "USERPROFILE": str(home)}
+    r = subprocess.run([sys.executable, "-m", "vdc_navis_lab.cli", "desktop-config", "--client", "lmstudio", "--write"],
+                       capture_output=True, text=True, env=env)
+    assert r.returncode == 0, r.stderr
+    data = json.loads(cfg.read_text(encoding="utf-8"))
+    assert "otro" in data["mcpServers"]
+    entry = data["mcpServers"]["vdc-navis-lab"]
+    assert entry["command"] and entry["env"]["VDC_NAVIS_LAB_READ_ONLY"] == "1"
+    assert "LM Studio" in r.stdout and list((home / ".lmstudio").glob("mcp.json.bak-*"))

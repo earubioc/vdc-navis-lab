@@ -179,6 +179,21 @@ def _cmd_bench(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_llm_eval(args: argparse.Namespace) -> int:
+    """Tool-calling evaluation of a model served on an OpenAI-compatible endpoint (LM Studio), against the simulator."""
+    from . import llm_eval
+    from .paths import home
+    chat = llm_eval.http_chat(args.base_url, args.model, args.api_key)
+    print(f"llm-eval: model {args.model} at {args.base_url}; {args.reps} repetitions per scenario, simulator only")
+    runs, scenarios = llm_eval.evaluate(chat, args.reps, args.only or None)
+    rows = llm_eval.summarise(runs, scenarios)
+    print()
+    llm_eval.print_table(rows)
+    path = llm_eval.write_results(Path(args.out) if args.out else home() / "llm_eval", args.model, args.hardware, runs, rows)
+    print(f"\nResults and transcripts (simulator data only): {path}")
+    return 0 if all(r["correct_pct"] == 100 for r in rows) else 1
+
+
 LEGACY_NAME = "navis" + "-mcp"
 
 
@@ -190,6 +205,10 @@ def _desktop_config_path() -> Path:
     return Path.home() / ".config" / "Claude" / "claude_desktop_config.json"
 
 
+def _lmstudio_config_path() -> Path:
+    return Path.home() / ".lmstudio" / "mcp.json"   # %USERPROFILE%\\.lmstudio\\mcp.json on Windows
+
+
 def _server_command() -> str:
     exe = "vdc-navis-lab.exe" if sys.platform == "win32" else "vdc-navis-lab"
     beside = Path(sys.executable).parent / exe  # the venv this command runs from
@@ -199,7 +218,9 @@ def _server_command() -> str:
 def _cmd_desktop_config(args: argparse.Namespace) -> int:
     """Print the Claude Desktop entry, or merge it into the config file without touching anything else."""
     entry = {"command": _server_command(), "env": {"VDC_NAVIS_LAB_READ_ONLY": "0" if args.allow_writes else "1"}}
-    path = Path(args.config) if args.config else _desktop_config_path()
+    lm = getattr(args, "client", "claude") == "lmstudio"
+    path = Path(args.config) if args.config else (_lmstudio_config_path() if lm else _desktop_config_path())
+    app_name = "LM Studio" if lm else "Claude Desktop"
     if not args.write:
         print(f"Config file: {path}")
         print("Add this INSIDE the existing \"mcpServers\" object (comma after the previous entry), or run again with --write:\n")
@@ -228,7 +249,11 @@ def _cmd_desktop_config(args: argparse.Namespace) -> int:
         print(f"removed the old '{LEGACY_NAME}' entry (replaced by 'vdc-navis-lab')")
     servers["vdc-navis-lab"] = entry
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"vdc-navis-lab added to {path}. Quit Claude Desktop completely and open it again.")
+    if lm:
+        print(f"vdc-navis-lab added to {path}. In LM Studio open the Program tab, check that the server shows up and load a model with tool use. "
+              "Keep 'always allow' off for nw_apply, nw_setup and nw_document: LM Studio then asks before each write.")
+    else:
+        print(f"vdc-navis-lab added to {path}. Quit {app_name} completely and open it again.")
     return 0
 
 
@@ -280,11 +305,22 @@ def main(argv: list[str] | None = None) -> int:
     bn.add_argument("--wait", type=float, default=1800.0, help="--live: seconds to wait for the extraction")
     bn.add_argument("--writes", action="store_true", help=argparse.SUPPRESS)
     bn.set_defaults(fn=_cmd_bench)
+    le = sub.add_parser("llm-eval", help="evaluate a model's tool use against the simulator (LM Studio or any OpenAI-compatible endpoint)")
+    le.add_argument("--model", required=True, help="model name as the server lists it")
+    le.add_argument("--base-url", default="http://localhost:1234/v1", help="LM Studio's default")
+    le.add_argument("--api-key", default="lm-studio")
+    le.add_argument("--reps", type=int, default=5, help="repetitions per scenario (the plan uses 5)")
+    le.add_argument("--only", nargs="*", help="scenario keys: estado top10 explicar dos_pasos informe ambigua masiva")
+    le.add_argument("--hardware", default="", help="free text recorded with the results (CPU, RAM, GPU, VRAM)")
+    le.add_argument("--out", default="", help="folder for results (default: the data folder, outside git)")
+    le.set_defaults(fn=_cmd_llm_eval)
     ca = sub.add_parser("call", help="call one tool once: vdc-navis-lab-cli call nw_profile '{\"action\":\"show\"}'")
     ca.add_argument("tool")
     ca.add_argument("args", nargs="?", default="")
     ca.set_defaults(fn=_cmd_call)
-    dc = sub.add_parser("desktop-config", help="print or safely merge the Claude Desktop entry for this install")
+    dc = sub.add_parser("desktop-config", help="print or safely merge the MCP client entry (Claude Desktop or LM Studio) for this install")
+    dc.add_argument("--client", choices=["claude", "lmstudio"], default="claude",
+                    help="which MCP client's config to print or merge (LM Studio reads ~/.lmstudio/mcp.json)")
     dc.add_argument("--write", action="store_true", help="merge into the config file (a backup is made first)")
     dc.add_argument("--allow-writes", action="store_true", help="do not set VDC_NAVIS_LAB_READ_ONLY=1")
     dc.add_argument("--config", default=None, help="config file path (default: the Claude Desktop location)")
