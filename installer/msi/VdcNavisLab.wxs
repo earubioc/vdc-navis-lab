@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  VDC Navis Lab add-in for Navisworks Manage: one MSI per major version of Navisworks (decision D-12 of the Community/Pro plan).
+  Per machine, so it suits Intune / GPO / SCCM: it installs where Navisworks itself looks for plugins,
+      C:\Program Files\Autodesk\Navisworks Manage <year>\Plugins\VdcNavisLab\VdcNavisLab.dll
+  Built by installer/build-msi.sh with:  -D Year=2025 -D Version=1.0.1 -D Dll=<path to the DLL compiled for that year>
+  wixl (msitools) cannot express a search for the Navisworks folder, so the package does not check for it; the install test
+  (installer/probar-instalacion.ps1) does. Build for x64 with: wixl -a x64.
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*" Name="VDC Navis Lab for Navisworks Manage $(var.Year)" Language="1033" Version="$(var.Version)"
+           Manufacturer="VDC Process Lab" UpgradeCode="$(var.UpgradeCode)">
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine"
+             Description="Add-in that connects Navisworks Manage $(var.Year) to the VDC Navis Lab MCP server"
+             Manufacturer="VDC Process Lab"/>
+    <MajorUpgrade DowngradeErrorMessage="A newer version of VDC Navis Lab for Navisworks Manage $(var.Year) is already installed."/>
+    <Media Id="1" Cabinet="VdcNavisLab.cab" EmbedCab="yes"/>
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="AutodeskDir" Name="Autodesk">
+          <Directory Id="NavisDir" Name="Navisworks Manage $(var.Year)">
+            <Directory Id="PluginsDir" Name="Plugins">
+              <Directory Id="INSTALLDIR" Name="VdcNavisLab"/>
+            </Directory>
+          </Directory>
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <DirectoryRef Id="INSTALLDIR">
+      <Component Id="AddinDll" Guid="$(var.ComponentGuid)" Win64="yes">
+        <File Id="VdcNavisLabDll" Name="VdcNavisLab.dll" Source="$(var.Dll)" KeyPath="yes"/>
+      </Component>
+    </DirectoryRef>
+
+    <Feature Id="Addin" Title="VDC Navis Lab add-in" Level="1">
+      <ComponentRef Id="AddinDll"/>
+    </Feature>
+  </Product>
+</Wix>

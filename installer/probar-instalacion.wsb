@@ -1,0 +1,21 @@
+<!--
+  Windows Sandbox para la prueba de instalación limpia. Cada vez que se abre es un Windows nuevo y se descarta al cerrar.
+  1. Copie en una carpeta de este equipo: la carpeta installer/ y los archivos .msi y .mcpb de dist/.
+  2. Cambie REEMPLAZAR por esa carpeta (ruta completa) y abra este archivo.
+  3. Al terminar, la ventana de PowerShell queda abierta con los PASS/FAIL.
+  Requiere Windows 10/11 Pro, Enterprise o Education con la función Windows Sandbox activada.
+-->
+<Configuration>
+  <VGpu>Disable</VGpu>
+  <Networking>Enable</Networking>
+  <MappedFolders>
+    <MappedFolder>
+      <HostFolder>REEMPLAZAR</HostFolder>
+      <SandboxFolder>C:\prueba</SandboxFolder>
+      <ReadOnly>true</ReadOnly>
+    </MappedFolder>
+  </MappedFolders>
+  <LogonCommand>
+    <Command>powershell.exe -NoExit -ExecutionPolicy Bypass -Command "Set-Location C:\prueba; powershell -ExecutionPolicy Bypass -File .\installer\probar-instalacion.ps1 -Msi (Get-ChildItem .\*.msi | Select -First 1).FullName -Year 2025</Command>
+  </LogonCommand>
+</Configuration>
