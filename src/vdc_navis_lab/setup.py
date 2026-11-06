@@ -37,7 +37,7 @@ class SetupPlan:
 
 def classify(app: "App") -> tuple[dict[str, list[str]], dict[str, str]]:
     """{discipline: [model files]} and {file: discipline} for the models loaded in the open document."""
-    census, _info, _note = app.bridge.call("model.census")
+    census, _info, _note = app.census()
     tagger = Tagger(app.profile)
     by_disc: dict[str, list[str]] = {}
     by_file: dict[str, str] = {}

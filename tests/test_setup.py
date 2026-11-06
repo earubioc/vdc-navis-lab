@@ -183,3 +183,25 @@ def test_elements_query_contains_any_counts_each_element_once():
                     NS(id="3", name="Viga", category="x", model="m", level="L1", props={})]
     res = sim.m_elements_query({"criteria": [{"field": "name", "op": "contains_any", "value": ["manguito", "sleeve", "abertura"]}], "limit": 1})
     assert res["count"] == 2
+
+
+def test_census_is_read_once_per_document_and_a_slow_one_reports_running(app, sim, monkeypatch):
+    import threading
+    calls = []
+    original = app.bridge.call_at
+
+    def slow(ep, method, params=None, timeout=None):
+        if method == "model.census":
+            calls.append(1)
+            gate.wait(5)
+        return original(ep, method, params, timeout)
+
+    gate = threading.Event()
+    monkeypatch.setattr(app.bridge, "call_at", slow)
+    with pytest.raises(ToolFault) as err:
+        app.census(wait=0.05)
+    assert err.value.code == "running"
+    gate.set()
+    first = app.census(wait=5)
+    second = app.census(wait=5)
+    assert first[0] == second[0] and len(calls) == 1, "the read is not repeated"

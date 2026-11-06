@@ -6,6 +6,7 @@ import dataclasses
 import json
 import os
 import re
+import threading
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -75,6 +76,7 @@ class App:
     plans: dict[str, Plan] = field(default_factory=dict)
     setup_plans: dict[str, Any] = field(default_factory=dict)
     pending_save: dict[str, Any] = field(default_factory=dict)
+    census_cache: dict[Any, Any] = field(default_factory=dict)
 
     # ------------------------------------------------------------ helpers
     @property
@@ -233,8 +235,45 @@ class App:
         return True
 
     # ------------------------------------------------------------ nw_model / nw_query
+    def census(self, wait: float = 35.0) -> tuple[Any, dict[str, Any], str]:
+        """The model census, read once per document. On a large federation the read takes minutes (about 2 min for a 1.6 GB
+        NWD), longer than a tool call may wait, so it runs in a background thread: the first call answers 'running', and
+        the next one gets the stored result instead of starting the read again."""
+        running = next((e for e in self.census_cache.values() if e["thread"].is_alive()), None)
+        if running is None:
+            try:
+                ep, info, note = self.bridge.resolve(False)
+            except Exception:
+                done = next((e for e in self.census_cache.values() if e["result"] is not None), None)
+                if done is None:
+                    raise
+                return done["result"], done["info"], done["note"]
+            key = (info.get("instance_id"), (info.get("doc") or {}).get("fingerprint") or "")
+            running = self.census_cache.get(key)
+            if running is None:
+                entry: dict[str, Any] = {"result": None, "error": None, "info": info, "note": note}
+
+                def work() -> None:
+                    try:
+                        entry["result"] = self.bridge.call_at(ep, "model.census", None, 900.0)
+                    except Exception as ex:  # reported to whoever collects it
+                        entry["error"] = ex
+
+                entry["thread"] = threading.Thread(target=work, daemon=True)
+                entry["thread"].start()
+                self.census_cache = {key: entry}
+                running = entry
+        running["thread"].join(wait)
+        if running["thread"].is_alive():
+            raise ToolFault("running", "reading the models of a large federation takes minutes and is running in the background",
+                            "call again in a minute; the result is kept and the read is not repeated")
+        if running["error"] is not None:
+            self.census_cache = {}
+            raise running["error"]
+        return running["result"], running["info"], running["note"]
+
     def model(self, audit: bool = False) -> dict[str, Any]:
-        census, info, note = self.bridge.call("model.census")
+        census, info, note = self.census()
         tagger = Tagger(self.profile)
         models = []
         for m in census["models"]:
