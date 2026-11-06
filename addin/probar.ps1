@@ -1,4 +1,6 @@
 # Prueba completa contra Navisworks real. Un solo comando; espera a que abras Navisworks.
+# ATENCION: imprime nombres de pruebas y de archivos y guarda una muestra real en insumos\ (fuera de git). Con modelos de proyectos
+# NO uses este script ni lo pegues en una conversacion: usa `vdc-navis-lab-cli verify` y `bench`, que solo imprimen cifras.
 #   powershell -ExecutionPolicy Bypass -File .\addin\probar.ps1 [-Version 2026]
 param([string]$Version = "2026")
 $root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)

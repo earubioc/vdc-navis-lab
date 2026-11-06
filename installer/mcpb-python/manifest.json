@@ -1,0 +1,36 @@
+{
+  "manifest_version": "0.3",
+  "name": "vdc-navis-lab",
+  "display_name": "VDC Navis Lab (sin conexión)",
+  "version": "1.0.1",
+  "description": "Coordina interferencias de Navisworks Manage desde Claude. Variante con todas las dependencias incluidas: no descarga nada al instalarse ni al arrancar.",
+  "long_description": "Servidor MCP para Navisworks Manage 2025 y 2026, para equipos sin conexión o con la red restringida. Necesita Python 3.11, 3.12 o 3.13 instalado en el equipo (no incluye el intérprete) y el add-in de Navisworks (MSI de VdcNavisLab). Las escrituras al modelo pasan siempre por un plan que se revisa antes de ejecutarse.",
+  "author": { "name": "VDC Process Lab", "url": "https://vdcprocesslab.com" },
+  "license": "Apache-2.0",
+  "keywords": ["navisworks", "bim", "clash", "coordinacion", "vdc"],
+  "server": {
+    "type": "python",
+    "entry_point": "server/main.py",
+    "mcp_config": {
+      "command": "python",
+      "args": ["${__dirname}/server/main.py"],
+      "env": {
+        "PYTHONPATH": "${__dirname}/server/lib",
+        "VDC_NAVIS_LAB_READ_ONLY": "${user_config.read_only}"
+      }
+    }
+  },
+  "user_config": {
+    "read_only": {
+      "type": "boolean",
+      "title": "Solo lectura",
+      "description": "Activado: el servidor no modifica el documento de Navisworks. Desactívelo para permitir plan, grupos, estados y puntos de vista (siempre con plan previo).",
+      "default": true,
+      "required": false
+    }
+  },
+  "compatibility": {
+    "platforms": ["win32"],
+    "runtimes": { "python": ">=3.11" }
+  }
+}

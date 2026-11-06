@@ -58,11 +58,14 @@ namespace VdcNavisLab.Addin
                 return string.Concat(h.ComputeHash(Encoding.UTF8.GetBytes(s)).Select(b => b.ToString("x2")));
         }
 
-        private static Dictionary<string, object> DocState(Document d)
+        private static Dictionary<string, object> DocState(Document d, bool withRevision = true)
         {
+            // The revision hashes every result of every test: on a federation with hundreds of thousands of results that is
+            // seconds of UI thread. A caller that only wants to know that Navisworks answers asks for the light hello.
             return new Dictionary<string, object>
             {
-                { "open", true }, { "title", d.Title }, { "fingerprint", Fingerprint(d) }, { "revision", SafeRevision(d) }
+                { "open", true }, { "title", d.Title }, { "fingerprint", Fingerprint(d) },
+                { "revision", withRevision ? SafeRevision(d) : "" }
             };
         }
 
@@ -76,12 +79,12 @@ namespace VdcNavisLab.Addin
             catch (Exception ex) { return "unknown (" + ex.GetType().Name + ")"; }
         }
 
-        public object Hello(string[] methods)
+        public object Hello(string[] methods, bool light = false)
         {
             return UiThread.Run<object>(() =>
             {
                 var d = Autodesk.Navisworks.Api.Application.ActiveDocument;
-                var doc = (d == null || d.IsClear) ? new Dictionary<string, object> { { "open", false } } : DocState(d);
+                var doc = (d == null || d.IsClear) ? new Dictionary<string, object> { { "open", false } } : DocState(d, !light);
                 return new Dictionary<string, object>
                 {
                     { "product", "navisworks" }, { "version", VersionText() },

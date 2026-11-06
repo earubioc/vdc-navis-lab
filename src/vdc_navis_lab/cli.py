@@ -38,7 +38,12 @@ def _cmd_sample(args: argparse.Namespace) -> int:
 
 
 def _cmd_simulate(args: argparse.Namespace) -> int:
-    sim = Simulator(seed=args.seed, port=args.port)
+    clashset = None
+    if args.infra:
+        from .sample.generator import build_infra
+        parts = [int(x) for x in args.infra.split(":")]
+        clashset = build_infra(parts[0], parts[1], args.seed, per_place=parts[2] if len(parts) > 2 else 6)
+    sim = Simulator(seed=args.seed, port=args.port, clashset=clashset, page_delay=args.page_delay)
     endpoint = sim.start(register=True)
     print(f"Navisworks simulator listening on {endpoint} (document {sim.title}). Ctrl-C to stop.")
     print("Start the MCP server in another terminal: it discovers this instance automatically.")
@@ -162,6 +167,9 @@ def _cmd_verify(args: argparse.Namespace) -> int:
 def _cmd_bench(args: argparse.Namespace) -> int:
     """Scale measurement. Prints figures only (no names), so it is safe to paste."""
     from . import bench
+    if args.paged:
+        bench.run_paged(args.tests, args.per_test, args.seed, args.per_place, args.wait)
+        return 0
     if args.live:
         from .service import App, ToolFault
         if args.writes:
@@ -284,6 +292,8 @@ def main(argv: list[str] | None = None) -> int:
     m = sub.add_parser("simulate", help="run a fake Navisworks add-in for demos and development")
     m.add_argument("--seed", type=int, default=7)
     m.add_argument("--port", type=int, default=0)
+    m.add_argument("--infra", default="", help="serve a synthetic infrastructure federation, TESTS:RESULTS_PER_TEST[:PER_PLACE], instead of the tower")
+    m.add_argument("--page-delay", type=float, default=0.0, help=argparse.SUPPRESS)
     m.set_defaults(fn=_cmd_simulate)
     d = sub.add_parser("demo", help="guided walk-through against a simulated Navisworks, no setup needed")
     d.add_argument("--lang", choices=["es", "en"], default="es")
@@ -302,7 +312,8 @@ def main(argv: list[str] | None = None) -> int:
     bn.add_argument("--seed", type=int, default=11)
     bn.add_argument("--file", default="", help="measure an exported clash file instead of generating one")
     bn.add_argument("--live", action="store_true", help="measure the whole path against the Navisworks that is open now")
-    bn.add_argument("--wait", type=float, default=1800.0, help="--live: seconds to wait for the extraction")
+    bn.add_argument("--paged", action="store_true", help="whole path (pipe, paged extraction, analysis) against the simulator serving the synthetic federation")
+    bn.add_argument("--wait", type=float, default=1800.0, help="--live, --paged: seconds to wait for the extraction")
     bn.add_argument("--writes", action="store_true", help=argparse.SUPPRESS)
     bn.set_defaults(fn=_cmd_bench)
     le = sub.add_parser("llm-eval", help="evaluate a model's tool use against the simulator (LM Studio or any OpenAI-compatible endpoint)")

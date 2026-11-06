@@ -34,3 +34,19 @@ def test_bench_live_against_the_simulator(monkeypatch, tmp_path, capsys):
     finally:
         sim.stop()
     assert out["finished"] and out["raw"] > 0 and out["pings"]["failed"] == 0
+
+
+def test_bench_paged_runs_the_whole_path_in_a_separate_simulator(capsys):
+    out = bench.run_paged(12, 200, seed=4, per_place=8, wait_s=120)
+    assert out["finished"] and out["raw"] == 2400 and out["partial"] is None  # complete=False here only because 12 tests do not cover the expected pairs
+    assert out["extraction"]["pages"] >= 12 and out["extraction"]["closed_only_counted"] > 0
+    assert out["pings"]["failed"] == 0
+    assert "INFRA" not in capsys.readouterr().out
+
+
+def test_bench_paged_reports_a_partial_extraction(monkeypatch, capsys):
+    monkeypatch.setenv("VDC_NAVIS_LAB_MAX_CLASHES", "400")
+    out = bench.run_paged(6, 300, seed=4, per_place=8, wait_s=120)
+    assert out["finished"] and out["complete"] is False and out["capped"] is True
+    assert [r["code"] for r in out["partial"]["reasons"]] == ["cap"]
+    assert "PARTIAL (cap)" in capsys.readouterr().out

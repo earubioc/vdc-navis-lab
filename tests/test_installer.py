@@ -60,3 +60,28 @@ def test_msi_installs_the_dll_where_navisworks_looks(tmp_path):
         t = subprocess.run(["msiinfo", "export", str(out / f"VdcNavisLab-{y}-1.0.1.msi"), "Property"], capture_output=True, text=True).stdout
         codes.append(next(l for l in t.splitlines() if l.startswith("UpgradeCode")))
     assert codes[0] != codes[1]
+
+
+def test_offline_manifest_matches_the_package_and_starts_from_its_own_lib():
+    m = json.loads((ROOT / "installer/mcpb-python/manifest.json").read_text(encoding="utf-8"))
+    assert m["version"] == _version() == json.loads((ROOT / "installer/mcpb/manifest.json").read_text(encoding="utf-8"))["version"]
+    assert m["server"]["type"] == "python" and m["server"]["entry_point"] == "server/main.py"
+    assert m["server"]["mcp_config"]["env"]["PYTHONPATH"] == "${__dirname}/server/lib"
+    assert m["server"]["mcp_config"]["env"]["VDC_NAVIS_LAB_READ_ONLY"] == "${user_config.read_only}"
+    assert m["user_config"]["read_only"]["default"] is True
+    assert (ROOT / "installer/mcpb-python/main.py").is_file()
+
+
+def test_offline_launcher_uses_only_its_lib(tmp_path):
+    """main.py finds the package through server/lib next to it, with nothing else on the path."""
+    import subprocess
+    import sys
+    lib = tmp_path / "server" / "lib"
+    shutil.copytree(ROOT / "src" / "vdc_navis_lab", lib / "vdc_navis_lab", ignore=shutil.ignore_patterns("__pycache__"))
+    shutil.copy(ROOT / "installer/mcpb-python/main.py", tmp_path / "server" / "main.py")
+    code = ("import sys, runpy; sys.argv=['main.py']; sys.path[:] = [p for p in sys.path if 'vdc-navis-lab' not in p and p != '']\n"
+            "import importlib.util as u\n"
+            "sys.path.insert(0, %r)\n" % str(lib) +
+            "print(u.find_spec('vdc_navis_lab').origin)")
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True).stdout.strip()
+    assert out.startswith(str(lib))

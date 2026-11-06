@@ -214,7 +214,7 @@ def test_document_save_requires_preview_first(app, sim):
 
 def test_slow_extraction_returns_a_job_to_collect():
     from vdc_navis_lab.bridge.simulator import Simulator
-    s = Simulator(job_delay=0.6)
+    s = Simulator(job_delay=0.6, legacy=True)  # an add-in without paging: the single export job
     app = App(bridge=Bridge(lambda: [Endpoint.parse(s.start())]))
     try:
         pending = app.analyze("", None, 5, 0.05, "", None)

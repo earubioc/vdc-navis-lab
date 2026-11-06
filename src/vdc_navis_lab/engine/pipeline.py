@@ -95,6 +95,8 @@ class Coverage:
     skipped: int = 0  # results dropped because an element no longer exists in the model
     skipped_open: int | None = None  # of those, the ones still open; None when the source did not say
     sleeves_modeled: int | None = None  # modeled sleeve/opening elements found; None when it was not checked
+    partial: dict = field(default_factory=dict)  # why the extraction did not cover everything (empty when it did)
+    stats: dict = field(default_factory=dict)  # how the extraction went (pages, seconds, slowest slice)
 
     @property
     def complete(self) -> bool:
@@ -159,7 +161,7 @@ def _congestion(groups: list[list[Clash]], radius: float, saturation: float) -> 
 def _coverage(cs: ClashSet, profile: Profile, flt: Screened, unclassified: dict[str, int],
               seen_pairs: set[tuple[str, str]]) -> Coverage:
     cov = Coverage(truncated=cs.truncated, skipped=cs.skipped, skipped_open=cs.skipped_open,
-                   sleeves_modeled=cs.sleeves_modeled,
+                   sleeves_modeled=cs.sleeves_modeled, partial=dict(cs.partial), stats=dict(cs.stats),
                    unclassified=dict(sorted(unclassified.items(), key=lambda kv: -kv[1])[:8]))
     cov.tests_count = len(cs.tests)
     for t in cs.tests:
@@ -179,7 +181,7 @@ def analyze(cs: ClashSet, profile: Profile, lang: str | None = None) -> Analysis
     for c in cs.clashes:  # a profile change must be able to re-tag the same data
         c.a.discipline = c.b.discipline = ""
     unclassified = Tagger(profile).tag(cs.clashes)
-    flt = NoiseScreen(profile).run(cs.clashes)
+    flt = NoiseScreen(profile).run(cs.clashes, cs.closed_unextracted)
     seen_pairs = {pair_key(c) for c in cs.clashes}
 
     eps = profile.num("cluster", "eps_m", default=1.5)
@@ -228,7 +230,7 @@ def analyze(cs: ClashSet, profile: Profile, lang: str | None = None) -> Analysis
 
     return AnalysisResult(
         analysis_id=uuid.uuid4().hex[:10], created=time.time(), lang=lang, profile_name=profile.name,
-        profile_hash=profile.checksum, source=cs.source, document=cs.document, raw_count=len(cs.clashes),
+        profile_hash=profile.checksum, source=cs.source, document=cs.document, raw_count=len(cs.clashes) + (sum(cs.closed_unextracted.values()) if profile.section("noise").get("drop_closed", True) else 0),
         filtering=flt.reasons, issues=issues, causes=causes, decisions=decisions,
         coverage=_coverage(cs, profile, flt, unclassified, seen_pairs), clashset=cs,
     )

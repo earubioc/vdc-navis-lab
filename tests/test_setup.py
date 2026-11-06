@@ -217,8 +217,8 @@ def test_slow_sleeve_scan_runs_once_and_a_retry_collects_the_same_export(app, si
         if method == "elements.query":
             scans.append(1)
             gate.wait(5)
-        if method == "clash.export":
-            exports.append(1)
+        if method == "clash.page" and (params or {}).get("begin"):
+            exports.append(1)  # the first slice of an extraction
         return original(ep, method, params, timeout)
 
     monkeypatch.setattr(app.bridge, "call_at", slow)

@@ -92,6 +92,36 @@ def detail(issue: Issue, result: AnalysisResult, profile: Profile, lang: str, cl
     return out
 
 
+_PARTIAL_REASONS = {
+    "cap": ("se alcanzó el tope de {cap} resultados descritos (VDC_NAVIS_LAB_MAX_CLASHES)",
+            "the limit of {cap} described results was reached (VDC_NAVIS_LAB_MAX_CLASHES)"),
+    "memory_addin": ("Navisworks llegó a su presupuesto de memoria durante la extracción",
+                     "Navisworks reached its memory budget during the extraction"),
+    "memory_server": ("el servidor llegó a su presupuesto de memoria ({mb} MB, VDC_NAVIS_LAB_MAX_SERVER_MB)",
+                      "the server reached its memory budget ({mb} MB, VDC_NAVIS_LAB_MAX_SERVER_MB)"),
+    "time": ("se agotó el tiempo máximo de extracción ({s} s, VDC_NAVIS_LAB_MAX_EXTRACT_S)",
+             "the extraction time limit ran out ({s} s, VDC_NAVIS_LAB_MAX_EXTRACT_S)"),
+    "cancelled": ("la extracción se canceló", "the extraction was cancelled"),
+}
+
+
+def _partial_text(part: dict[str, Any], es: bool) -> str:
+    """One sentence that says that the analysis does not cover everything, how much it covers and why."""
+    why = []
+    for r in part.get("reasons", []):
+        tpl = _PARTIAL_REASONS.get(r.get("code", ""))
+        why.append((tpl[0 if es else 1].format(**{k: r.get(k, "") for k in ("cap", "mb", "s")}) if tpl else str(r.get("code", ""))))
+    got, avail = part.get("open_extracted", 0), part.get("open_available", 0)
+    k, n = part.get("tests_partial", 0), part.get("tests_total", 0)
+    if es:
+        return (f"análisis PARCIAL: se describieron {got} de {avail} resultados abiertos ({k} de {n} pruebas incompletas) porque "
+                f"{'; '.join(why)}. Los problemas listados existen, pero faltan los de los resultados no extraídos: "
+                "no se puede afirmar que un par esté limpio. Para completarlo, subir el tope o analizar por pruebas (tests=[...])")
+    return (f"PARTIAL analysis: {got} of {avail} open results were described ({k} of {n} tests incomplete) because "
+            f"{'; '.join(why)}. The issues listed exist, but those of the results that were not extracted are missing: "
+            "no pair can be called clean. To complete it, raise the limit or analyse by tests (tests=[...])")
+
+
 def coverage_view(result: AnalysisResult, lang: str) -> dict[str, Any]:
     cov = result.coverage
     warnings = []
@@ -106,7 +136,9 @@ def coverage_view(result: AnalysisResult, lang: str) -> dict[str, Any]:
     if cov.silenced_tests:
         warnings.append((f"el filtro descartó todos los resultados de: {', '.join(cov.silenced_tests)}"
                          if es else f"the filter rejected every result of: {', '.join(cov.silenced_tests)}"))
-    if cov.truncated:
+    if cov.partial:
+        warnings.append(_partial_text(cov.partial, es))
+    elif cov.truncated:
         warnings.append("la exportación fue truncada; el análisis es parcial" if es else "export was truncated; analysis is partial")
     if cov.skipped:
         if cov.skipped_open is None:
@@ -132,7 +164,9 @@ def coverage_view(result: AnalysisResult, lang: str) -> dict[str, Any]:
         warnings.append((f"elementos sin disciplina por categoría: {top}; ajustar perfil o asignar archivos"
                          if es else f"elements with no discipline: {top}; adjust the profile or assign files"))
     return {"complete": cov.complete, "tests": f"{cov.tests_ran}/{cov.tests_count}", "never_run": cov.never_run,
-            "pairs_without_results": cov.pairs_without_results, "skipped": cov.skipped, "skipped_open": cov.skipped_open, "sleeves_modeled": cov.sleeves_modeled, "warnings": warnings}
+            "pairs_without_results": cov.pairs_without_results, "skipped": cov.skipped, "skipped_open": cov.skipped_open, "sleeves_modeled": cov.sleeves_modeled,
+            **({"partial": cov.partial} if cov.partial else {}), **({"extraction": cov.stats} if cov.stats else {}),
+            "warnings": warnings}
 
 
 def summary(result: AnalysisResult, profile: Profile, top: int = 10, lang: str | None = None) -> dict[str, Any]:

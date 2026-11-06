@@ -116,9 +116,17 @@ def run(app: App, writes: bool = False, wait_s: float = 900.0, say: Callable[[st
             a = _wait(lambda: app.analyze("", None, 5, 45, a.get("job_id", ""), None), wait_s)
         ctx["analysis"] = a
         b = a["per_band"]
+        cov = a["coverage"]
+        part = cov.get("partial")
+        ex = cov.get("extraction")
+        extra = ""
+        if part:
+            extra = f"; PARTIAL ({', '.join(r['code'] for r in part['reasons'])}): {part['open_extracted']} of {part['open_available']} open results"
+        if ex:
+            extra += f"; {ex['pages']} slices, slowest {ex['slowest_slice_s']} s"
         return (f"{a['raw_count']} results -> {a['issues']} issues "
                 f"(critical {b['critical']}, high {b['high']}, medium {b['medium']}, low {b['low']}); "
-                f"filtered {sum(a.get('filtered', {}).values())}, complete={a['coverage']['complete']}")
+                f"filtered {sum(a.get('filtered', {}).values())}, complete={cov['complete']}{extra}")
 
     def issues() -> str:
         res = app.issues("", "", "", "", "", "rank", 5, 0, None)

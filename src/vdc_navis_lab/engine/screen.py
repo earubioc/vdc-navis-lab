@@ -77,8 +77,12 @@ class NoiseScreen:
             return "designed_opening"
         return ""
 
-    def run(self, clashes: list[Clash]) -> Screened:
+    def run(self, clashes: list[Clash], closed_unextracted: dict[str, int] | None = None) -> Screened:
         out = Screened()
+        for test, n in (closed_unextracted or {}).items():  # counted by the extractor, never described: closed by definition
+            if n > 0 and self.drop_closed:
+                out.by_test_in[test] += n
+                out.reasons["closed"] += n
         for clash in clashes:
             out.by_test_in[clash.test] += 1
             why = self.reason(clash)

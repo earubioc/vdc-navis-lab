@@ -89,6 +89,12 @@ class App:
             raise ToolFault("read_only", "VDC_NAVIS_LAB_READ_ONLY is set: this server will not modify the document",
                             "unset it in the server environment to allow writes")
 
+    def _drop_pending(self) -> None:
+        ext = self.pending_analysis.get("extraction")
+        if ext is not None:
+            ext.cancel()
+        self.pending_analysis = {}
+
     def _lang(self, lang: str | None) -> str:
         if lang and lang not in ("es", "en"):
             raise ToolFault(INVALID_PARAMS, "lang must be 'es' or 'en'")
@@ -147,7 +153,9 @@ class App:
                                "issues": len(r.issues), "age_s": round(time.time() - r.created),
                                "stale": stale, "reasons": reasons}
         if self.pending_analysis:
-            out["extraction_job"] = {"job_id": self.pending_analysis["job_id"]}
+            ext = self.pending_analysis.get("extraction")
+            out["extraction_job"] = ({"job_id": self.pending_analysis["job_id"], **ext.status()["progress"], "state": ext.state}
+                                     if ext is not None else {"job_id": self.pending_analysis["job_id"]})
         return out
 
     def _live_tests(self) -> dict[str, Any]:
@@ -172,7 +180,7 @@ class App:
             if not target:
                 raise ToolFault(INVALID_PARAMS, "target is required to select")
             info = self.bridge.select(target)
-            self.pending_analysis = {}
+            self._drop_pending()
             return {"selected": info["instance_id"], "document": (info.get("doc") or {}).get("title")}
         if action == "release":
             self.bridge.release()
@@ -181,6 +189,25 @@ class App:
 
     # ------------------------------------------------------------ nw_job
     def job(self, action: str, job_id: str) -> dict[str, Any]:
+        ext = self.pending_analysis.get("extraction")
+        if ext is not None and (action == "list" or job_id == ext.job_id):
+            # The extraction runs in this server, not in the add-in: its status and cancellation are answered here.
+            if action == "status":
+                return ext.status()
+            if action == "cancel":
+                self._refuse_if_read_only()
+                ext.cancel()
+                ext.wait(10)
+                out = ext.status()
+                self.pending_analysis = {}
+                return out
+            if action == "list":
+                try:
+                    ep, _, _ = self.bridge.resolve()
+                    jobs = list(self.bridge.call_at(ep, "job.list"))
+                except BridgeError:
+                    jobs = []
+                return {"jobs": [ext.status(), *jobs]}
         ep, _, note = self.bridge.resolve(for_write=(action == "cancel"))
         if action == "list":
             return {"jobs": self.bridge.call_at(ep, "job.list")}
@@ -347,28 +374,50 @@ class App:
         else:
             ep, info, note = self.bridge.resolve()
             ep_text = str(ep)
-            # A federation with hundreds of thousands of results does not fit in the Navisworks process or in one pipe
-            # message; the export is capped and reported as truncated (coverage warning) instead of failing late.
-            cap = int(os.environ.get("VDC_NAVIS_LAB_MAX_CLASHES", "40000") or 0)
-            started = self.bridge.call_at(ep, "clash.export", {"tests": tests or [], "limit": max(cap, 0)})
-            self.pending_analysis = {"job_id": started["job_id"], "endpoint": ep_text, "info": info}
+            hello = self.bridge.call_at(ep, "hello", {"light": True})
+            if "clash.page" in (hello.get("methods") or []):
+                # Paged extraction: no cap of 40,000, no single 64 MB message, Navisworks keeps answering between slices.
+                from .extract import Extraction
+                ext = Extraction(self.bridge, ep, tests, bool(self.profile.section("noise").get("drop_closed", True))).start()
+                self.pending_analysis = {"job_id": ext.job_id, "endpoint": ep_text, "info": info, "extraction": ext}
+            else:
+                # An older add-in: one export job, capped, because a federation with hundreds of thousands of results does
+                # not fit in one pipe message; the export is reported as truncated (coverage warning) instead of failing late.
+                cap = int(os.environ.get("VDC_NAVIS_LAB_MAX_CLASHES", "40000") or 0)
+                started = self.bridge.call_at(ep, "clash.export", {"tests": tests or [], "limit": max(cap, 0)})
+                self.pending_analysis = {"job_id": started["job_id"], "endpoint": ep_text, "info": info}
 
         from .bridge.transport import Endpoint
         ep = Endpoint.parse(ep_text)
         jid = self.pending_analysis["job_id"]
-        status = self.bridge.wait_job(ep, jid, min(max(max_wait_s, 0), 50))
-        if status["state"] in ("running", "queued", "verifying"):
-            return {"state": status["state"], "job_id": jid, "progress": status.get("progress"),
-                    "hint": f"still extracting; call nw_analyze(job_id='{jid}') to collect, or nw_job to watch it"}
-        if status["state"] != "completed":
-            self.pending_analysis = {}
-            raise ToolFault("export_failed", status.get("error") or f"export job {status['state']}")
-        data = self.bridge.call_at(ep, "job.result", {"job_id": jid})
-        try:
-            cs = ClashSet.from_dict(data)
-        except (KeyError, ValueError, TypeError) as exc:
-            self.pending_analysis = {}
-            raise ToolFault("bad_export", f"the add-in returned an export this server cannot read ({type(exc).__name__})") from None
+        ext = self.pending_analysis.get("extraction")
+        if ext is not None:
+            state = ext.wait(min(max(max_wait_s, 0), 50))
+            if state == "running":
+                st = ext.status()
+                return {"state": "running", "job_id": jid, "stage": "extraction", "progress": st["progress"],
+                        "hint": f"extracting the results in slices (nothing is lost if you wait); call nw_analyze(job_id='{jid}') "
+                                "to collect, or nw_job(action='status') to watch it"}
+            if state == "failed":
+                self.pending_analysis = {}
+                code, msg = ext.error or ("export_failed", "extraction failed")
+                raise ToolFault(NOT_FOUND if code == "not_found" else "export_failed", msg)
+            cs = ext.result
+            assert cs is not None
+        else:
+            status = self.bridge.wait_job(ep, jid, min(max(max_wait_s, 0), 50))
+            if status["state"] in ("running", "queued", "verifying"):
+                return {"state": status["state"], "job_id": jid, "progress": status.get("progress"),
+                        "hint": f"still extracting; call nw_analyze(job_id='{jid}') to collect, or nw_job to watch it"}
+            if status["state"] != "completed":
+                self.pending_analysis = {}
+                raise ToolFault("export_failed", status.get("error") or f"export job {status['state']}")
+            data = self.bridge.call_at(ep, "job.result", {"job_id": jid})
+            try:
+                cs = ClashSet.from_dict(data)
+            except (KeyError, ValueError, TypeError) as exc:
+                self.pending_analysis = {}
+                raise ToolFault("bad_export", f"the add-in returned an export this server cannot read ({type(exc).__name__})") from None
         live = self.bridge.call_at(ep, "hello")
         cs.document = {**cs.document, **{k: v for k, v in (live.get("doc") or {}).items() if k in ("title", "fingerprint")}}
         key = (live.get("instance_id"), str((live.get("doc") or {}).get("fingerprint", "")))

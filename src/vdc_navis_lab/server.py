@@ -126,7 +126,9 @@ def nw_analyze(path: str = "", tests: list[str] | None = None, top: int = 10, ma
                job_id: str = "", lang: str = "") -> dict[str, Any]:
     """Core tool. Extracts the clash results (live from Navisworks, or from path= a .xml/.csv/.json export), drops
     noise, collapses clashes into issues, scores each with reasons, finds root causes, and reports coverage. Returns a
-    summary only. If extraction outlasts max_wait_s you get a job_id: call again with job_id= to collect."""
+    summary only. If extraction outlasts max_wait_s you get a job_id: call again with job_id= to collect (nothing is repeated;
+    on a large federation it takes minutes and reports progress). When coverage.partial is present the analysis does NOT cover
+    every open result and says why (limit, memory, time): never present it as complete."""
     return APP.analyze(path, tests, top, max_wait_s, job_id, lang or None)
 
 

@@ -166,6 +166,13 @@ class ClashSet:
     skipped: int = 0  # results dropped by the extractor because an element no longer exists in the model
     skipped_open: int | None = None  # of those, how many were still open (new/active); None = not reported
     sleeves_modeled: int | None = None  # elements that look like modeled sleeves/openings; None = not checked (not serialized)
+    # Closed results (approved, resolved) that the paged extraction counted but did not describe, per test: the noise filter
+    # would drop them anyway, so they only need to be counted. Nothing here is ever an open result.
+    closed_unextracted: dict[str, int] = field(default_factory=dict)
+    # Why the extraction is incomplete, when it is: {"reasons": [...], "extracted": n, "available_open": n, "tests_partial": k, ...}
+    partial: dict[str, Any] = field(default_factory=dict)
+    # How the extraction went (pages, seconds, slowest slice, results only counted); informative, not serialized.
+    stats: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -174,6 +181,8 @@ class ClashSet:
             "skipped_open": self.skipped_open,
             "tests": [t.to_dict() for t in self.tests],
             "clashes": [c.to_dict() for c in self.clashes],
+            **({"closed_unextracted": self.closed_unextracted} if self.closed_unextracted else {}),
+            **({"partial": self.partial} if self.partial else {}),
         }
 
     @classmethod
@@ -189,6 +198,8 @@ class ClashSet:
             truncated=bool(raw.get("truncated", False)),
             skipped=int(raw.get("skipped", 0) or 0),
             skipped_open=(int(raw["skipped_open"]) if raw.get("skipped_open") is not None else None),
+            closed_unextracted={str(k): int(v) for k, v in (raw.get("closed_unextracted") or {}).items()},
+            partial=dict(raw.get("partial") or {}),
         )
 
 

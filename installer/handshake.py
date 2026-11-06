@@ -1,6 +1,6 @@
 """Handshake with an MCP server over stdio, the way a client does: initialize, list tools, call nw_status.
 
-  uv run --with mcp python installer/handshake.py <dir of the unzipped .mcpb> [expected tools]
+  uv run --with mcp python installer/handshake.py <dir of the unzipped .mcpb> [expected tools] [python to run a "python" bundle with]
 
 It launches the server exactly as the manifest says (uv run --directory <dir> run_server.py), with a private data folder so
 it does not touch the real one. Prints PASS/FAIL lines and nothing about any model.
@@ -18,12 +18,11 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 
-async def main(folder: str, expected: int) -> int:
+async def main(folder: str, expected: int, python_bin: str = "") -> int:
     manifest = json.loads((Path(folder) / "manifest.json").read_text(encoding="utf-8"))
     cfg = manifest["server"]["mcp_config"]
     data = tempfile.mkdtemp(prefix="vdc-navis-lab-handshake-")
     env = dict(os.environ)  # a real host also passes the user's environment (proxy, certificates, uv cache)
-    env.update({k: v.replace("${user_config.read_only}", "true") for k, v in cfg.get("env", {}).items()})
     env["VDC_NAVIS_LAB_HOME"] = data
     args = [a.replace("${__dirname}", str(Path(folder).resolve())) for a in cfg["args"]]
     ok = True
@@ -33,7 +32,10 @@ async def main(folder: str, expected: int) -> int:
         ok &= good
         print(f"{'PASS' if good else 'FAIL'}  {name:<28} {detail}")
 
-    params = StdioServerParameters(command=cfg["command"], args=args, env=env)
+    command = python_bin if (python_bin and cfg["command"] == "python") else cfg["command"]
+    for k, v in cfg.get("env", {}).items():
+        env[k] = v.replace("${user_config.read_only}", "true").replace("${__dirname}", str(Path(folder).resolve()))
+    params = StdioServerParameters(command=command, args=args, env=env)
     async with stdio_client(params) as (read, write):
         async with ClientSession(read, write) as s:
             init = await asyncio.wait_for(s.initialize(), 300)
@@ -52,4 +54,4 @@ async def main(folder: str, expected: int) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(asyncio.run(main(sys.argv[1], int(sys.argv[2]) if len(sys.argv) > 2 else 16)))
+    sys.exit(asyncio.run(main(sys.argv[1], int(sys.argv[2]) if len(sys.argv) > 2 else 16, sys.argv[3] if len(sys.argv) > 3 else "")))

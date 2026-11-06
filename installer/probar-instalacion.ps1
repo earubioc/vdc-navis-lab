@@ -5,7 +5,8 @@
   Uso:
     .\probar-instalacion.ps1 -Msi VdcNavisLab-2025-1.0.1.msi -Year 2025
     .\probar-instalacion.ps1 -Msi VdcNavisLab-2025-1.0.1.msi -Year 2025 -MsiNueva VdcNavisLab-2025-1.0.2.msi
-    .\probar-instalacion.ps1 -Mcpb vdc-navis-lab-1.0.1.mcpb          # necesita uv (https://docs.astral.sh/uv/)
+    .\probar-instalacion.ps1 -Mcpb vdc-navis-lab-1.0.1.mcpb          # variante uv: necesita uv e internet la primera vez
+    .\probar-instalacion.ps1 -Mcpb vdc-navis-lab-1.0.1-offline-windows.mcpb   # variante sin conexión: necesita Python 3.11 a 3.13, nada más
     .\probar-instalacion.ps1 -Msi ... -Year 2025 -Mcpb ...           # las dos cosas
 
   Imprime PASS o FAIL por paso y termina con código 0 solo si todo pasó. No imprime nada de ningún modelo.
@@ -92,25 +93,43 @@ if ($Msi) {
 if ($Mcpb) {
     $Mcpb = (Resolve-Path $Mcpb).Path
     $dest = Join-Path $env:TEMP 'vdc-navis-lab-mcpb'
-    Paso 'MCPB: uv disponible' {
-        $v = (& uv --version) 2>&1
-        Exigir ($LASTEXITCODE -eq 0) 'no se encontró uv (Claude Desktop lo trae; en una máquina sin él: winget install astral-sh.uv)'
-        "$v"
-    }
     Paso 'MCPB: abrir el paquete' {
         if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
         Copy-Item $Mcpb "$Mcpb.zip" -Force
         Expand-Archive "$Mcpb.zip" -DestinationPath $dest -Force
         Remove-Item "$Mcpb.zip"
-        $m = Get-Content (Join-Path $dest 'manifest.json') -Raw | ConvertFrom-Json
-        "$($m.name) $($m.version), servidor tipo $($m.server.type)"
+        $script:manifiesto = Get-Content (Join-Path $dest 'manifest.json') -Raw | ConvertFrom-Json
+        "$($script:manifiesto.name) $($script:manifiesto.version), servidor tipo $($script:manifiesto.server.type)"
     }
-    Paso 'MCPB: el servidor arranca y responde (16 herramientas)' {
-        $h = Join-Path $PSScriptRoot 'handshake.py'
-        Exigir (Test-Path $h) "falta $h (copie la carpeta installer completa)"
-        $out = & uv run --no-project --with mcp python $h $dest 16 2>&1 | Out-String
-        Exigir ($LASTEXITCODE -eq 0) ("el saludo con el servidor falló:`n" + $out)
-        ($out -split "`n" | Where-Object { $_ -match '^PASS' }) -join ' | '
+    $h = Join-Path $PSScriptRoot 'handshake.py'
+    if ($script:manifiesto.server.type -eq 'uv') {
+        Paso 'MCPB (uv): uv disponible' {
+            $v = (& uv --version) 2>&1
+            Exigir ($LASTEXITCODE -eq 0) 'no se encontró uv (Claude Desktop lo trae; en una máquina sin él: winget install astral-sh.uv)'
+            "$v"
+        }
+        Paso 'MCPB (uv): el servidor arranca y responde (16 herramientas)' {
+            Exigir (Test-Path $h) "falta $h (copie la carpeta installer completa)"
+            $out = & uv run --no-project --with mcp python $h $dest 16 2>&1 | Out-String
+            Exigir ($LASTEXITCODE -eq 0) ("el saludo con el servidor falló:`n" + $out)
+            ($out -split "`n" | Where-Object { $_ -match '^PASS' }) -join ' | '
+        }
+    } else {
+        # Variante sin conexión: Python del equipo y todo lo demás dentro del paquete. No se usa la red en ningún paso.
+        Paso 'MCPB (python): Python 3.11 a 3.13 disponible' {
+            $py = Get-Command python -ErrorAction Stop
+            $v = (& $py.Source --version) 2>&1 | Out-String
+            Exigir ($v -match 'Python 3\.(11|12|13)\.') "el paquete incluye dependencias para Python 3.11, 3.12 y 3.13; este equipo tiene: $v"
+            "$($v.Trim()) en $($py.Source)"
+        }
+        Paso 'MCPB (python): el servidor arranca y responde (16 herramientas)' {
+            Exigir (Test-Path $h) "falta $h (copie la carpeta installer completa)"
+            $py = (Get-Command python).Source
+            $env:PYTHONPATH = Join-Path $dest 'server\lib'   # el cliente del saludo también sale del paquete: sin red
+            try { $out = & $py $h $dest 16 $py 2>&1 | Out-String } finally { Remove-Item Env:\PYTHONPATH }
+            Exigir ($LASTEXITCODE -eq 0) ("el saludo con el servidor falló:`n" + $out)
+            ($out -split "`n" | Where-Object { $_ -match '^PASS' }) -join ' | '
+        }
     }
 }
 

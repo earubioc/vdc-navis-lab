@@ -49,11 +49,13 @@ namespace VdcNavisLab.Addin
         {
             _methods = new Dictionary<string, Func<Dictionary<string, object>, object>>
             {
-                { "hello", p => _h.Hello(Names()) },
+                { "hello", p => _h.Hello(Names(), p != null && p.ContainsKey("light") && true.Equals(p["light"])) },
                 { "doc.info", p => _h.DocInfo() },
                 { "doc.sample", p => _h.Sample(p) },
                 { "clash.tests", p => _h.ClashTests() },
                 { "clash.export", p => _h.StartExport(p) },
+                { "clash.page", p => _h.ClashPage(p) },
+                { "clash.release", p => _h.ClashRelease() },
                 { "clash.apply", p => _h.ClashApply(p) },
                 { "doc.save", p => _h.DocSave(p) },
                 { "clash.run", p => _h.StartClashRun(p) },

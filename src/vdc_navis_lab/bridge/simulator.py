@@ -25,7 +25,7 @@ from .protocol import (API_VERSION, BUSY, INVALID_PARAMS, NOT_FOUND, STALE_DOCUM
                        encode_result)
 from .transport import registry_dir
 
-METHODS = ["hello", "doc.info", "model.census", "elements.query", "clash.tests", "clash.run", "clash.export",
+METHODS = ["hello", "doc.info", "model.census", "elements.query", "clash.tests", "clash.run", "clash.export", "clash.page", "clash.release",
            "clash.apply", "clash.image", "view.select", "view.color", "view.reset", "sets.list", "props.sample", "setup.apply", "doc.save", "job.status", "job.result", "job.cancel", "job.list"]
 
 # A 1x1 transparent PNG: the simulator cannot render, so this stands in for whatever real image
@@ -41,8 +41,23 @@ class Fault(Exception):
 
 
 class Simulator:
-    def __init__(self, seed: int = 7, port: int = 0, job_delay: float = 0.15) -> None:
-        self.clashset, self.elements = build(seed)
+    def __init__(self, seed: int = 7, port: int = 0, job_delay: float = 0.15, clashset: ClashSet | None = None,
+                 page_memory_stop_after: int = 0, legacy: bool = False, page_delay: float = 0.0) -> None:
+        """`clashset` replaces the synthetic tower (for scale tests); `page_memory_stop_after` makes clash.page report its
+        memory guard after that many described results; `legacy` answers like an add-in without clash.page."""
+        if clashset is not None:
+            self.clashset, self.elements = clashset, []
+            self.clashset.document = {**(self.clashset.document or {}), "title": self.clashset.document.get("title", "simulated-federation")}
+        else:
+            self.clashset, self.elements = build(seed)
+        self.legacy = legacy
+        self.page_delay = page_delay
+        self.page_memory_stop_after = page_memory_stop_after
+        self._described = 0
+        self._by_test: dict[str, list] = {}
+        for c in self.clashset.clashes:
+            self._by_test.setdefault(c.test, []).append(c)
+        self._page_cache: dict[str, list] = {}
         self.job_delay = job_delay
         self.instance_id = f"sim-{uuid.uuid4().hex[:8]}"
         self.started = time.time()
@@ -145,8 +160,9 @@ class Simulator:
 
     # ------------------------------------------------------------ methods
     def m_hello(self, p: dict) -> dict:
+        methods = [m for m in METHODS if not (self.legacy and m in ("clash.page", "clash.release"))]
         return {"product": "navisworks-simulator", "version": "0.1", "api": API_VERSION,
-                "instance_id": self.instance_id, "started": self.started, "doc": self._doc(), "methods": METHODS}
+                "instance_id": self.instance_id, "started": self.started, "doc": self._doc(), "methods": methods}
 
     def m_doc_info(self, p: dict) -> dict:
         return {**self._doc(), "models": self.clashset.models, "units": "m", "saves": self.saves}
@@ -196,8 +212,7 @@ class Simulator:
         return out
 
     def m_clash_tests(self, p: dict) -> list[dict]:
-        rows = [{**t.to_dict(), "count": sum(1 for c in self.clashset.clashes if c.test == t.name)}
-                for t in self.clashset.tests]
+        rows = [{**t.to_dict(), "count": len(self._by_test.get(t.name, ()))} for t in self.clashset.tests]
         rows += [{"name": n, "kind": t["type"], "status": "new", "tolerance": t["tolerance_m"], "count": 0}
                  for n, t in self.setup_tests.items()]
         return rows
@@ -214,6 +229,64 @@ class Simulator:
                     t.status = "active"
             return {"ran": sorted(names)}
         return {"job_id": self._job("clash.run", work)}
+
+    def m_clash_page(self, p: dict) -> dict:
+        """One slice of one test, open results first, like the add-in. Positions are indexes in that order."""
+        if self.legacy:
+            raise Fault(UNSUPPORTED, "unknown method 'clash.page'")
+        if self.page_delay:
+            time.sleep(self.page_delay)
+        name, cursor = str(p["test"]), max(0, int(p.get("cursor", 0)))
+        limit = max(25, min(3000, int(p.get("limit", 500))))
+        closed_left = int(p.get("closed_describe", -1))
+        want = str(p.get("if_fingerprint", ""))
+        if want and want != self.fingerprint:
+            raise Fault(STALE_DOCUMENT, "the open document is not the one the extraction started on", "start the analysis again")
+        if p.get("begin"):
+            self._page_cache.clear()
+            self._described = 0
+        if name not in self._by_test and name not in {t.name for t in self.clashset.tests}:
+            raise Fault(NOT_FOUND, "unknown clash test")
+        items = self._page_cache.get(name)
+        if items is None or cursor == 0:
+            raw = self._by_test.get(name, [])
+            closed_set = ("approved", "resolved")
+            items = [c for c in raw if self.status[c.id] not in closed_set] + [c for c in raw if self.status[c.id] in closed_set]
+            self._page_cache = {name: items}
+        n_open = sum(1 for c in items if self.status[c.id] not in ("approved", "resolved"))
+        out, closed_skipped, closed_described, stop = [], 0, 0, None
+        i = cursor
+        while i < len(items):
+            if len(out) >= limit:
+                break
+            if self.page_memory_stop_after and self._described >= self.page_memory_stop_after:
+                stop = "memory"
+                break
+            c = items[i]
+            st = self.status[c.id]
+            closed = st in ("approved", "resolved")
+            if closed and closed_left == 0:
+                closed_skipped += 1
+                i += 1
+                continue
+            d = c.to_dict()
+            d["status"] = st
+            out.append(d)
+            self._described += 1
+            if closed:
+                closed_described += 1
+                closed_left -= 1 if closed_left > 0 else 0
+            i += 1
+        t = next((t for t in self.clashset.tests if t.name == name), None)
+        return {"test": {"name": name, "kind": t.kind if t else "hard", "status": t.status if t else "new",
+                         "tolerance": t.tolerance if t else 0.0, "count": len(items)},
+                "clashes": out, "next": i if i < len(items) else None, "total": len(items), "open_total": n_open,
+                "closed_total": len(items) - n_open, "skipped": 0, "skipped_open": 0, "closed_skipped": closed_skipped,
+                "closed_described": closed_described, "memory_growth_mb": 0, "stop": stop}
+
+    def m_clash_release(self, p: dict) -> dict:
+        self._page_cache.clear()
+        return {"released": True}
 
     def m_clash_export(self, p: dict) -> dict:
         names = set(p.get("tests") or [])
