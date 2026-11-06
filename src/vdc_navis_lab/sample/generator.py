@@ -143,3 +143,72 @@ def build(seed: int = 7, levels: int = 5) -> tuple[ClashSet, list[Element]]:
     cs = ClashSet(clashes=b.clashes, tests=tests, models=sorted(MODELS.values()),
                   document={"title": "TORRE-DEMO.nwf", "fingerprint": "sim-torre-demo-0001"}, source="synthetic")
     return cs, list(b.elements.values())
+
+
+# ------------------------------------------------------------------ infrastructure scale
+INFRA_MODELS = {
+    "STR": ("INFRA-EST.nwc", "Structural Framing", "Concrete-Rectangular Beam"),
+    "ARC": ("INFRA-ARQ.nwc", "Walls", "Basic Wall"),
+    "HVAC": ("INFRA-MEC.nwc", "Ducts", "Rectangular Duct"),
+    "PLB": ("INFRA-HID.nwc", "Pipes", "Pipe Types:Steel 100"),
+    "DRN": ("INFRA-SAN.nwc", "Pipes", "Pipe Types:PVC 200"),
+    "ELE": ("INFRA-ELE.nwc", "Conduits", "Conduit:EMT 25"),
+    "FIRE": ("INFRA-RCI.nwc", "Pipes", "Pipe Types:Black steel 65"),
+}
+# status mix of a long-running coordination: most results are already handled
+_STATUS_WEIGHTS = (("new", 40), ("active", 10), ("reviewed", 10), ("approved", 28), ("resolved", 12))
+
+
+def build_infra(tests: int = 240, per_test: int = 3000, seed: int = 11, segments: int = 60, per_place: int = 6) -> ClashSet:
+    """Synthetic infrastructure-sized federation: hundreds of tests, thousands of results each, clustered along an
+    alignment so that the engine sees realistic places (hotspots), shared elements, repeated details, closed results,
+    tolerance noise and clearance tests. Deterministic. Nothing here is real project data.
+
+    The count is what matters for measuring: 240 tests x 3000 results is 720,000 results.
+    """
+    rng = random.Random(seed)
+    codes = list(INFRA_MODELS)
+    pairs = [(a, b) for i, a in enumerate(codes) for b in codes[i + 1:]] + [(a, a) for a in codes]
+    pool: dict[str, list[Element]] = {}
+    per_pool = max(400, tests * per_test // (len(codes) * 8))   # each element takes part in several results
+    for code in codes:
+        model, cat, fam = INFRA_MODELS[code]
+        items = []
+        for n in range(per_pool):
+            seg = f"Tramo {1 + (n * segments) // per_pool}"
+            x, y, z = rng.uniform(0, 6000), rng.uniform(-40, 40), rng.uniform(-12, 12)
+            items.append(Element(id=f"{model}:{n}", name=f"{fam} {n}", category=cat, family=fam, model=model,
+                                 level=seg, props={"Id": str(n)}, system="S" + str(n % 40),
+                                 bbox=((x - 1, y - 1, z), (x + 1, y + 1, z + 0.4))))
+        pool[code] = items
+    weights = [w for _, w in _STATUS_WEIGHTS]
+    names = [s for s, _ in _STATUS_WEIGHTS]
+    infos: list[TestInfo] = []
+    clashes: list[Clash] = []
+    n = 0
+    for t in range(tests):
+        a, b = pairs[t % len(pairs)]
+        clearance = t % 10 == 9
+        info = TestInfo(f"T{t + 1:03d}_{a}vs{b}", CLEARANCE if clearance else HARD, "active", 1.0 if clearance else 0.0, per_test)
+        infos.append(info)
+        spots = max(1, per_test // max(1, per_place))   # results per place: 6 is sparse, 100 or more is a congested corridor
+        centres = [(rng.uniform(0, 6000), rng.uniform(-40, 40), rng.uniform(-12, 12)) for _ in range(spots)]
+        pa, pb = pool[a], pool[b]
+        for _ in range(per_test):
+            n += 1
+            cx, cy, cz = centres[rng.randrange(spots)]
+            ea, eb = pa[rng.randrange(len(pa))], pb[rng.randrange(len(pb))]
+            if ea is eb:
+                eb = pb[(pb.index(eb) + 1) % len(pb)] if len(pb) > 1 else eb
+            point = (cx + rng.uniform(-0.8, 0.8), cy + rng.uniform(-0.8, 0.8), cz + rng.uniform(-0.3, 0.3))
+            if clearance:
+                dist, kind = rng.uniform(0.2, 0.9), CLEARANCE
+            else:
+                depth = 0.001 + rng.random() ** 3 * 0.35 if rng.random() > 0.08 else rng.uniform(0.0005, 0.004)
+                dist, kind = -depth, HARD
+            seg = f"Tramo {1 + int(cx / 6000 * (segments - 1))}"
+            clashes.append(Clash(id=f"c{n}", test=info.name, name=f"Clash{n}", status=rng.choices(names, weights)[0],
+                                 kind=kind, distance=dist, point=point, a=ea, b=eb, level=seg))
+    return ClashSet(clashes=clashes, tests=infos, models=sorted(v[0] for v in INFRA_MODELS.values()),
+                    document={"title": "INFRA-SINTETICO.nwf", "fingerprint": f"synthetic-infra-{tests}x{per_test}"},
+                    source="synthetic")

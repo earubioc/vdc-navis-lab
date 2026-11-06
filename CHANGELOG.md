@@ -2,6 +2,7 @@
 
 ## 1.0.1
 
+- `vdc-navis-lab-cli bench`: scale measurement that prints figures only. Default: a synthetic infrastructure federation (`build_infra`, 240 tests by 3000 results, clustered along an alignment, with closed results, noise, clearance tests and shared elements) generated and analysed in memory; `--file` for an exported clash file; `--live` for the whole path against the open Navisworks, including how Navisworks answers while it extracts and the peak memory of both processes.
 - `vdc-navis-lab-cli verify [--writes] [--simulate]`: self-check that exercises status, census, analysis, views, reports, exports, images and, with `--writes`, a group, a status and a viewpoint. It prints only PASS/FAIL and figures (no names), so its output can be shared about a confidential model. Peak Navisworks memory is reported on Windows.
 - Add-in: changing a clash result's status no longer references the `Assignee` type at compile time; the call picks the overload the running Navisworks has (two or three arguments). It was the only error when building against Navisworks Manage 2025. 2025 is not listed as verified until a live run confirms it.
 - Navisworks 2025: the add-in now creates a WinForms UI context when Navisworks leaves none installed on its main thread (2025 does; 2026 does not), which is what made every call fail with "UI thread context not captured". Verified live in Manage 2025: connection, model audit, `nw_setup` (5 sets and 5 tests created) and running the tests.

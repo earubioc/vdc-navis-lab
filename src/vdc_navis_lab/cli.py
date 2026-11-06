@@ -159,6 +159,26 @@ def _cmd_verify(args: argparse.Namespace) -> int:
             scratch.cleanup()
 
 
+def _cmd_bench(args: argparse.Namespace) -> int:
+    """Scale measurement. Prints figures only (no names), so it is safe to paste."""
+    from . import bench
+    if args.live:
+        from .service import App, ToolFault
+        if args.writes:
+            os.environ["VDC_NAVIS_LAB_READ_ONLY"] = "0"
+        try:
+            bench.run_live(App(), wait_s=args.wait)
+        except ToolFault as exc:
+            print(f"error: {exc.code}", file=sys.stderr)
+            return 1
+        return 0
+    if args.file:
+        bench.run_file(args.file)
+    else:
+        bench.run_synthetic(args.tests, args.per_test, args.seed, args.per_place)
+    return 0
+
+
 LEGACY_NAME = "navis" + "-mcp"
 
 
@@ -250,6 +270,16 @@ def main(argv: list[str] | None = None) -> int:
     vf.add_argument("--writes", action="store_true", help="also test writing a group, a status and a viewpoint (changes the open document in memory; never saves)")
     vf.add_argument("--wait", type=float, default=900.0, help="seconds to wait for slow steps such as the census")
     vf.set_defaults(fn=_cmd_verify)
+    bn = sub.add_parser("bench", help="measure time and memory at scale; prints figures only (synthetic, --file, or --live)")
+    bn.add_argument("--tests", type=int, default=240, help="synthetic: number of tests")
+    bn.add_argument("--per-test", type=int, default=3000, help="synthetic: results per test")
+    bn.add_argument("--per-place", type=int, default=6, help="synthetic: results per place (6 sparse; 100 or more is a congested corridor)")
+    bn.add_argument("--seed", type=int, default=11)
+    bn.add_argument("--file", default="", help="measure an exported clash file instead of generating one")
+    bn.add_argument("--live", action="store_true", help="measure the whole path against the Navisworks that is open now")
+    bn.add_argument("--wait", type=float, default=1800.0, help="--live: seconds to wait for the extraction")
+    bn.add_argument("--writes", action="store_true", help=argparse.SUPPRESS)
+    bn.set_defaults(fn=_cmd_bench)
     ca = sub.add_parser("call", help="call one tool once: vdc-navis-lab-cli call nw_profile '{\"action\":\"show\"}'")
     ca.add_argument("tool")
     ca.add_argument("args", nargs="?", default="")
