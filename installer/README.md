@@ -5,7 +5,7 @@ Two packages, built from this repository.
 | Package | What it is | Built with | Installed by |
 |---|---|---|---|
 | `VdcNavisLab-<year>-<version>.msi` | the Navisworks add-in, one per major version (2025, 2026) | `build-msi.sh <year> <version> <dll>` | the IT department (Intune, GPO, SCCM, double click) |
-| `vdc-navis-lab-<version>.mcpb` | the MCP server as a Claude Desktop extension, server type `uv` (116 KB; downloads its dependencies the first time) | `build-mcpb.sh` | double click, or Settings > Extensions in Claude Desktop |
+| `vdc-navis-lab-<version>.mcpb` | the MCP server as a Claude Desktop extension, server type `uv` (125 KB; downloads its dependencies the first time) | `build-mcpb.sh` | double click, or Settings > Extensions in Claude Desktop |
 | `vdc-navis-lab-<version>-offline-windows.mcpb` | the same server with every dependency inside (13 MB; for computers without internet), server type `python` | `build-mcpb-python.sh --target windows` | the same; needs Python 3.11, 3.12 or 3.13 installed |
 
 ## Build

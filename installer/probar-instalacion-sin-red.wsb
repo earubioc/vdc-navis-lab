@@ -1,0 +1,22 @@
+<!--
+  Windows Sandbox SIN RED para la prueba del MCPB sin conexión (variante python, dependencias incluidas).
+  El Windows nuevo no tiene Python ni internet: el instalador de Python debe estar en la carpeta mapeada
+  (python-3.11.x-amd64.exe, 3.12 o 3.13, descargado antes en este equipo). Se instala en silencio y se prueba el paquete.
+  1. Copie en una carpeta: la carpeta installer/, el archivo *-offline-windows.mcpb y el instalador de Python.
+  2. Cambie REEMPLAZAR por esa carpeta (ruta completa) y abra este archivo.
+  3. Al terminar, la ventana de PowerShell queda abierta con los PASS/FAIL.
+-->
+<Configuration>
+  <VGpu>Disable</VGpu>
+  <Networking>Disable</Networking>
+  <MappedFolders>
+    <MappedFolder>
+      <HostFolder>REEMPLAZAR</HostFolder>
+      <SandboxFolder>C:\prueba</SandboxFolder>
+      <ReadOnly>true</ReadOnly>
+    </MappedFolder>
+  </MappedFolders>
+  <LogonCommand>
+    <Command>powershell.exe -NoExit -ExecutionPolicy Bypass -Command "Set-Location C:\prueba; $py = (Get-ChildItem .\python-*.exe | Select-Object -First 1).FullName; Start-Process $py -ArgumentList '/quiet','InstallAllUsers=1','PrependPath=1','Include_test=0' -Wait; $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User'); .\installer\probar-instalacion.ps1 -Mcpb (Get-ChildItem .\*offline-windows.mcpb | Select-Object -First 1).FullName"</Command>
+  </LogonCommand>
+</Configuration>

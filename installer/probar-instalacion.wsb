@@ -16,6 +16,6 @@
     </MappedFolder>
   </MappedFolders>
   <LogonCommand>
-    <Command>powershell.exe -NoExit -ExecutionPolicy Bypass -Command "Set-Location C:\prueba; powershell -ExecutionPolicy Bypass -File .\installer\probar-instalacion.ps1 -Msi (Get-ChildItem .\*.msi | Select -First 1).FullName -Year 2025</Command>
+    <Command>powershell.exe -NoExit -ExecutionPolicy Bypass -Command "Set-Location C:\prueba; powershell -ExecutionPolicy Bypass -File .\installer\probar-instalacion.ps1 -Msi (Get-ChildItem .\*.msi | Select -First 1).FullName -Year 2025"</Command>
   </LogonCommand>
 </Configuration>
