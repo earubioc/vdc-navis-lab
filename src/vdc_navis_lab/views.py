@@ -123,8 +123,8 @@ def coverage_view(result: AnalysisResult, lang: str) -> dict[str, Any]:
                              if es else f"{cov.skipped} result(s) skipped because their element no longer exists in the model; "
                              "all were already closed (reviewed, approved or resolved), so the analysis is unaffected"))
     if cov.sleeves_modeled == 0:
-        warnings.append(("no hay manguitos ni aberturas modeladas (se buscaron por nombre y categoría): los pasos por losas y muros "
-                         "se tratan como pendientes de manguito"
+        warnings.append(("no hay pasamuros ni aberturas modeladas (se buscaron por nombre y categoría): los pasos por losas y muros "
+                         "se tratan como pendientes de pasamuros"
                          if es else "no sleeves or openings are modelled (searched by name and category): passages through floors "
                          "and walls are treated as still needing a sleeve"))
     if cov.unclassified:
