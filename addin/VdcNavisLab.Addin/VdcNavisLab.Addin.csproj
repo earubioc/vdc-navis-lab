@@ -8,6 +8,8 @@
     <PlatformTarget>x64</PlatformTarget>
     <!-- Default: assemblies copied to addin\refs\2026 (git-ignored). Override: dotnet build -p:NavisworksDir="C:\Program Files\Autodesk\Navisworks Manage 2026" -->
     <NavisworksDir Condition="'$(NavisworksDir)' == ''">$(MSBuildThisFileDirectory)..\refs\2026</NavisworksDir>
+    <!-- Navisworks 2027 changed the Clash API (DocumentClashTests.Tests and the one-argument edit overloads were removed). -->
+    <DefineConstants Condition="$(NavisworksDir.Contains('2027'))">$(DefineConstants);NW2027</DefineConstants>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <Version>1.1.0</Version>
   </PropertyGroup>

@@ -325,7 +325,11 @@ namespace VdcNavisLab.Addin
                                 t.SelectionB.Selection.CopyFrom(srcB);
                                 t.SelectionA.SelfIntersect = false;
                                 t.SelectionB.SelfIntersect = false;
+#if NW2027
+                                edit.TestsAddCopy(edit.Value.TestsRoot, t);  // VERIFY (2027): the one-argument overload no longer exists
+#else
                                 edit.TestsAddCopy(t);
+#endif
                                 testsAdded++;
                             }
                             var live = Tests(d).FirstOrDefault(x => x.DisplayName == name);

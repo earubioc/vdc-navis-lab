@@ -72,7 +72,7 @@ def test_instructions_fit_one_sheet_in_spanish_without_long_dashes():
 def _fake_inputs(tmp_path, version="1.1.0"):
     msis = tmp_path / "msis"
     msis.mkdir(exist_ok=True)
-    for y in (2025, 2026):
+    for y in (2025, 2026, 2027):
         (msis / f"VdcNavisLab-{y}-{version}.msi").write_bytes(b"msi" + str(y).encode())
     mcpb = tmp_path / f"vdc-navis-lab-{version}-pro-offline-windows.mcpb"
     mcpb.write_bytes(b"zip")
@@ -93,11 +93,11 @@ def test_builder_lays_out_the_folder(tmp_path):
     assert r.returncode == 0, r.stderr
     names = sorted(p.relative_to(out).as_posix() for p in out.rglob("*") if p.is_file())
     assert names == sorted(["INSTRUCCIONES.html", "SHA256SUMS.txt", "campo.ps1", "desinstalar-prueba.ps1", "instalar-prueba.ps1",
-                            "licencia/license.token", "msi/VdcNavisLab-2025-1.1.0.msi", "msi/VdcNavisLab-2026-1.1.0.msi",
+                            "licencia/license.token", "msi/VdcNavisLab-2025-1.1.0.msi", "msi/VdcNavisLab-2026-1.1.0.msi", "msi/VdcNavisLab-2027-1.1.0.msi",
                             "vdc-navis-lab-1.1.0-pro-offline-windows.mcpb"])
     assert (out / "resultados").is_dir()
     html = (out / "INSTRUCCIONES.html").read_text(encoding="utf-8")
-    assert "1.1.0" in html and "2025 y 2026" in html and "@" not in html.replace("@page", "").replace("@media", "")
+    assert "1.1.0" in html and "2025, 2026 y 2027" in html and "@" not in html.replace("@page", "").replace("@media", "")
     assert "VdcNavisLab-2025-1.1.0.msi" in (out / "SHA256SUMS.txt").read_text()
 
 

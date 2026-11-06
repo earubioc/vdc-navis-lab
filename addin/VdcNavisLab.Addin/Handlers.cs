@@ -115,7 +115,12 @@ namespace VdcNavisLab.Addin
         // ------------------------------------------------------------ clash data
         private static IEnumerable<ClashTest> Tests(Document d)
         {
+#if NW2027
+            // 2027 removed DocumentClashTests.Tests: the tests are the children of the root folder of the data.
+            return d.GetClash().TestsData.Value.TestsRoot.Children.OfType<ClashTest>();  // VERIFY (2027): not yet run against Navisworks 2027
+#else
             return d.GetClash().TestsData.Tests.OfType<ClashTest>();  // VERIFY: DocumentClash.TestsData.Tests
+#endif
         }
 
         private static IEnumerable<ClashResult> Results(ClashTest t)
