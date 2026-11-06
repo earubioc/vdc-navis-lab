@@ -2,6 +2,7 @@
 
 ## 1.0.1
 
+- `vdc-navis-lab-cli verify [--writes] [--simulate]`: self-check that exercises status, census, analysis, views, reports, exports, images and, with `--writes`, a group, a status and a viewpoint. It prints only PASS/FAIL and figures (no names), so its output can be shared about a confidential model. Peak Navisworks memory is reported on Windows.
 - Add-in: changing a clash result's status no longer references the `Assignee` type at compile time; the call picks the overload the running Navisworks has (two or three arguments). It was the only error when building against Navisworks Manage 2025. 2025 is not listed as verified until a live run confirms it.
 - Navisworks 2025: the add-in now creates a WinForms UI context when Navisworks leaves none installed on its main thread (2025 does; 2026 does not), which is what made every call fail with "UI thread context not captured". Verified live in Manage 2025: connection, model audit, `nw_setup` (5 sets and 5 tests created) and running the tests.
 - `nw_analyze` on a 1.5 GB federation: the sleeve name scan (about 135 s) now runs once in the background; while it runs the call answers `state: running, stage: sleeve_scan`, and the retry collects the same export instead of starting another one (each retry used to repeat export and scan).

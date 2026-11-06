@@ -131,6 +131,34 @@ def _cmd_demo(args: argparse.Namespace) -> int:
         scratch.cleanup()
 
 
+def _cmd_verify(args: argparse.Namespace) -> int:
+    """Self-check, safe to paste: PASS/FAIL and figures only (names never printed)."""
+    from . import verify
+    from .service import App
+    sim = None
+    scratch = None
+    if args.simulate:
+        sim = Simulator(job_delay=0.05)
+        scratch = tempfile.TemporaryDirectory(prefix="vdc-navis-lab-verify-home-")
+        os.environ["VDC_NAVIS_LAB_HOME"] = scratch.name
+        os.environ["VDC_NAVIS_LAB_ENDPOINT"] = sim.start()
+    if args.writes:
+        os.environ["VDC_NAVIS_LAB_READ_ONLY"] = "0"
+    try:
+        print(f"vdc-navis-lab verify ({'simulator' if args.simulate else 'live Navisworks'}, "
+              f"writes {'ON' if args.writes else 'off'})")
+        rep = verify.run(App(), writes=args.writes, wait_s=args.wait)
+        if rep.nw_peak_mb is not None:
+            print(f"Navisworks peak memory: {rep.nw_peak_mb} MB")
+        print("RESULT: " + ("ALL PASS" if rep.ok else f"{sum(not c.ok for c in rep.checks)} FAILED (details in verify.log in the data folder)"))
+        return 0 if rep.ok else 1
+    finally:
+        if sim:
+            sim.stop()
+        if scratch:
+            scratch.cleanup()
+
+
 LEGACY_NAME = "navis" + "-mcp"
 
 
@@ -217,6 +245,11 @@ def main(argv: list[str] | None = None) -> int:
     d.set_defaults(fn=_cmd_demo)
     tl = sub.add_parser("tools", help="list the MCP tools")
     tl.set_defaults(fn=_cmd_tools)
+    vf = sub.add_parser("verify", help="self-check against Navisworks (or --simulate); prints PASS/FAIL and figures only")
+    vf.add_argument("--simulate", action="store_true", help="use the built-in simulator instead of a live Navisworks")
+    vf.add_argument("--writes", action="store_true", help="also test writing a group, a status and a viewpoint (changes the open document in memory; never saves)")
+    vf.add_argument("--wait", type=float, default=900.0, help="seconds to wait for slow steps such as the census")
+    vf.set_defaults(fn=_cmd_verify)
     ca = sub.add_parser("call", help="call one tool once: vdc-navis-lab-cli call nw_profile '{\"action\":\"show\"}'")
     ca.add_argument("tool")
     ca.add_argument("args", nargs="?", default="")

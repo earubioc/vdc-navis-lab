@@ -27,3 +27,15 @@ It builds and copies `VdcNavisLab.dll` to `%APPDATA%\Autodesk\Navisworks Manage 
 1. Open a federated model with clash tests.
 2. In Python: `vdc-navis-lab` (or an MCP client) and call `nw_status`. The instance should be listed.
 3. `nw_analyze` should return a summary. Compare the clash count with Clash Detective.
+
+## Check an installation / Comprobar una instalación
+
+With Navisworks open on any model:
+
+```
+.venv\Scripts\vdc-navis-lab-cli verify            # read-only checks
+.venv\Scripts\vdc-navis-lab-cli verify --writes   # also writes a group, a status and a viewpoint (never saves the file)
+```
+
+It prints PASS or FAIL per step with figures and no names of files, tests or elements. `--writes` changes the open document in memory: use a copy or do not save afterwards.
+Con Navisworks abierto sobre cualquier modelo. Imprime PASS o FAIL por paso, con cifras y sin nombres. `--writes` modifica el documento abierto en memoria: use una copia o no guarde después.
