@@ -15,10 +15,13 @@ def run(*args, stdin=None):
 
 
 def test_demo_runs_end_to_end_in_both_languages():
-    for lang, marker in (("es", "Listo."), ("en", "Done.")):
-        r = run("vdc_navis_lab.cli", "demo", "--lang", lang)
+    """Community: analysis and the write preview run; executing the plan says it is a Pro capability."""
+    env = {**os.environ, "PYTHONPATH": SRC, "VDC_NAVIS_LAB_NO_PLUGINS": "1"}
+    for lang, marker, pro in (("es", "Listo.", "capacidad Pro"), ("en", "Done.", "Pro capability")):
+        r = subprocess.run([sys.executable, "-m", "vdc_navis_lab.cli", "demo", "--lang", lang], capture_output=True, text=True,
+                           timeout=60, env=env)
         assert r.returncode == 0, r.stderr
-        assert marker in r.stdout and "completed" in r.stdout and "'groups': 3" in r.stdout
+        assert marker in r.stdout and pro in r.stdout and "completed" not in r.stdout
 
 
 def test_demo_never_touches_the_users_data_folder(tmp_path):

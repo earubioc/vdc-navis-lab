@@ -6,6 +6,7 @@
  vdc_navis_lab.server      16 tools, thin wrappers, error mapping
         |
  vdc_navis_lab.service     App: state, plans, jobs, snapshots
+ vdc_navis_lab.capabilities / plugins   extension point (see EXTENSIONS.md)
      |         |
  engine/      bridge/            exports, views, ingest, paths
  (pure)       client -> transport (pipe | tcp) -> add-in or simulator

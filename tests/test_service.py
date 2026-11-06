@@ -42,6 +42,7 @@ def test_issues_filters_and_detail(app):
         app.issues("urgent", "", "", "", "", "rank", 10, 0, None)
 
 
+@pytest.mark.pro
 def test_apply_two_step_flow_verifies_by_rereading(app, sim):
     live(app)
     plan = app.apply([{"op": "group", "issues": "top:5"}, {"op": "status", "issues": {"priority": "low"}, "status": "reviewed"}],
@@ -55,6 +56,7 @@ def test_apply_two_step_flow_verifies_by_rereading(app, sim):
         app.apply(None, plan["plan_id"], False)
 
 
+@pytest.mark.pro
 def test_apply_viewpoint_op_saves_one_per_issue(app, sim):
     live(app)
     plan = app.apply([{"op": "viewpoint", "issues": "top:3"}], "", True)
@@ -71,6 +73,7 @@ def test_execution_never_takes_raw_ops(app):
         app.apply([{"op": "group", "issues": "top:1"}], "", False)
 
 
+@pytest.mark.pro
 def test_external_change_makes_analysis_stale_and_blocks_writes(app, sim):
     live(app)
     plan = app.apply([{"op": "group", "issues": "top:2"}], "", True)
@@ -94,6 +97,7 @@ def test_writes_need_a_live_analysis(app, tmp_path):
     assert exc.value.code == "needs_live_analysis"
 
 
+@pytest.mark.pro
 def test_read_only_mode_blocks_every_write(app, monkeypatch):
     live(app)
     plan = app.apply([{"op": "group", "issues": "top:1"}], "", True)  # previews are allowed
@@ -119,6 +123,7 @@ def test_closing_critical_issues_warns(app):
     assert "critical" in plan["ops"][0]["warning"]
 
 
+@pytest.mark.pro
 def test_status_change_then_reanalysis_drops_closed_issues(app):
     first = live(app)
     plan = app.apply([{"op": "status", "issues": {"priority": "low"}, "status": "approved"},
@@ -158,6 +163,7 @@ def test_run_marks_tests_and_bumps_revision(app, sim):
         app.run(["no such test"], 5)
 
 
+@pytest.mark.pro
 def test_report_files_and_inline(app, tmp_path):
     live(app)
     assert "markdown" in app.report("markdown", "", False, 5, "en")
@@ -175,6 +181,7 @@ def test_report_files_and_inline(app, tmp_path):
     assert app.report("plan", "", False, 5, None)["packages"]
 
 
+@pytest.mark.pro
 def test_report_image_needs_a_live_issue(app):
     from pathlib import Path
     live(app)
@@ -190,6 +197,7 @@ def test_report_image_needs_a_live_issue(app):
     assert exc.value.code == "not_found"
 
 
+@pytest.mark.pro
 def test_snapshots_save_and_compare(app):
     live(app)
     assert app.snapshot("save", "v1", "")["issues"] > 0
@@ -202,6 +210,7 @@ def test_snapshots_save_and_compare(app):
     assert [s["name"] for s in app.snapshot("list", "", "")["snapshots"]] == ["v1"]
 
 
+@pytest.mark.pro
 def test_document_save_requires_preview_first(app, sim):
     assert app.document("save", "", False, False)["dry_run"] is True
     with pytest.raises(ToolFault) as exc:
@@ -276,6 +285,7 @@ def test_view_needs_the_live_document(app, sim):
     assert exc.value.code == "stale_document"
 
 
+@pytest.mark.pro
 def test_selection_sets_per_issue_or_merged_go_through_a_plan(app, sim):
     live(app)
     preview = app.apply([{"op": "set", "issues": "top:3"},

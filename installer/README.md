@@ -12,8 +12,8 @@ Two packages, built from this repository.
 
 ```bash
 # the DLL must be compiled against the Navisworks DLLs of that year (addin/build-and-install.ps1 on Windows, or mcs)
-installer/build-msi.sh 2025 1.0.1 path/to/VdcNavisLab-2025.dll
-installer/build-msi.sh 2026 1.0.1 path/to/VdcNavisLab-2026.dll
+installer/build-msi.sh 2025 1.1.0 path/to/VdcNavisLab-2025.dll
+installer/build-msi.sh 2026 1.1.0 path/to/VdcNavisLab-2026.dll
 installer/build-mcpb.sh                              # uv type
 installer/build-mcpb-python.sh --target windows     # offline type (needs network once, to download wheels)
 ```

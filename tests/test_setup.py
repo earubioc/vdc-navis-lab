@@ -12,6 +12,7 @@ def live(app):
     return out
 
 
+@pytest.mark.pro
 def test_discipline_sets_and_tests_from_the_matrix_go_through_a_plan(app, sim):
     plan = app.setup("plan", [{"op": "discipline_sets"}, {"op": "tests", "pairs": "matrix"}], "", True)
     assert plan["dry_run"] and plan["sets"] >= 3 and plan["tests"] >= 3
@@ -29,6 +30,7 @@ def test_discipline_sets_and_tests_from_the_matrix_go_through_a_plan(app, sim):
         app.setup("plan", None, plan["plan_id"], False)  # already executed
 
 
+@pytest.mark.pro
 def test_tests_pairs_are_checked_and_missing_disciplines_skipped(app):
     with pytest.raises(ToolFault):
         app.setup("plan", [{"op": "tests", "pairs": ["STR-NOPE"]}], "", True)
@@ -45,6 +47,7 @@ def test_tests_pairs_are_checked_and_missing_disciplines_skipped(app):
     assert only_tests["state"] == "completed" and only_tests["verified"] == {"sets": 2, "tests": 1}
 
 
+@pytest.mark.pro
 def test_search_set_needs_valid_criteria(app, sim):
     with pytest.raises(ToolFault):
         app.setup("plan", [{"op": "search_set", "name": "x", "where": []}], "", True)
@@ -60,6 +63,7 @@ def test_search_set_needs_valid_criteria(app, sim):
     assert out["state"] == "failed" and out["missing"]
 
 
+@pytest.mark.pro
 def test_setup_refuses_when_read_only_and_when_the_document_changed(app, sim, monkeypatch):
     plan = app.setup("plan", [{"op": "discipline_sets"}], "", True)
     sim.fingerprint = "changed"
@@ -77,6 +81,7 @@ def test_properties_helper_returns_names(app):
     assert out["categories"][0]["properties"]
 
 
+@pytest.mark.pro
 def test_group_by_level_makes_one_group_per_test_and_level(app, sim):
     live(app)
     preview = app.apply([{"op": "group", "issues": "all", "by": "level"}], "", True)

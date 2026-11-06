@@ -1,13 +1,10 @@
 import io
 import json
-import zipfile
-from xml.etree import ElementTree as ET
 
 import pytest
 
 from vdc_navis_lab import exports, ingest
 from vdc_navis_lab.engine import analyze
-from vdc_navis_lab.engine.diff import compare, snapshot_of
 from vdc_navis_lab.model import ClashSet
 from vdc_navis_lab.paths import PathError, resolve_output
 
@@ -81,115 +78,13 @@ def test_json_roundtrip(tower, tmp_path):
         ClashSet.from_dict({"schema": "other/1"})
 
 
-# ---------------------------------------------------------------- exports
-def test_csv_neutralises_formulas_but_not_numbers(result, profile):
-    assert exports.csv_cell("=cmd|'/c calc'!A1") == "'=cmd|'/c calc'!A1"
-    assert exports.csv_cell("-2+3") == "'-2+3"
-    assert exports.csv_cell(-0.5) == -0.5 and exports.csv_cell("Duct") == "Duct"
-    data = exports.to_csv(result, profile).decode("utf-8-sig")
-    assert data.splitlines()[0].startswith("id,priority") and len(data.splitlines()) == len(result.issues) + 1
-
-
-def test_pdf_report_is_a_valid_document_in_both_languages(result, profile):
-    import dataclasses
-    for lang, needle in (("es", b"Decisiones por tomar"), ("en", b"Decisions to make")):
-        data = exports.to_pdf(dataclasses.replace(result, lang=lang), profile, 10)
-        assert data.startswith(b"%PDF-1.4") and data.rstrip().endswith(b"%%EOF")
-        assert needle in data and b"\xe2\x80\x94" not in data  # no em dash
-        # every xref offset points at its object
-        xref = int(data.rsplit(b"startxref\n", 1)[1].split(b"\n")[0])
-        n = int(data[xref:].split(b"\n")[1].split()[1])
-        offsets = [int(l[:10]) for l in data[xref:].split(b"\n")[3:3 + n - 1]]
-        for k, off in enumerate(offsets, 1):
-            assert data[off:].startswith(b"%d 0 obj" % k)
-
-
-def test_handoff_lists_the_elements_each_author_has_to_change(result, profile):
-    import csv, io
-    data = exports.to_handoff(result, profile).decode("utf-8-sig")
-    rows = list(csv.DictReader(io.StringIO(data)))
-    assert rows and {"modelo_a_editar", "id_navisworks", "accion", "prioridad"} <= set(rows[0])
-    by_issue = {i.id: i for i in result.issues}
-    for r in rows:
-        issue = by_issue[r["problema"]]
-        assert r["responsable"] == profile.label(issue.responsible, "es")  # only the party that has to move
-    assert len({(r["problema"], r["id_navisworks"]) for r in rows}) == len(rows)  # one row per element and issue
-    assert "\u2014" not in data
-
-
-def test_pdf_wraps_long_words_and_breaks_pages():
-    from vdc_navis_lab import pdf
-    assert all(pdf.width(l, 9) <= 100.01 for l in pdf.wrap("x" * 300 + " corto", 9, 100))
-    d = pdf.Document("t", "f")
-    for _ in range(200):
-        d.paragraph("línea con acentos ñ é ü", 10)
-    assert len(d.pages) > 3 and d.render().count(b"/Type /Page ") == len(d.pages)
-
-
+# ---------------------------------------------------------------- exports (Community: markdown; the file formats are Pro)
 def test_markdown_report_has_scope_and_language(result, profile):
     es = exports.to_markdown(result, profile)
     assert "Alcance de la evidencia" in es
     import dataclasses
     en = exports.to_markdown(dataclasses.replace(result, lang="en"), profile)
     assert "Evidence scope" in en and "—" not in en and "—" not in es
-
-
-def test_bcf_structure(result, profile):
-    z = zipfile.ZipFile(io.BytesIO(exports.to_bcf(result, profile)))
-    names = z.namelist()
-    assert "bcf.version" in names and len(names) == len(result.issues) + 1
-    markup = next(n for n in names if n.endswith("markup.bcf"))
-    topic = ET.fromstring(z.read(markup)).find("Topic")
-    assert topic.get("TopicType") == "Clash" and topic.find("AssignedTo").text in profile.disciplines
-    import uuid
-    uuid.UUID(topic.get("Guid"))
-
-
-def test_bcf_validates_against_buildingsmart_schema_when_available(result, profile):
-    import os
-    d = os.environ.get("BCF_SCHEMA_DIR")
-    if not d:
-        pytest.skip("set BCF_SCHEMA_DIR to a folder with markup.xsd and visinfo.xsd")
-    xmlschema = pytest.importorskip("xmlschema")
-    schema = xmlschema.XMLSchema(os.path.join(d, "markup.xsd"))
-    z = zipfile.ZipFile(io.BytesIO(exports.to_bcf(result, profile)))
-    for n in z.namelist():
-        if n.endswith("markup.bcf"):
-            schema.validate(z.read(n).decode("utf-8"))
-
-
-# ---------------------------------------------------------------- diff
-def test_compare_identical_is_stable(result):
-    snap = snapshot_of(result)
-    d = compare(snap, snap)
-    assert d["new"] == [] and d["absent"] == [] and d["persisting_count"] == len(result.issues)
-
-
-def test_compare_reports_absent_never_resolved(tower, profile):
-    before = snapshot_of(analyze(tower, profile))
-    tower.clashes = [c for c in tower.clashes if c.a.discipline != "FIRE" and c.b.discipline != "FIRE"
-                     and "sprk" not in c.b.id]
-    after = snapshot_of(analyze(tower, profile))
-    d = compare(before, after)
-    assert len(d["absent"]) == 1 and d["new"] == []
-    assert "resolved" not in json.dumps(d["absent"]) and "absent is not resolved" in d["note_absent"]
-
-
-def test_compare_flags_changed_coverage(tower, profile):
-    before = snapshot_of(analyze(tower, profile))
-    after = json.loads(json.dumps(before))
-    after["tests"] = after["tests"][:-1]
-    after["profile"]["checksum"] = "other"
-    d = compare(before, after)
-    assert d["coverage_shift"] and len(d["notes"]) == 2
-
-
-def test_compare_survives_reclustering(tower, profile):
-    before = snapshot_of(analyze(tower, profile))
-    profile.raw["cluster"]["eps_m"] = 0.3  # the rack splits into several issues
-    after = snapshot_of(analyze(tower, profile))
-    d = compare(before, after)
-    assert d["persisting_count"] >= len(before["issues"]) - 2
 
 
 # ---------------------------------------------------------------- paths

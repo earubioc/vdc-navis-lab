@@ -264,14 +264,32 @@ def vram_mb() -> int | None:
         return None
 
 
+WRITE_SCENARIOS = ("dos_pasos",)  # they need writes.execute, a Pro capability
+
+
 def evaluate(chat: Callable[..., dict[str, Any]], reps: int = 5, only: list[str] | None = None,
-             say: Callable[[str], None] = print) -> tuple[list[Run], list[Scenario]]:
-    """Runs the scenarios against the simulator with a fresh state per run. `chat` is the model under test."""
+             say: Callable[[str], None] = print,
+             app_factory: Callable[[], Any] | None = None) -> tuple[list[Run], list[Scenario]]:
+    """Runs the scenarios against the simulator with a fresh state per run. `chat` is the model under test.
+    `app_factory` builds each fresh App; by default a plain App with the installed plugins."""
     from . import server
     from .bridge.simulator import Simulator
+    from .plugins import load_plugins
     from .service import App
 
+    def make() -> Any:
+        if app_factory is not None:
+            return app_factory()
+        app = App()
+        load_plugins(app)
+        return app
+
     scenarios = [s for s in SCENARIOS if not only or s.key in only]
+    if not make().capabilities.has("writes.execute"):
+        dropped = [s.key for s in scenarios if s.key in WRITE_SCENARIOS]
+        scenarios = [s for s in scenarios if s.key not in WRITE_SCENARIOS]
+        if dropped:
+            say(f"  skipped {', '.join(dropped)}: executing writes needs the Pro edition (pro_required)")
     runs: list[Run] = []
     saved = {k: os.environ.get(k) for k in ("VDC_NAVIS_LAB_HOME", "VDC_NAVIS_LAB_ENDPOINT", "VDC_NAVIS_LAB_READ_ONLY")}
     scratch = tempfile.TemporaryDirectory(prefix="vdc-navis-lab-eval-")
@@ -282,10 +300,10 @@ def evaluate(chat: Callable[..., dict[str, Any]], reps: int = 5, only: list[str]
                 sim = Simulator(job_delay=0.02)
                 os.environ.update({"VDC_NAVIS_LAB_HOME": scratch.name, "VDC_NAVIS_LAB_ENDPOINT": sim.start(),
                                    "VDC_NAVIS_LAB_READ_ONLY": "0"})
-                server.APP = App()
+                server.APP = make()
                 try:
                     t = truth(server)
-                    server.APP = App()                       # the model starts with no analysis in memory
+                    server.APP = make()                       # the model starts with no analysis in memory
                     tools = openai_tools(server)
                     run = run_once(server, chat, tools, sc, rep, t)
                 finally:

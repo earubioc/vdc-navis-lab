@@ -60,11 +60,30 @@ def test_tool_list_annotations_and_full_write_flow(sim, tmp_path):
 
         plan = json.loads(_text(await s.call_tool("nw_apply", {"ops": [{"op": "group", "issues": "top:3"}]})))
         assert plan["dry_run"] is True
-        done = json.loads(_text(await s.call_tool("nw_apply", {"plan_id": plan["plan_id"], "dry_run": False})))
-        assert done["state"] == "completed" and done["verified"]["groups"] == 3
+        # executing is a Pro capability: without plugins the server says so, with a code a model can act on
+        res = await s.call_tool("nw_apply", {"plan_id": plan["plan_id"], "dry_run": False})
+        err = _err(res)
+        assert err["error"] == "pro_required" and err["data"]["capability"] == "writes.execute" and "hint" in err
+
+        ext = json.loads(_text(await s.call_tool("nw_status", {})))["extensions"]
+        assert ext["plugins"][0]["state"] == "disabled" and "writes.execute" in ext["missing"] and ext["available"] == []
 
         bad = await s.call_tool("nw_issue", {"id": "NW-NOPE"})
         assert _err(bad)["error"] == "not_found"
+
+    anyio.run(_session, _env(sim, tmp_path, VDC_NAVIS_LAB_NO_PLUGINS="1"), body)
+
+
+def test_without_the_env_var_a_server_with_no_pro_package_is_community(sim, tmp_path):
+    """No plugin installed (or none licensed): writes are previewed, never executed, and nothing crashes."""
+    async def body(s):
+        await s.call_tool("nw_analyze", {})
+        plan = json.loads(_text(await s.call_tool("nw_apply", {"ops": [{"op": "group", "issues": "top:2"}]})))
+        assert plan["dry_run"] is True
+        assert _err(await s.call_tool("nw_apply", {"plan_id": plan["plan_id"], "dry_run": False}))["error"] == "pro_required"
+        assert _err(await s.call_tool("nw_report", {"kind": "csv"}))["error"] == "pro_required"
+        md = json.loads(_text(await s.call_tool("nw_report", {"kind": "markdown"})))
+        assert "markdown" in md
 
     anyio.run(_session, _env(sim, tmp_path), body)
 
@@ -74,7 +93,7 @@ def test_read_only_flag_reaches_the_process(sim, tmp_path):
         await s.call_tool("nw_analyze", {})
         plan = json.loads(_text(await s.call_tool("nw_apply", {"ops": [{"op": "group", "issues": "top:1"}]})))
         res = await s.call_tool("nw_apply", {"plan_id": plan["plan_id"], "dry_run": False})
-        assert _err(res)["error"] == "read_only"
+        assert _err(res)["error"] in ("read_only", "pro_required")  # read-only with Pro, pro_required without it
 
     anyio.run(_session, _env(sim, tmp_path, VDC_NAVIS_LAB_READ_ONLY="1"), body)
 

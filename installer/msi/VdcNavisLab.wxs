@@ -3,7 +3,7 @@
   VDC Navis Lab add-in for Navisworks Manage: one MSI per major version of Navisworks (decision D-12 of the Community/Pro plan).
   Per machine, so it suits Intune / GPO / SCCM: it installs where Navisworks itself looks for plugins,
       C:\Program Files\Autodesk\Navisworks Manage <year>\Plugins\VdcNavisLab\VdcNavisLab.dll
-  Built by installer/build-msi.sh with:  -D Year=2025 -D Version=1.0.1 -D Dll=<path to the DLL compiled for that year>
+  Built by installer/build-msi.sh with:  -D Year=2025 -D Version=1.1.0 -D Dll=<path to the DLL compiled for that year>
   wixl (msitools) cannot express a search for the Navisworks folder, so the package does not check for it; the install test
   (installer/probar-instalacion.ps1) does. Build for x64 with: wixl -a x64.
 -->

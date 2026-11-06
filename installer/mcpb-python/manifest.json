@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "vdc-navis-lab",
   "display_name": "VDC Navis Lab (sin conexión)",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Coordina interferencias de Navisworks Manage desde Claude. Variante con todas las dependencias incluidas: no descarga nada al instalarse ni al arrancar.",
   "long_description": "Servidor MCP para Navisworks Manage 2025 y 2026, para equipos sin conexión o con la red restringida. Necesita Python 3.11, 3.12 o 3.13 instalado en el equipo (no incluye el intérprete) y el add-in de Navisworks (MSI de VdcNavisLab). Las escrituras al modelo pasan siempre por un plan que se revisa antes de ejecutarse.",
   "author": { "name": "VDC Process Lab", "url": "https://vdcprocesslab.com" },

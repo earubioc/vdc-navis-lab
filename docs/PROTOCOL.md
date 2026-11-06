@@ -16,7 +16,7 @@ Transport: Windows named pipe `\\.\pipe\vdc-navis-lab.<pid>` (ACL: current user 
 
 | Method | Params | Result |
 |---|---|---|
-| `hello` | `light?` | `product`, `version`, `api`, `instance_id`, `doc`, `methods` (what this add-in implements) |
+| `hello` | `light?` | `product`, `version` (Navisworks), `addin_version` (optional; the add-in's own version, absent in add-ins before 1.1), `api`, `instance_id`, `doc`, `methods` (what this add-in implements) |
 | `doc.info` | none | `doc` fields plus `models`, `units` |
 | `model.census` | none | per model: element count, top categories |
 | `elements.query` | `criteria[]`, `group_by`, `limit` | `count`, `groups[]`, `sample[]` |

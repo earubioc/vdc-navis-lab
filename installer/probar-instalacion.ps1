@@ -3,10 +3,10 @@
   Pensada para Windows Sandbox o una máquina virtual recién creada, con PowerShell como administrador.
 
   Uso:
-    .\probar-instalacion.ps1 -Msi VdcNavisLab-2025-1.0.1.msi -Year 2025
-    .\probar-instalacion.ps1 -Msi VdcNavisLab-2025-1.0.1.msi -Year 2025 -MsiNueva VdcNavisLab-2025-1.0.2.msi
-    .\probar-instalacion.ps1 -Mcpb vdc-navis-lab-1.0.1.mcpb          # variante uv: necesita uv e internet la primera vez
-    .\probar-instalacion.ps1 -Mcpb vdc-navis-lab-1.0.1-offline-windows.mcpb   # variante sin conexión: necesita Python 3.11 a 3.13, nada más
+    .\probar-instalacion.ps1 -Msi VdcNavisLab-2025-1.1.0.msi -Year 2025
+    .\probar-instalacion.ps1 -Msi VdcNavisLab-2025-1.1.0.msi -Year 2025 -MsiNueva VdcNavisLab-2025-1.1.1.msi
+    .\probar-instalacion.ps1 -Mcpb vdc-navis-lab-1.1.0.mcpb          # variante uv: necesita uv e internet la primera vez
+    .\probar-instalacion.ps1 -Mcpb vdc-navis-lab-1.1.0-offline-windows.mcpb   # variante sin conexión: necesita Python 3.11 a 3.13, nada más
     .\probar-instalacion.ps1 -Msi ... -Year 2025 -Mcpb ...           # las dos cosas
 
   Imprime PASS o FAIL por paso y termina con código 0 solo si todo pasó. No imprime nada de ningún modelo.

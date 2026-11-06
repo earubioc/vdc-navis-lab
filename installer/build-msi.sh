@@ -6,7 +6,7 @@
 # UpgradeCode is what makes a newer MSI replace an older one (MajorUpgrade).
 set -euo pipefail
 
-year="${1:?year, e.g. 2025}"; version="${2:?version, e.g. 1.0.1}"; dll="${3:?path to VdcNavisLab.dll}"; out="${4:-dist}"
+year="${1:?year, e.g. 2025}"; version="${2:?version, e.g. 1.1.0}"; dll="${3:?path to VdcNavisLab.dll}"; out="${4:-dist}"
 [ -f "$dll" ] || { echo "no existe el DLL: $dll" >&2; exit 2; }
 command -v wixl >/dev/null || { echo "falta wixl (apt install wixl msitools)" >&2; exit 2; }
 

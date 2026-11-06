@@ -79,6 +79,12 @@ namespace VdcNavisLab.Addin
             catch (Exception ex) { return "unknown (" + ex.GetType().Name + ")"; }
         }
 
+        private static string AddinVersion()
+        {
+            try { return typeof(Handlers).Assembly.GetName().Version.ToString(3); }
+            catch (Exception) { return "unknown"; }
+        }
+
         public object Hello(string[] methods, bool light = false)
         {
             return UiThread.Run<object>(() =>
@@ -87,7 +93,7 @@ namespace VdcNavisLab.Addin
                 var doc = (d == null || d.IsClear) ? new Dictionary<string, object> { { "open", false } } : DocState(d, !light);
                 return new Dictionary<string, object>
                 {
-                    { "product", "navisworks" }, { "version", VersionText() },
+                    { "product", "navisworks" }, { "version", VersionText() }, { "addin_version", AddinVersion() },
                     { "api", 1 }, { "instance_id", _instance },
                     { "started", (Started - new DateTime(1970, 1, 1)).TotalSeconds }, { "doc", doc }, { "methods", methods }
                 };

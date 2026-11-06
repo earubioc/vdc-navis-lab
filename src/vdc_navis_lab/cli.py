@@ -16,6 +16,7 @@ from pathlib import Path
 from . import exports, ingest, views
 from .bridge.simulator import Simulator
 from .engine import analyze
+from .plugins import load_plugins
 from .profile import Profile, ProfileError
 from .sample.generator import build
 
@@ -58,7 +59,8 @@ def _cmd_simulate(args: argparse.Namespace) -> int:
 
 
 def _cmd_tools(args: argparse.Namespace) -> int:
-    from .server import mcp
+    from .server import init_plugins, mcp
+    init_plugins()
     for t in asyncio.run(mcp.list_tools()):
         title = t.annotations.title if t.annotations and t.annotations.title else ""
         print(f"{t.name:<13} {title}")
@@ -67,7 +69,8 @@ def _cmd_tools(args: argparse.Namespace) -> int:
 
 def _cmd_call(args: argparse.Namespace) -> int:
     """One stateless call. State (analysis, plans) lives in the server process, so use `demo` for flows."""
-    from .server import mcp
+    from .server import init_plugins, mcp
+    init_plugins()
     try:
         params = json.loads(args.args) if args.args else {}
     except json.JSONDecodeError as exc:
@@ -92,6 +95,7 @@ def _cmd_demo(args: argparse.Namespace) -> int:
     os.environ["VDC_NAVIS_LAB_ENDPOINT"] = sim.start()
     os.environ["VDC_NAVIS_LAB_READ_ONLY"] = "0"
     app = App()
+    load_plugins(app)
 
     def step(n: int, es_text: str, en_text: str) -> None:
         print(f"\n[{n}] {es_text if es else en_text}")
@@ -119,8 +123,14 @@ def _cmd_demo(args: argparse.Namespace) -> int:
               f"{'vence en' if es else 'expires in'} {plan['expires_in_s']} s")
 
         step(4, "Ejecución del plan y verificación por relectura", "Execute the plan and verify by re-reading")
-        done = app.apply(None, plan["plan_id"], False)
-        print(f"    {done['state']}; {'verificado' if es else 'verified'}: {done['verified']}")
+        try:
+            done = app.apply(None, plan["plan_id"], False)
+            print(f"    {done['state']}; {'verificado' if es else 'verified'}: {done['verified']}")
+        except ToolFault as exc:
+            if exc.code != "pro_required":
+                raise
+            print("    " + ("Ejecutar planes es una capacidad Pro (pro_required): aquí solo se ve la vista previa; el análisis y los informes siguen disponibles."
+                            if es else "Executing plans is a Pro capability (pro_required): only the preview runs here; analysis and reports keep working."))
 
         step(5, "Instantánea de la entrega", "Snapshot of the delivery")
         sn = app.snapshot("save", "demo", "")
@@ -152,11 +162,61 @@ def _cmd_verify(args: argparse.Namespace) -> int:
     try:
         print(f"vdc-navis-lab verify ({'simulator' if args.simulate else 'live Navisworks'}, "
               f"writes {'ON' if args.writes else 'off'})")
-        rep = verify.run(App(), writes=args.writes, wait_s=args.wait)
+        app = App()
+        load_plugins(app)
+        rep = verify.run(app, writes=args.writes, wait_s=args.wait)
         if rep.nw_peak_mb is not None:
             print(f"Navisworks peak memory: {rep.nw_peak_mb} MB")
-        print("RESULT: " + ("ALL PASS" if rep.ok else f"{sum(not c.ok for c in rep.checks)} FAILED (details in verify.log in the data folder)"))
+        note = f" ({rep.skipped} skipped: Pro capability not available, so not proven)" if rep.skipped else ""
+        print("RESULT: " + (f"ALL PASS{note}" if rep.ok else f"{sum(not c.ok for c in rep.checks)} FAILED (details in verify.log in the data folder)"))
         return 0 if rep.ok else 1
+    finally:
+        if sim:
+            sim.stop()
+        if scratch:
+            scratch.cleanup()
+
+
+def _cmd_field_test(args: argparse.Namespace) -> int:
+    """One command for the machine under test: versions, verify, bench --live, nw_analyze, and a report with no names."""
+    from . import field_test
+    from .service import App
+    try:
+        equipo, modelo = field_test.check_id(args.equipo, "--equipo"), field_test.check_id(args.modelo, "--modelo")
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    sim = scratch = None
+    if args.simulate:
+        sim = Simulator(job_delay=0.05)
+        scratch = tempfile.TemporaryDirectory(prefix="vdc-navis-lab-field-")
+        os.environ["VDC_NAVIS_LAB_HOME"] = scratch.name
+        os.environ["VDC_NAVIS_LAB_ENDPOINT"] = sim.start()
+    writes = False
+    if args.sin_escrituras:
+        pass
+    elif args.confirmo_copia:
+        writes = True
+    elif sys.stdin is not None and sys.stdin.isatty():
+        print("\nLa prueba de escritura crea un grupo, un estado y un punto de vista en el modelo abierto (en memoria, no guarda).")
+        print("Hágala solo sobre una COPIA del modelo, nunca sobre el original.")
+        ans = input(f"Escriba {field_test.COPY_WORD} si el modelo abierto es una copia (Enter para omitir las escrituras): ")
+        writes = ans.strip().upper() == field_test.COPY_WORD
+    if writes:
+        os.environ["VDC_NAVIS_LAB_READ_ONLY"] = "0"
+    try:
+        app = App()
+        load_plugins(app)
+        report, paths = field_test.run(app, equipo=equipo, modelo=modelo, writes=writes, wait_s=args.wait, bench_wait_s=args.bench_wait,
+                                       out_dir=Path(args.out) if args.out else None)
+        print("\n----- copiar desde aquí (sin nombres de proyecto, modelo, archivo, prueba ni ruta) -----\n")
+        print(paths[1].read_text(encoding="utf-8"))
+        print("----- hasta aquí -----")
+        print(f"Archivos del informe (JSON y markdown) en la carpeta {paths[0].parent.name} dentro de la carpeta de datos, o en la indicada con --out.")
+        return 0 if report["verdict"] == "PASS" else 1
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     finally:
         if sim:
             sim.stop()
@@ -175,7 +235,9 @@ def _cmd_bench(args: argparse.Namespace) -> int:
         if args.writes:
             os.environ["VDC_NAVIS_LAB_READ_ONLY"] = "0"
         try:
-            bench.run_live(App(), wait_s=args.wait)
+            app = App()
+            load_plugins(app)
+            bench.run_live(app, wait_s=args.wait)
         except ToolFault as exc:
             print(f"error: {exc.code}", file=sys.stderr)
             return 1
@@ -316,6 +378,16 @@ def main(argv: list[str] | None = None) -> int:
     bn.add_argument("--wait", type=float, default=1800.0, help="--live, --paged: seconds to wait for the extraction")
     bn.add_argument("--writes", action="store_true", help=argparse.SUPPRESS)
     bn.set_defaults(fn=_cmd_bench)
+    ft = sub.add_parser("field-test", help="field test on this machine: versions, verify, bench --live, nw_analyze; writes a report of figures with no names")
+    ft.add_argument("--equipo", default="E1", help="generic identifier of this machine in the campaign (E1, E2, ...)")
+    ft.add_argument("--modelo", default="M1", help="generic identifier of the open model (M1, M2, ...); never its name")
+    ft.add_argument("--confirmo-copia", action="store_true", help="the open model is a copy: allow the write test (without it, it is asked on the keyboard)")
+    ft.add_argument("--sin-escrituras", action="store_true", help="read-only run, skip the write test")
+    ft.add_argument("--simulate", action="store_true", help="rehearse against the built-in simulator instead of a live Navisworks")
+    ft.add_argument("--out", default="", help="folder for the report files (default: field-test inside the data folder)")
+    ft.add_argument("--wait", type=float, default=900.0, help="seconds to wait for slow steps")
+    ft.add_argument("--bench-wait", type=float, default=1800.0, help="seconds to wait for the extraction in bench --live")
+    ft.set_defaults(fn=_cmd_field_test)
     le = sub.add_parser("llm-eval", help="evaluate a model's tool use against the simulator (LM Studio or any OpenAI-compatible endpoint)")
     le.add_argument("--model", required=True, help="model name as the server lists it")
     le.add_argument("--base-url", default="http://localhost:1234/v1", help="LM Studio's default")

@@ -2,7 +2,19 @@
 
 import json
 
+import pytest
+
+from conftest import PRO_AVAILABLE, enable_pro
 from vdc_navis_lab import cli, llm_eval
+from vdc_navis_lab.service import App
+
+
+def _community():
+    return App()
+
+
+def _pro():
+    return enable_pro(App())
 
 
 def _msg(content=None, calls=None):
@@ -73,16 +85,27 @@ def careless(messages, tools):
     return _msg("Listo.")
 
 
-def test_a_careful_model_passes_every_scenario():
-    runs, scenarios = llm_eval.evaluate(careful, reps=2)
+@pytest.mark.pro
+def test_a_careful_model_passes_every_scenario_with_pro():
+    runs, scenarios = llm_eval.evaluate(careful, reps=2, app_factory=_pro)
     rows = llm_eval.summarise(runs, scenarios)
     assert [r["correct_pct"] for r in rows] == [100] * 7, [r for r in rows if r["correct_pct"] != 100]
     assert all(r["unrequested_writes"] == 0 and r["argument_errors"] == 0 for r in rows)
     assert sum(1 for r in runs if r.scenario == "dos_pasos" and r.executed_plans == 1) == 2
 
 
+def test_in_community_the_write_scenario_is_dropped_not_failed():
+    said = []
+    runs, scenarios = llm_eval.evaluate(careful, reps=1, app_factory=_community, say=said.append)
+    rows = llm_eval.summarise(runs, scenarios)
+    assert len(rows) == 6 and "dos_pasos" not in {s.key for s in scenarios}
+    assert [r["correct_pct"] for r in rows] == [100] * 6
+    assert any("Pro" in line and "dos_pasos" in line for line in said)
+
+
+@pytest.mark.pro
 def test_a_careless_model_is_caught_on_bad_arguments_and_unrequested_writes():
-    runs, scenarios = llm_eval.evaluate(careless, reps=1)
+    runs, scenarios = llm_eval.evaluate(careless, reps=1, app_factory=_pro)
     rows = {r["scenario"]: r for r in llm_eval.summarise(runs, scenarios)}
     assert rows["Invitación a una operación masiva"]["unrequested_writes"] == 1
     assert rows["Invitación a una operación masiva"]["correct_pct"] == 0
@@ -102,7 +125,8 @@ def test_spanish_check_tells_spanish_from_english():
     assert not llm_eval.spanish_ok("There are twelve critical issues in the model and they must be reviewed.")
 
 
-def test_the_http_client_talks_to_an_openai_compatible_server_end_to_end(tmp_path, capsys):
+def test_the_http_client_talks_to_an_openai_compatible_server_end_to_end(tmp_path, capsys, monkeypatch):
+    monkeypatch.setenv("VDC_NAVIS_LAB_NO_PLUGINS", "1")  # Community: six scenarios, the write one is dropped
     import threading
     from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -134,4 +158,4 @@ def test_the_http_client_talks_to_an_openai_compatible_server_end_to_end(tmp_pat
     assert code == 0 and "100 %" in out
     assert seen["tools"] == 16 and seen["path"] == "/v1/chat/completions"
     saved = json.loads(next(tmp_path.glob("llm-eval-*.json")).read_text(encoding="utf-8"))
-    assert saved["hardware"] == "pc de prueba" and len(saved["runs"]) == 7
+    assert saved["hardware"] == "pc de prueba" and len(saved["runs"]) == 6

@@ -15,17 +15,20 @@ from pathlib import Path
 from typing import Any
 
 from . import exports, ingest, setup as setup_ops, texts, views
+from .capabilities import CATALOG, Capabilities
+from .errors import ToolFault
 from .bridge import Bridge, BridgeError
 from .bridge.protocol import INVALID_PARAMS, NO_DOCUMENT, NOT_FOUND, STALE_DOCUMENT
 from .engine import AnalysisResult, analyze
 from .engine.audit import audit_models
-from .engine.diff import compare, snapshot_of
+from .engine.snapshot import snapshot_of
 from .engine.plan import hotspots, matrix, work_packages
 from .engine.pipeline import level_label
 from .engine.tagging import Tagger
 from .model import ClashSet
 from .paths import PathError, home, output_roots, resolve_output
 from .profile import PRIORITIES, Profile, ProfileError, check_rule
+from .usage_log import UsageLog
 
 PLAN_TTL = 30 * 60
 MAX_PLAN_ISSUES = 500
@@ -33,20 +36,6 @@ MAX_PLAN_CLASHES = 5000
 SETTABLE_STATUS = ("active", "reviewed", "approved", "resolved")
 QUERY_OPS = ("eq", "contains", "in")
 _SAFE_NAME = re.compile(r"^[A-Za-z0-9._-]{1,60}$")
-
-
-class ToolFault(Exception):
-    def __init__(self, code: str, message: str, hint: str = "", data: Any = None) -> None:
-        super().__init__(message)
-        self.code, self.message, self.hint, self.data = code, message, hint, data
-
-    def to_dict(self) -> dict[str, Any]:
-        out: dict[str, Any] = {"error": self.code, "detail": self.message}
-        if self.hint:
-            out["hint"] = self.hint
-        if self.data is not None:
-            out["data"] = self.data
-        return out
 
 
 @dataclass(slots=True)
@@ -78,16 +67,30 @@ class App:
     pending_save: dict[str, Any] = field(default_factory=dict)
     census_cache: dict[Any, Any] = field(default_factory=dict)
     sleeve_cache: dict[Any, Any] = field(default_factory=dict)
+    plugins: list[Any] = field(default_factory=list)  # PluginInfo of the loaded plugins (see plugins.load_plugins)
+    log: UsageLog = field(default_factory=UsageLog)
+    capabilities: Capabilities = field(default_factory=Capabilities)
+
+    def __post_init__(self) -> None:
+        self.capabilities._on_call = self.log.record
 
     # ------------------------------------------------------------ helpers
     @property
     def read_only(self) -> bool:
         return os.environ.get("VDC_NAVIS_LAB_READ_ONLY", "").lower() in ("1", "true", "yes")
 
-    def _refuse_if_read_only(self) -> None:
+    def require_writable(self) -> None:
+        """Public contract for plugins: refuse when the server runs in read-only mode."""
         if self.read_only:
             raise ToolFault("read_only", "VDC_NAVIS_LAB_READ_ONLY is set: this server will not modify the document",
                             "unset it in the server environment to allow writes")
+
+    def _refuse_if_read_only(self) -> None:
+        self.require_writable()
+
+    def require_result(self) -> AnalysisResult:
+        """Public contract for plugins: the current analysis, or a no_analysis fault."""
+        return self._require_result()
 
     def _drop_pending(self) -> None:
         ext = self.pending_analysis.get("extraction")
@@ -116,6 +119,7 @@ class App:
     def status(self) -> dict[str, Any]:
         found, dead = self.bridge.instances()
         instances = [{"instance_id": i["instance_id"], "product": i.get("product"), "version": i.get("version"),
+                      "addin_version": i.get("addin_version"),
                       "document": (i.get("doc") or {}).get("title"), "open": (i.get("doc") or {}).get("open"),
                       "fingerprint": (i.get("doc") or {}).get("fingerprint")} for i in found]
         out: dict[str, Any] = {
@@ -125,6 +129,8 @@ class App:
             "profile": self.profile.summary(),
             "outputs": {"folders": [str(r) for r in output_roots()]},
             "plans_pending": sum(1 for p in self.plans.values() if not p.executed),
+            "extensions": {"plugins": [p.to_dict() for p in self.plugins], **self.capabilities.names(),
+                           "usage_log": os.environ.get("VDC_NAVIS_LAB_USAGE_LOG", "").lower() in ("1", "true", "yes")},
         }
         if not found:
             out["bridge"]["hint"] = ("no Navisworks add-in answered; offline analysis of exported files still works "
@@ -233,7 +239,24 @@ class App:
             except ProfileError as exc:
                 return {"valid": False, "problems": str(exc).split("; ")}
             return {"valid": True}
+        if action == "packs":
+            packs = self.capabilities.call("profiles.packs") if self.capabilities.has("profiles.packs") else []
+            out = {"packs": packs, "use": "nw_profile(action='load', path='pack:<name>')"}
+            if not packs:
+                out["note"] = ("no calibrated profile packs are installed; the default profile is in use "
+                               "(packs are a Pro capability)")
+            return out
         if action in ("load", "reset"):
+            if action == "load" and path.startswith("pack:"):
+                name = path[5:]
+                match = next((p for p in (self.capabilities.call("profiles.packs")
+                                          if self.capabilities.has("profiles.packs") else [])
+                              if p.get("name") == name), None)
+                if match is None:
+                    if not self.capabilities.has("profiles.packs"):
+                        self.capabilities.call("profiles.packs")  # raises pro_required
+                    raise ToolFault(NOT_FOUND, f"no profile pack {name!r}", "list them with nw_profile(action='packs')")
+                path = str(match["path"])
             try:
                 new = Profile.load(path if action == "load" else None)
             except ProfileError as exc:
@@ -251,7 +274,7 @@ class App:
                 self.profile.overrides[str(name)] = code
             refreshed = self._reanalyze()
         else:
-            raise ToolFault(INVALID_PARAMS, "action must be show, load, validate, reset or assign")
+            raise ToolFault(INVALID_PARAMS, "action must be show, load, validate, reset, assign or packs")
         return self.profile.summary() | {"analysis_refreshed": refreshed}
 
     def _reanalyze(self) -> bool:
@@ -522,19 +545,13 @@ class App:
         ext = {"markdown": "md", "csv": "csv", "bcf": "bcf", "json": "json", "pdf": "pdf", "handoff": "csv"}.get(kind)
         if ext is None:
             raise ToolFault(INVALID_PARAMS, "kind must be summary, matrix, hotspots, plan, markdown, csv, bcf, json, pdf, handoff or image")
+        if kind != "markdown" and not self.capabilities.has(f"report.{kind}"):
+            self.capabilities.call(f"report.{kind}")  # no provider: logs the attempt and raises pro_required
         target = _output(path, f"vdc-navis-lab-{r.analysis_id}{'-handoff' if kind == 'handoff' else ''}.{ext}", overwrite)
         if kind == "markdown":
             data = exports.to_markdown(r, self.profile, min(limit, 500)).encode("utf-8")
-        elif kind == "csv":
-            data = exports.to_csv(r, self.profile)
-        elif kind == "bcf":
-            data = exports.to_bcf(r, self.profile, limit)
-        elif kind == "handoff":
-            data = exports.to_handoff(r, self.profile)
-        elif kind == "pdf":
-            data = exports.to_pdf(r, self.profile, limit if limit != 25 else 40)
         else:
-            data = json.dumps(r.clashset.to_dict(), ensure_ascii=False).encode("utf-8")
+            data = self.capabilities.call(f"report.{kind}", r, self.profile, limit)
         target.write_bytes(data)
         return {"path": str(target), "bytes": len(data), "kind": kind, "issues": len(r.issues)}
 
@@ -549,9 +566,11 @@ class App:
             raise ToolFault(NOT_FOUND, f"unknown issue {issue!r}")
         if r.source not in ("navisworks", "simulator"):
             raise ToolFault(INVALID_PARAMS, "kind='image' needs a live Navisworks analysis, not a file")
+        if not self.capabilities.has("report.image"):
+            self.capabilities.call("report.image")
         ep, info, note = self.bridge.resolve()
         target = _output(path, f"vdc-navis-lab-{iss.id}.png", overwrite)
-        res = self.bridge.call_at(ep, "clash.image", {"clash_id": iss.rep.id, "path": str(target)})
+        res = self.capabilities.call("report.image", self, ep, iss, str(target))
         out = {"path": res.get("path", str(target)), "issue": iss.id, "clash_id": iss.rep.id}
         if note:
             out["note"] = note
@@ -614,7 +633,7 @@ class App:
     # ------------------------------------------------------------ nw_apply
     def apply(self, ops: list[dict[str, Any]] | None, plan_id: str, dry_run: bool) -> dict[str, Any]:
         if plan_id:
-            return self._execute_plan(plan_id)
+            return self.capabilities.call("writes.execute", self, plan_id)
         if not dry_run:
             raise ToolFault(INVALID_PARAMS, "to execute, pass the plan_id returned by a dry run",
                             "call nw_apply(ops=[...]) first; execution never takes raw ops")
@@ -663,7 +682,7 @@ class App:
         if action != "plan":
             raise ToolFault(INVALID_PARAMS, "action must be plan, list or properties")
         if plan_id:
-            return setup_ops.execute(self, plan_id)
+            return self.capabilities.call("setup.execute", self, plan_id)
         if not dry_run:
             raise ToolFault(INVALID_PARAMS, "to execute, pass the plan_id returned by a dry run",
                             "call nw_setup(ops=[...]) first; execution never takes raw ops")
@@ -805,49 +824,6 @@ class App:
         return {"plan_id": plan.id, "dry_run": True, "document": doc.get("title"), "expires_in_s": PLAN_TTL,
                 **plan.preview, "next": f"nw_apply(plan_id='{plan.id}') executes this plan; nothing was changed yet"}
 
-    def _execute_plan(self, plan_id: str) -> dict[str, Any]:
-        self._refuse_if_read_only()
-        plan = self.plans.get(plan_id)
-        if plan is None:
-            raise ToolFault(NOT_FOUND, f"unknown plan {plan_id!r}", "plans are rejected when the analysis is rebuilt; plan again")
-        if plan.executed:
-            raise ToolFault("plan_executed", "this plan was already executed", "make a new plan to apply more changes")
-        if time.time() - plan.created > PLAN_TTL:
-            raise ToolFault("plan_expired", "the plan is older than 30 minutes", "plan again")
-        r = self._require_result()
-        if r.analysis_id != plan.analysis_id:
-            raise ToolFault("outdated_analysis", "the analysis was rebuilt after this plan was made", "plan again")
-        ep, info, _ = self.bridge.resolve(for_write=True)
-        if info.get("instance_id") != plan.instance_id:
-            raise ToolFault("target_changed", "the selected instance is not the one the plan was made for")
-        doc = info.get("doc") or {}
-        if doc.get("fingerprint") != plan.fingerprint or str(doc.get("revision", "")) != plan.revision:
-            raise ToolFault(STALE_DOCUMENT, "the document changed since the plan was made", "plan again")
-        res = self.bridge.call_at(ep, "clash.apply", {
-            "if_fingerprint": plan.fingerprint, "dedupe_key": plan.id,
-            "groups": plan.groups, "statuses": plan.statuses, "viewpoints": plan.viewpoints,
-            "sets": plan.sets})
-        plan.executed = True
-        verified, applied = res.get("verified", {}), res.get("applied", {})
-        want_groups, want_status = len(plan.groups), sum(len(s["guids"]) for s in plan.statuses)
-        want_viewpoints = len(plan.viewpoints)
-        want_sets = len(plan.sets)
-        ok = (verified.get("groups", 0) == want_groups and verified.get("statuses", 0) == want_status
-              and verified.get("viewpoints", 0) == want_viewpoints and verified.get("sets", 0) == want_sets
-              and not res.get("missing"))
-        state = "completed" if ok else (
-            "failed" if not (verified.get("groups") or verified.get("statuses") or verified.get("viewpoints")
-                         or verified.get("sets")) else "partial")
-        live = self.bridge.call_at(ep, "hello")
-        self.seen_revision = str((live.get("doc") or {}).get("revision", ""))  # our own change is not staleness
-        out = {"state": state,
-               "requested": {"groups": want_groups, "statuses": want_status, "viewpoints": want_viewpoints,
-                             "sets": want_sets},
-               "applied": applied, "verified": verified, "missing": res.get("missing", [])[:10]}
-        if plan.statuses:
-            out["hint"] = "statuses changed in the document: run nw_analyze again to refresh the ranking"
-        return out
-
     # ------------------------------------------------------------ nw_snapshot
     def snapshot(self, action: str, name: str, against: str) -> dict[str, Any]:
         folder = home() / "snapshots"
@@ -877,6 +853,8 @@ class App:
             target.write_text(json.dumps(snapshot_of(r), ensure_ascii=False), encoding="utf-8")
             return {"saved": n, "issues": len(r.issues)}
         if action == "compare":
+            if not self.capabilities.has("snapshot.compare"):
+                self.capabilities.call("snapshot.compare")
             if not against:
                 raise ToolFault(INVALID_PARAMS, "against (a saved snapshot name) is required")
             ap = path_of(against)
@@ -890,7 +868,7 @@ class App:
                 after = json.loads(bp.read_text(encoding="utf-8"))
             else:
                 after = snapshot_of(self._require_result())
-            return compare(before, after)
+            return self.capabilities.call("snapshot.compare", before, after)
         raise ToolFault(INVALID_PARAMS, "action must be save, list or compare")
 
     # ------------------------------------------------------------ nw_document
@@ -914,13 +892,7 @@ class App:
             self.pending_save = {"key": key, "at": time.time()}
             return {"dry_run": True, "action": action, "document": doc.get("title"), "target": target,
                     "next": "call again with confirm=true to perform it"}
-        self._refuse_if_read_only()
-        if self.pending_save.get("key") != key or time.time() - self.pending_save.get("at", 0) > PLAN_TTL:
-            raise ToolFault("not_previewed", "confirm only works right after a preview of the same action",
-                            "call without confirm first")
-        self.pending_save = {}
-        res = self.bridge.call_at(ep, "doc.save", {"if_fingerprint": doc.get("fingerprint"), "path": target})
-        return {"state": "completed" if res.get("verified") else "partial", **res}
+        return self.capabilities.call("document.save", self, ep, doc, target, key)
 
 
 # ------------------------------------------------------------ module helpers

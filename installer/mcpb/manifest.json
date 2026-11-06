@@ -2,7 +2,7 @@
   "manifest_version": "0.4",
   "name": "vdc-navis-lab",
   "display_name": "VDC Navis Lab",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Coordina interferencias de Navisworks Manage desde Claude: lee, prioriza y explica los clashes, y escribe de vuelta con plan previo y verificación.",
   "long_description": "Servidor MCP para Navisworks Manage 2025 y 2026. Necesita el add-in de Navisworks instalado en el mismo equipo (MSI de VdcNavisLab). Sin Navisworks abierto funciona contra archivos exportados. Las escrituras al modelo pasan siempre por un plan que se revisa antes de ejecutarse.",
   "author": { "name": "VDC Process Lab", "url": "https://vdcprocesslab.com" },

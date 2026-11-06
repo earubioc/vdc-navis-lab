@@ -26,16 +26,22 @@ class Check:
     ok: bool
     seconds: float
     detail: str = ""
+    skipped: bool = False  # a Pro capability that this server does not have: not a failure, but not proven either
 
 
 @dataclass
 class Report:
     checks: list[Check] = field(default_factory=list)
     nw_peak_mb: int | None = None
+    figures: dict[str, Any] = field(default_factory=dict)  # aggregate numbers only, for the field-test report
 
     @property
     def ok(self) -> bool:
         return all(c.ok for c in self.checks)
+
+    @property
+    def skipped(self) -> int:
+        return sum(1 for c in self.checks if c.skipped)
 
 
 def nw_peak_mb() -> int | None:
@@ -78,19 +84,23 @@ def run(app: App, writes: bool = False, wait_s: float = 900.0, say: Callable[[st
 
     def step(name: str, fn: Callable[[], str]) -> bool:
         t0 = time.monotonic()
+        skipped = False
         try:
             detail, ok = fn(), True
         except ToolFault as exc:
-            detail, ok = f"{exc.code}", False
+            if exc.code == "pro_required":
+                detail, ok, skipped = "SKIPPED, needs the Pro edition (pro_required)", True, True
+            else:
+                detail, ok = f"{exc.code}", False
             with log.open("a", encoding="utf-8") as f:
                 f.write(f"{time.strftime('%F %T')} {name}: {exc.code}: {exc.message}\n")
         except Exception as exc:  # a crash in a check is a failed check, not a crashed run
             detail, ok = type(exc).__name__, False
             with log.open("a", encoding="utf-8") as f:
                 f.write(f"{time.strftime('%F %T')} {name}: {type(exc).__name__}: {exc}\n")
-        c = Check(name, ok, time.monotonic() - t0, detail)
+        c = Check(name, ok, time.monotonic() - t0, detail, skipped)
         rep.checks.append(c)
-        say(f"{'PASS' if ok else 'FAIL'}  {name:<26} {c.seconds:7.1f} s  {detail}")
+        say(f"{'SKIP' if skipped else ('PASS' if ok else 'FAIL')}  {name:<26} {c.seconds:7.1f} s  {detail}")
         return ok
 
     def status() -> str:
@@ -103,11 +113,14 @@ def run(app: App, writes: bool = False, wait_s: float = 900.0, say: Callable[[st
             raise ToolFault("no_document", "no document open")
         t = st["tests"]
         ctx["tests"], ctx["clashes"] = t["count"], sum(int(i.get("count") or 0) for i in t["items"])
+        rep.figures.update(navisworks_version=str(inst[0].get("version", "")), addin_version=inst[0].get("addin_version"),
+                           tests=t["count"], results=ctx["clashes"])
         return f"{inst[0].get('version', '?')}; {t['count']} tests, {ctx['clashes']} results"
 
     def census() -> str:
         m = _wait(lambda: app.model(False), wait_s)
         models = m.get("models", [])
+        rep.figures.update(models=len(models), elements=sum(int(x.get("elements", 0)) for x in models))
         return f"{len(models)} models, {sum(int(x.get('elements', 0)) for x in models)} elements"
 
     def analyze() -> str:
@@ -115,6 +128,7 @@ def run(app: App, writes: bool = False, wait_s: float = 900.0, say: Callable[[st
         if a.get("state") == "running":
             a = _wait(lambda: app.analyze("", None, 5, 45, a.get("job_id", ""), None), wait_s)
         ctx["analysis"] = a
+        rep.figures.update(raw_results=a["raw_count"], issues=a["issues"], bands=dict(a["per_band"]))
         b = a["per_band"]
         cov = a["coverage"]
         part = cov.get("partial")
@@ -149,6 +163,14 @@ def run(app: App, writes: bool = False, wait_s: float = 900.0, say: Callable[[st
         for kind in ("summary", "matrix", "hotspots", "plan", "markdown"):
             app.report(kind, "", False, 10, None)
             got.append(kind)
+        r = app.report("markdown", str(Path(scratch.name) / "v.md"), True, 25, None)
+        if int(r["bytes"]) <= 0:
+            raise ToolFault("empty_file", "markdown")
+        got.append(f"markdown file {int(r['bytes']) // 1024} KB")
+        return ", ".join(got)
+
+    def exports() -> str:
+        got = []
         for kind in ("csv", "json", "pdf", "handoff", "bcf"):
             r = app.report(kind, str(Path(scratch.name) / f"v.{kind}"), True, 25, None)
             if int(r["bytes"]) <= 0:
@@ -187,12 +209,13 @@ def run(app: App, writes: bool = False, wait_s: float = 900.0, say: Callable[[st
         return f"state {done['state']}; verified {done.get('verified')}"
 
     for name, fn in (("status", status), ("model census", census), ("analysis", analyze), ("issues", issues),
-                     ("view select/color/reset", view), ("reports and exports", reports), ("image of an issue", image),
+                     ("view select/color/reset", view), ("reports", reports), ("exports (Pro)", exports),
+                     ("image of an issue (Pro)", image),
                      ("sets and tests listing", setup_list), ("save preview", save_preview)):
         if not step(name, fn) and name == "status":
             break
     if writes and rep.checks and rep.checks[0].ok:
-        step("write plan (group+status+viewpoint)", apply_plan)
+        step("write plan (Pro)", apply_plan)
     rep.nw_peak_mb = nw_peak_mb()
     scratch.cleanup()
     return rep

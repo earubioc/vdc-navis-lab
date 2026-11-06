@@ -161,7 +161,7 @@ class Simulator:
     # ------------------------------------------------------------ methods
     def m_hello(self, p: dict) -> dict:
         methods = [m for m in METHODS if not (self.legacy and m in ("clash.page", "clash.release"))]
-        return {"product": "navisworks-simulator", "version": "0.1", "api": API_VERSION,
+        return {"product": "navisworks-simulator", "version": "0.1", "addin_version": "simulator", "api": API_VERSION,
                 "instance_id": self.instance_id, "started": self.started, "doc": self._doc(), "methods": methods}
 
     def m_doc_info(self, p: dict) -> dict:

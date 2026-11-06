@@ -66,7 +66,7 @@ Sixteen tools, prefix `nw_`. Heavy data never enters the conversation: results a
 | Criteria | `nw_profile` |
 | Model | `nw_model` (census, discipline proposal, model audit), `nw_query` |
 | Analysis | `nw_run`, `nw_analyze`, `nw_issues`, `nw_issue` |
-| Output | `nw_report` (markdown, csv, bcf, json, pdf, handoff, plan, image), `nw_snapshot` |
+| Output | `nw_report` (markdown, summary, matrix, hotspots and plan in Community; csv, bcf, json, pdf, handoff, image in Pro), `nw_snapshot` (save and list in Community; compare in Pro) |
 | View | `nw_view` (select, colour by priority, reset) |
 | Writes | `nw_apply` (groups per issue or level, statuses, viewpoints, selection sets, profile rules), `nw_document` |
 | Setup | `nw_setup` (discipline sets, search sets, clash tests from the matrix) |

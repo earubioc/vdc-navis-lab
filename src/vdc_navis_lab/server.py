@@ -16,6 +16,7 @@ from .bridge import BridgeError
 from .ingest import IngestError
 from .paths import PathError
 from .profile import ProfileError
+from .plugins import load_plugins
 from .service import App, ToolFault
 
 INSTRUCTIONS = """\
@@ -26,12 +27,26 @@ vdc-navis-lab coordinates clashes from Autodesk Navisworks Manage. Typical flow:
 3. nw_issues / nw_issue to drill down; nw_report for markdown, csv, bcf, plan.
 4. Writes are two steps: nw_apply(ops=[...]) previews and returns a plan_id; nw_apply(plan_id=...) executes
    and reports what was VERIFIED by re-reading the document.
+Executing writes, file formats other than markdown, document save and snapshot comparison are Pro capabilities. If a tool
+answers pro_required, tell the person; do not retry and never say the change was made. nw_status lists what is available.
 Heavy data never enters the conversation: results are summaries or file paths.
 Read the coverage warnings before claiming a discipline pair is clean: no results can mean never tested.
 """
 
 mcp = MCPServer("vdc-navis-lab", version=__version__, instructions=INSTRUCTIONS)
 APP = App()
+
+
+_PLUGINS_LOADED = False
+
+
+def init_plugins() -> list:
+    """Load the installed plugins once (entry point group vdc_navis_lab.plugins). Never raises."""
+    global _PLUGINS_LOADED
+    if not _PLUGINS_LOADED:
+        _PLUGINS_LOADED = True
+        load_plugins(APP, mcp)
+    return APP.plugins
 
 
 def _ro(title: str) -> ToolAnnotations:
@@ -153,7 +168,7 @@ def nw_issue(id: str, lang: str = "") -> dict[str, Any]:
 def nw_report(kind: str = "summary", path: str = "", overwrite: bool = False, limit: int = 25, lang: str = "",
               issue: str = "") -> dict[str, Any]:
     """kind: summary | matrix | hotspots | plan (work packages) return inline; markdown returns inline unless path is
-    given; csv | bcf (BCF 2.1) | pdf (readable report: decisions, who moves what, hotspots, top issues) | handoff (CSV for the authors: one row per element to change, grouped by the model that has to be edited, with its authoring Id when the export carries one) | json (re-readable export) write a file; image (needs issue=<id> and a live
+    given. Pro (pro_required without it): csv | bcf (BCF 2.1) | pdf (readable report: decisions, who moves what, hotspots, top issues) | handoff (CSV for the authors: one row per element to change, grouped by the model that has to be edited, with its authoring Id when the export carries one) | json (re-readable export) write a file; image (needs issue=<id> and a live
     Navisworks document, not a file analysis) writes a PNG framed on that issue's representative clash. Files go
     only under the allowed output folders (VDC_NAVIS_LAB_OUTPUT_ROOTS); a bare name lands in the default folder;
     overwrite defaults to false."""
@@ -237,6 +252,7 @@ def main(argv: list[str] | None = None) -> int:
     if "--serve" not in args and sys.stdin.isatty():
         print(TERMINAL_NOTE, file=sys.stderr)
         return 0
+    init_plugins()
     mcp.run()
     return 0
 

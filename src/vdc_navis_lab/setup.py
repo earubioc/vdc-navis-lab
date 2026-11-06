@@ -165,39 +165,6 @@ def make_plan(app: "App", ops: list[dict[str, Any]]) -> dict[str, Any]:
             **plan.preview, "next": f"nw_setup(plan_id='{plan.id}') executes this plan; nothing was changed yet"}
 
 
-def execute(app: "App", plan_id: str) -> dict[str, Any]:
-    from .service import PLAN_TTL
-    app._refuse_if_read_only()
-    plan = app.setup_plans.get(plan_id)
-    if plan is None:
-        raise ToolFault_(NOT_FOUND, f"unknown setup plan {plan_id!r}", "plan again with nw_setup(ops=[...])")
-    if plan.executed:
-        raise ToolFault_("plan_executed", "this plan was already executed", "make a new plan")
-    if time.time() - plan.created > PLAN_TTL:
-        raise ToolFault_("plan_expired", "the plan is older than 30 minutes", "plan again")
-    ep, info, _ = app.bridge.resolve(for_write=True)
-    doc = info.get("doc") or {}
-    if info.get("instance_id") != plan.instance_id or doc.get("fingerprint") != plan.fingerprint:
-        raise ToolFault_(STALE_DOCUMENT, "the open document is not the one the plan was made for", "plan again")
-    res = app.bridge.call_at(ep, "setup.apply", {"if_fingerprint": plan.fingerprint, "sets": plan.sets, "tests": plan.tests})
-    plan.executed = True
-    verified, applied, missing = res.get("verified", {}), res.get("applied", {}), res.get("missing", [])
-    want_sets, want_tests = len(plan.sets), len(plan.tests)
-    ok = verified.get("sets", 0) == want_sets and verified.get("tests", 0) == want_tests and not missing
-    state = "completed" if ok else ("failed" if not (verified.get("sets") or verified.get("tests")) else "partial")
-    live = app.bridge.call_at(ep, "hello")
-    if app.analysis_instance == plan.instance_id and not applied.get("tests_added"):
-        # sets are our own change, not staleness; new tests have no results yet, so they keep the analysis flagged
-        app.seen_revision = str((live.get("doc") or {}).get("revision", ""))
-    out = {"state": state, "requested": {"sets": want_sets, "tests": want_tests}, "applied": applied,
-           "verified": verified, "missing": missing[:10]}
-    if res.get("notes"):
-        out["notes"] = res["notes"][:10]
-    if plan.tests and applied.get("tests_added"):
-        out["hint"] = "tests created but not run: call nw_run to compute their results"
-    return out
-
-
 def listing(app: "App") -> dict[str, Any]:
     res, info, note = app.bridge.call("sets.list")
     tests, _info, _n = app.bridge.call("clash.tests")
