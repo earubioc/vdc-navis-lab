@@ -77,6 +77,7 @@ class App:
     setup_plans: dict[str, Any] = field(default_factory=dict)
     pending_save: dict[str, Any] = field(default_factory=dict)
     census_cache: dict[Any, Any] = field(default_factory=dict)
+    sleeve_cache: dict[Any, Any] = field(default_factory=dict)
 
     # ------------------------------------------------------------ helpers
     @property
@@ -359,19 +360,47 @@ class App:
         if status["state"] in ("running", "queued", "verifying"):
             return {"state": status["state"], "job_id": jid, "progress": status.get("progress"),
                     "hint": f"still extracting; call nw_analyze(job_id='{jid}') to collect, or nw_job to watch it"}
-        self.pending_analysis = {}
         if status["state"] != "completed":
+            self.pending_analysis = {}
             raise ToolFault("export_failed", status.get("error") or f"export job {status['state']}")
         data = self.bridge.call_at(ep, "job.result", {"job_id": jid})
         try:
             cs = ClashSet.from_dict(data)
         except (KeyError, ValueError, TypeError) as exc:
+            self.pending_analysis = {}
             raise ToolFault("bad_export", f"the add-in returned an export this server cannot read ({type(exc).__name__})") from None
         live = self.bridge.call_at(ep, "hello")
         cs.document = {**cs.document, **{k: v for k, v in (live.get("doc") or {}).items() if k in ("title", "fingerprint")}}
-        cs.sleeves_modeled = self._count_sleeves(ep)
+        key = (live.get("instance_id"), str((live.get("doc") or {}).get("fingerprint", "")))
+        sleeves, pending = self._sleeves(ep, key, 40.0)
+        if pending:
+            # The export is done and kept by the add-in; only the name scan for modeled sleeves is still running (minutes on
+            # a large federation). Keeping pending_analysis makes the next call collect the same export, not start another.
+            return {"state": "running", "job_id": jid, "stage": "sleeve_scan",
+                    "hint": "the clashes are extracted; counting modeled sleeves in the background (minutes on a large federation). "
+                            f"Call nw_analyze(job_id='{jid}') again, nothing is repeated"}
+        self.pending_analysis = {}
+        cs.sleeves_modeled = sleeves
         self._set_result(analyze(cs, self.profile, lang), live["instance_id"], str((live.get("doc") or {}).get("revision", "")))
         return views.summary(self.result, self.profile, top, lang)
+
+    def _sleeves(self, ep: Any, key: Any, wait: float) -> tuple[int | None, bool]:
+        """(count, still_running). The scan runs once per document in a background thread."""
+        entry = self.sleeve_cache.get(key)
+        if entry is None:
+            entry = {"result": None}
+
+            def work() -> None:
+                entry["result"] = self._count_sleeves(ep)
+                entry["done"] = True
+
+            entry["thread"] = threading.Thread(target=work, daemon=True)
+            entry["thread"].start()
+            self.sleeve_cache = {key: entry}
+        entry["thread"].join(wait)
+        if entry["thread"].is_alive():
+            return None, True
+        return entry["result"], False
 
     def _count_sleeves(self, ep: Any) -> int | None:
         """Elements in the open model that look like modeled sleeves or openings (by name). None when it could not

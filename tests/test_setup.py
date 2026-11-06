@@ -205,3 +205,27 @@ def test_census_is_read_once_per_document_and_a_slow_one_reports_running(app, si
     first = app.census(wait=5)
     second = app.census(wait=5)
     assert first[0] == second[0] and len(calls) == 1, "the read is not repeated"
+
+
+def test_slow_sleeve_scan_runs_once_and_a_retry_collects_the_same_export(app, sim, monkeypatch):
+    import threading
+    scans, exports = [], []
+    original = app.bridge.call_at
+    gate = threading.Event()
+
+    def slow(ep, method, params=None, timeout=None):
+        if method == "elements.query":
+            scans.append(1)
+            gate.wait(5)
+        if method == "clash.export":
+            exports.append(1)
+        return original(ep, method, params, timeout)
+
+    monkeypatch.setattr(app.bridge, "call_at", slow)
+    monkeypatch.setattr(type(app), "_sleeves", lambda self, ep, key, wait, _o=type(app)._sleeves: _o(self, ep, key, 0.05))
+    first = app.analyze("", None, 5, 20, "", None)
+    assert first["state"] == "running" and first["stage"] == "sleeve_scan"
+    gate.set()
+    done = app.analyze("", None, 5, 20, first["job_id"], None)
+    assert "state" not in done or done.get("state") != "running"
+    assert len(scans) == 1 and len(exports) == 1, "neither the scan nor the export is repeated"
